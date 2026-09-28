@@ -26,6 +26,11 @@ build_wordlist.py —— 从 ECDICT 抽取雅思词表
 输出结构（数组，可直接作为 seed_words 的 words 入参）：
   [{ "word","phoneticUK","phoneticUS","pos","meaning","seq","level","source" }]
 
+三道清洗（顺序执行，规则都在下方常量里，重跑即复现）：
+  1. 基础词      —— 带 zk/gk 标签的中考/高考词不入表（--exclude-tags 控制）
+  2. 冗余复数     —— 单数已在表内的规则复数丢弃（KEEP_PLURAL 为例外）
+  3. 专名        —— 地名/机构/姓氏剔除（判据见 PROPER_NOUNS 上方说明）
+
 文件名刻意不带词数：词表规模会随 ECDICT 版本与筛选规则变化（曾出现
 "ielts-5000.json 里其实只有 3056 词"的名不副实问题），用具名反而要反复改名。
 
@@ -96,6 +101,58 @@ def is_redundant_plural(word: str, vocabulary: set) -> bool:
     if not word.endswith("s"):
         return False
     return any(s in vocabulary for s in singular_forms(word))
+
+
+# ---------------------------------------------------------------------------
+# 专名（地名 / 机构名 / 姓氏）剔除
+#
+# 为什么必须剔：ECDICT 的 ielts 标签里混入了不少专名（雅思阅读听力里出现过，
+# 就被打了标签）。它们朗读没问题，但作为「词汇」毫无学习价值，还会挤占学习队列
+# ——york 曾被词频排到第 48 位（因为 New York 语料频次极高），等于让用户很早就
+# 学到一个人名/地名。
+#
+# 判据取自 ECDICT 自身的两个字段（实测在 3041 词上命中 5 个、**0 误报**）：
+#   A. 中文释义的括号注释是「地名/姓氏/王朝」类标记
+#      → 悉尼（澳大利亚港市）、福布斯（美国出版及媒体集团）、图尔斯（姓氏）
+#   B. 英文释义是地名 / 王室的「指认句式」
+#      → the largest Australian city located in …、the English royal house … reigned from
+# 两条都刻意收紧过：早期宽松写法（任何含 city/town/state 的释义）命中 106 个，
+# 绝大多数是 "the state of being …" 这类正常释义，不可用。
+#
+# 误杀逃生舱：万一将来 ECDICT 更新后某个正经词被规则命中，把它加进这里即可放行，
+# 无需改判据。词表重建时会打印被剔除的全部专名，便于复核。
+# ---------------------------------------------------------------------------
+PROPER_NOUNS = {
+    "york",         # 约克郡 / 约克王朝（seq 48 —— 词频被 New York 抬高）
+    "sydney",       # 悉尼（澳大利亚港市）
+    "forbes",       # 福布斯（媒体集团 / 姓氏）
+    "tours",        # 图尔斯（姓氏）；图尔市（法国城市名）
+    "wollongong",   # 伍伦贡（澳大利亚东南部港市）
+}
+
+KEEP_PROPER_LOOKING = set()   # 逃生舱：命中判据但确认是普通词的，写在这里
+
+# A. 中文释义括号注释里的专名标记
+_BRACKET = re.compile(r"[（(\[]([^）)\]]{1,14})[）)\]]")
+_NAME_MARK = re.compile(r"(地名|姓氏|王朝|人名|港市|城市|国名|首都|州郡)$"
+                        r"|^(澳大利亚|英国|美国|法国|加拿大|新西兰)")
+
+# B. 英文释义里的地名 / 王室指认句式
+_PLACE_SENTENCE = re.compile(
+    r"\b(?:a|an|the)\s+(?:city|town|village|port|borough|county|province"
+    r"|island|river|lake|capital|republic|kingdom|empire)\s+(?:in|on|of|near|that)\b"
+    r"|\bcapital of\b|\broyal house\b",
+    re.I,
+)
+
+
+def is_proper_noun(translation: str, definition: str) -> bool:
+    """该词是否是地名 / 机构名 / 姓氏这类「不值得学的专名」。"""
+    tr = (translation or "").replace("\\n", "；")
+    for mark in _BRACKET.findall(tr):
+        if _NAME_MARK.search(mark):
+            return True
+    return bool(_PLACE_SENTENCE.search(definition or ""))
 
 
 # 同形异音词（heteronym）：孤立单词喂给 TTS 容易读错词性对应的读音，需人工抽检。
@@ -178,7 +235,8 @@ def main():
 
     rows, scan = [], 0
     skip = {"no_tag": 0, "basic": 0, "no_phonetic": 0, "no_meaning": 0,
-            "bad_chars": 0, "phrase": 0}
+            "bad_chars": 0, "phrase": 0, "proper": 0}
+    dropped_proper = []
 
     with open(args.src, "r", encoding="utf-8", errors="replace", newline="") as f:
         reader = csv.DictReader(f)
@@ -211,6 +269,13 @@ def main():
             meaning = norm_meaning(r.get("translation"))
             if not meaning:
                 skip["no_meaning"] += 1
+                continue
+            # 专名剔除（判据见 PROPER_NOUNS 上方说明；显式清单作为判据的兜底）
+            if word.lower() not in KEEP_PROPER_LOOKING and (
+                    word.lower() in PROPER_NOUNS
+                    or is_proper_noun(r.get("translation"), r.get("definition"))):
+                skip["proper"] += 1
+                dropped_proper.append(word.lower())
                 continue
             rows.append({
                 "word": word.lower(),
@@ -263,7 +328,13 @@ def main():
     print(f"扫描 {scan} 行 → tag={args.tag} 且全部合格 {qualified} 词（排序键：{args.sort}）")
     print(f"  跳过：无 {args.tag} 标签 {skip['no_tag']} / 基础词({'/'.join(excl) or '未启用'}) {skip['basic']}"
           f" / 无音标 {skip['no_phonetic']} / 无释义 {skip['no_meaning']}"
-          f" / 非法字符或专名 {skip['bad_chars']} / 词组 {skip['phrase']}")
+          f" / 首字母大写或非法字符 {skip['bad_chars']} / 词组 {skip['phrase']}"
+          f" / 专名 {skip['proper']}")
+    if dropped_proper:
+        print(f"    剔除的专名（{len(dropped_proper)} 个）：{', '.join(sorted(dropped_proper))}")
+    stale = sorted(PROPER_NOUNS - set(dropped_proper))
+    if stale:
+        print(f"    ⚠️ PROPER_NOUNS 中未命中判据的条目（请复核）：{', '.join(stale)}")
     print(f"  实收：{qualified} − 单复数同源去重 {len(dropped_plural)} = {qualified - len(dropped_plural)} 词")
     if dropped_plural:
         preview = ", ".join(dropped_plural[:12])

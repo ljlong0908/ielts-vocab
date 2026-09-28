@@ -459,7 +459,7 @@ playWord(word)
 
 | 级别 | 问题 | 说明 / 处理建议 |
 |---|---|---|
-| **高（安全）** | ~~`enrich_word/index.js` 硬编码 DeepSeek API Key 作为 fallback~~ | ✅ **已修复**（2026-09-27）：已改为只读 `process.env.DEEPSEEK_API_KEY`，无 fallback 字面量；新增 `.gitignore`（忽略 `node_modules`、`project.private.config.json`、`.env`）。**仍需到 DeepSeek 后台吊销旧 Key 并重发**（旧 Key 已暴露在历史代码中）。 |
+| **高（安全）** | ~~`enrich_word/index.js` 硬编码 DeepSeek API Key 作为 fallback~~ | ✅ **已闭环**：代码侧已改为只读 `process.env.DEEPSEEK_API_KEY`（无 fallback 字面量，2026-09-27）；暴露在历史代码中的旧 Key 已到 DeepSeek 后台**吊销并重发**，新 Key 已写入本地 `.env`（`gen_examples.py` 用）并配置到 `enrich_word` 的环境变量（2026-09-28）。仓库内已确认无任何 `sk-` 字面量残留。 |
 | **高（安全）** | ~~`enrich_word` 的 `force` 参数可由客户端任意传入~~ | ✅ **已修复**（2026-09-28）：`force` 仅在 `_token === ADMIN_TOKEN` 时生效，否则忽略并记日志。未配置 `ADMIN_TOKEN` 时恒为忽略（安全默认）。修复前任何人可 `force:true` 循环调用绕过缓存烧余额。 |
 | **高（安全）** | ~~`seed_words` 零鉴权，任何用户可往词库写入数据~~ | ✅ **已修复**（2026-09-28）：强制 `_token === ADMIN_TOKEN`；未配 `ADMIN_TOKEN` 时**拒绝一切调用**。⚠️ **副作用**：控制台执行导入时必须带 `_token` 入参。 |
 | 中（安全） | ~~`audio_cache` 入参无限制，可被用来写满云存储~~ | ✅ **已修复**（2026-09-28）：`text` 限定为字母开头的英文单词/短语（≤40 字符），`type` 收敛为 1/2。后续新增的例句路径（`kind:'sentence'`，≤200 字符）**只查库、不下载也不写存储**，故放宽长度不会重新打开写存储的口子。 |
@@ -545,15 +545,38 @@ playWord(word)
 | `build/` 下 25 个文件 | 一次性校验脚本（`hash_check.*` / `check_re_sentence.*` / `fix_spacy.py` …）与临时日志 | 逻辑已固化进 `scripts/` 正式脚本，或核验已完成。产物目录，不入库 |
 | `README.md` | 34KB → 约 8KB | 与 `docs/` 大量重复（部署步骤、流水线细节）。重写为概览：定位 / 目录树 / 快速开始 / 云函数清单 / 核心机制 / 注意事项 / 许可 |
 
-#### 词表清洗（3056 → 3041 词）
+#### 词表清洗（3056 → 3041 → **3036 词**）
 
-- 文件名 `ielts-5000.json` 名不副实（实际只有 3056 词），已改名 **`ielts-full.json`**——**刻意不带词数**，词表规模会随 ECDICT 版本与筛选规则变化，具名反而要反复改名
-- `scripts/build_wordlist.py` 新增**单复数同源去重**：以 `s` 结尾、且「规则还原出的单数也在候选词表中」的条目直接丢弃（`-ies` / `-es` / `-s` 三条规则，靠「单数确实存在」兜底，不会误伤 `business` / `access` 这类本身以 s 收尾的词）。共剔除 **15 个**冗余复数：`apes` / `commercials` / `concessions` / `contracts` / `disputes` / `fossils` / `objectives` / `opportunities` / `photocopies` / `planners` / `precautions` / `priorities` / `tablets` / `tunnels` / `workshops`
-- 例外表 `KEEP_PLURAL` 保留**语义已分化**的复数独立词条：`economics` / `statistics` / `ethics` / `politics` / `physics` / `mathematics` / `odds` / `amends` / `pants` / `savings` / `sales` / `means` / `premises` / `contents` / `customs` / `goods` / `manners` / `quarters` / `works` / `regards` / `terms` / `ways` / `news` / `series` / `species`
-- `--limit` 默认由 `5000` 改为 `0`（不限），避免"明明还有词却被截断"的困惑
-- ✅ **前 100 词 seq 完全未变** → 已生成的 `pilot-100` 音频（`build/audio/us/`、`build/seed_audio/`）**全部仍然有效**，无需重跑；被剔除项的 index 最小为 730，也不影响「按 seq 顺序生成音频」的约束
+三道清洗规则全部固定在 `scripts/build_wordlist.py` 里，**重跑即复现**，不需要手工改词表：
 
-> ⚠️ **破坏性语义**：若云端已导入过旧词表（3056 词），必须用 `reset_words`（`purge`）清空后重导，**不能**直接 `seed_words` —— 它按 `word` 去重跳过，`contracts` 这类已删词会留在库里。
+1. `--exclude-tags zk,gk` —— 中考/高考基础词不入表
+2. `PROPER_NOUNS` —— **专名剔除**（本轮新增，见下）
+3. `KEEP_PLURAL` —— **单复数同源去重**：以 `s` 结尾、且「规则还原出的单数也在候选词表中」的条目直接丢弃（`-ies` / `-es` / `-s` 三条规则，靠「单数确实存在」兜底，不会误伤 `business` / `access` 这类本身以 s 收尾的词）。共剔除 **15 个**冗余复数：`apes` / `commercials` / `concessions` / `contracts` / `disputes` / `fossils` / `objectives` / `opportunities` / `photocopies` / `planners` / `precautions` / `priorities` / `tablets` / `tunnels` / `workshops`
+
+例外表 `KEEP_PLURAL` 保留**语义已分化**的复数独立词条：`economics` / `statistics` / `ethics` / `politics` / `physics` / `mathematics` / `odds` / `amends` / `pants` / `savings` / `sales` / `means` / `premises` / `contents` / `customs` / `goods` / `manners` / `quarters` / `works` / `regards` / `terms` / `ways` / `news` / `series` / `species`
+
+另外两项：文件名 `ielts-5000.json` 名不副实（实际只有 3056 词），已改名 **`ielts-full.json`**——**刻意不带词数**；`--limit` 默认由 `5000` 改为 `0`（不限）。
+
+##### 专名剔除（本轮新增）
+
+**问题**：ECDICT 的 `ielts` 标签里混入专名（雅思阅读听力里出现过，就被打上标签）。它们朗读没问题，但作为「词汇」毫无学习价值，还挤占学习队列——`york` 因 `New York` 语料频次极高，被按 BNC 排到了**第 48 位**，等于让用户很早就学一个人名/地名。
+
+**判据**（取自 ECDICT 自身的两个字段，在 3041 词上命中 5 个、**0 误报**）：
+
+| 规则 | 判据 | 命中 |
+|---|---|---|
+| A | 中文释义的括号注释是「地名/姓氏/王朝」类标记 | `sydney`（澳大利亚港市）、`forbes`（美国出版及媒体集团）、`tours`（姓氏）、`wollongong`（澳大利亚东南部港市） |
+| B | 英文释义是地名 / 王室的**指认句式** | `york`（the English royal house … reigned from）、`sydney`（the largest Australian city located in …） |
+
+两条都刻意收紧过：早期宽松写法（任何含 `city` / `town` / `state` 的释义）命中 **106** 个，绝大多数是 `the state of being …` 这类正常释义，**不可用**。
+
+**逃生舱**：`KEEP_PROPER_LOOKING` —— 万一将来 ECDICT 更新后某个正经词被规则命中，加进去即可放行，无需改判据；`PROPER_NOUNS` 里的显式清单同时作为判据的兜底，词表重建时会打印全部被剔除的专名，并对「列在清单里但已不再命中判据」的条目报警，便于复核。
+
+**注意**：`guy`（seq 270）**不是专名**，已保留——柯林斯 4 星、牛津 3000 核心词、有完整词形变化（`guys` / `guyed` / `guying`），释义「家伙」是正经的常用义。
+
+**连带影响**：`york` 原本在 48 位，剔除后 pilot-100 由「`york`」换成「`discipline`」（原第 101 位），其余 99 词不变；`assets/examples/pilot-100-examples.json` 与 `build/` 下的音频、入参批次已同步重建。
+
+> ⚠️ **破坏性语义**：若云端已导入过旧词表（3056 / 3041 词），必须用 `reset_words`（`purge`）清空后重导，**不能**直接 `seed_words` —— 它按 `word` 去重跳过，`contracts` 这类已删词会留在库里。
 
 #### 新增
 

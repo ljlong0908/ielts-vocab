@@ -969,15 +969,6 @@
     "etymology": "来自古法语 paiement，源于拉丁语 pacare（使满意、平息），与 peace 同源，原指偿还债务使债主满意。"
   },
   {
-    "word": "york",
-    "example": {
-      "en": "The House of York ruled England during the Wars of the Roses.",
-      "cn": "约克王朝在玫瑰战争期间统治了英格兰。"
-    },
-    "roots": [],
-    "etymology": "源自古英语 Eoforwic，可能意为“野猪聚居的村庄”，后演变为约克郡和约克王朝的名称。"
-  },
-  {
     "word": "facility",
     "example": {
       "en": "The university offers excellent sports facilities for all students.",
@@ -2070,5 +2061,30 @@
       }
     ],
     "etymology": "源自古英语 hūs（房屋），加 -ing 后缀构成集合名词，指房屋的总称或供给。"
+  },
+  {
+    "word": "discipline",
+    "example": {
+      "en": "Academic success requires discipline and consistent effort.",
+      "cn": "学业成功需要纪律和持续的努力。"
+    },
+    "roots": [
+      {
+        "part": "dis-",
+        "type": "prefix",
+        "meaning": "分开，离"
+      },
+      {
+        "part": "-cipl-",
+        "type": "root",
+        "meaning": "抓，取（来自拉丁语 capere）"
+      },
+      {
+        "part": "-ine",
+        "type": "suffix",
+        "meaning": "名词或动词后缀"
+      }
+    ],
+    "etymology": "源自拉丁语 disciplina，来自 discere（学习），与 discipulus（学生）相关，原指教导、学习，后引申为训练和纪律。"
   }
 ]
