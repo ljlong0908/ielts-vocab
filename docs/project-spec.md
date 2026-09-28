@@ -486,7 +486,7 @@ playWord(word)
 | **部署步骤 / 报错排查** | `docs/deploy.md` |
 | 例句文本来源 | 运行时：`cloudfunctions/enrich_word`（`buildPrompt`）；离线批量：`scripts/gen_examples.py` |
 | 发音音源（例句） | `scripts/gen_examples.py` → `scripts/gen_sentence_audio.py`（本地生成，`s_{hash}`）→ `seed_audio`（`kind:'sentence'` 上传）→ `audio.js` 的 `playSentence` / `audio_cache`（**只读不写**） |
-| 词表来源 / 筛选 / 去重 | `scripts/build_wordlist.py`（ECDICT → `assets/word_lists/ielts-full.json`；含单复数同源去重与 `KEEP_PLURAL` 例外表） |
+| 词表来源 / 筛选 / 归一 | `scripts/build_wordlist.py`（ECDICT → `assets/word_lists/ielts-full.json`；基础词排除 + 专名剔除 + 名词复数归一，规则全部固化为脚本常量） |
 | 词表导入入参打包 | `scripts/pack_words.py` → `build/seed_words/batch-*.json` |
 | 音频入参打包 | `scripts/pack_audio.py` → `build/seed_audio/` 或 `build/seed_sentence/` |
 | 分享标题/路径/配图 | `miniprogram/utils/share.js`（`toFriend`），各页 `onShareAppMessage()` |
@@ -551,9 +551,9 @@ playWord(word)
 
 1. `--exclude-tags zk,gk` —— 中考/高考基础词不入表
 2. `PROPER_NOUNS` —— **专名剔除**（本轮新增，见下）
-3. `KEEP_PLURAL` —— **单复数同源去重**：以 `s` 结尾、且「规则还原出的单数也在候选词表中」的条目直接丢弃（`-ies` / `-es` / `-s` 三条规则，靠「单数确实存在」兜底，不会误伤 `business` / `access` 这类本身以 s 收尾的词）。共剔除 **15 个**冗余复数：`apes` / `commercials` / `concessions` / `contracts` / `disputes` / `fossils` / `objectives` / `opportunities` / `photocopies` / `planners` / `precautions` / `priorities` / `tablets` / `tunnels` / `workshops`
+3. 冗余复数去重 —— 单数已在候选池内的规则复数丢弃，共剔除 **15 个**：`apes` / `commercials` / `concessions` / `contracts` / `disputes` / `fossils` / `objectives` / `opportunities` / `photocopies` / `planners` / `precautions` / `priorities` / `tablets` / `tunnels` / `workshops`。⚠️ 其原始实现（「以 `s` 结尾 + 规则还原的单数在候选池内」）只是**字符串猜测**，既漏 `tours` 又误判 `ambitious` / `crisis` / `series` / `campus`，已在**第三轮**被 §11.6 的「名词复数归一」整体取代
 
-例外表 `KEEP_PLURAL` 保留**语义已分化**的复数独立词条：`economics` / `statistics` / `ethics` / `politics` / `physics` / `mathematics` / `odds` / `amends` / `pants` / `savings` / `sales` / `means` / `premises` / `contents` / `customs` / `goods` / `manners` / `quarters` / `works` / `regards` / `terms` / `ways` / `news` / `series` / `species`
+例外表 `KEEP_PLURAL` 保留**形似复数、实为独立词条**的词（完整清单以脚本为准）：`-ics` 学科名词、语义分化词（`odds` / `pants` / `savings` / `contents` …）、集合用法 `bacteria`、单复数同形 `news` / `series` / `species`。
 
 另外两项：文件名 `ielts-5000.json` 名不副实（实际只有 3056 词），已改名 **`ielts-full.json`**——**刻意不带词数**；`--limit` 默认由 `5000` 改为 `0`（不限）。
 
@@ -561,7 +561,7 @@ playWord(word)
 
 **问题**：ECDICT 的 `ielts` 标签里混入专名（雅思阅读听力里出现过，就被打上标签）。它们朗读没问题，但作为「词汇」毫无学习价值，还挤占学习队列——`york` 因 `New York` 语料频次极高，被按 BNC 排到了**第 48 位**，等于让用户很早就学一个人名/地名。
 
-**判据**（取自 ECDICT 自身的两个字段，在 3041 词上命中 5 个、**0 误报**）：
+**判据**（取自 ECDICT 自身的两个字段，在合格候选池上命中 5 个、**0 误报**）：
 
 | 规则 | 判据 | 命中 |
 |---|---|---|
@@ -574,11 +574,40 @@ playWord(word)
 
 **注意**：`guy`（seq 270）**不是专名**，已保留——柯林斯 4 星、牛津 3000 核心词、有完整词形变化（`guys` / `guyed` / `guying`），释义「家伙」是正经的常用义。
 
-**连带影响**：`york` 原本在 48 位，剔除后 pilot-100 由「`york`」换成「`discipline`」（原第 101 位），其余 99 词不变；`assets/examples/pilot-100-examples.json` 与 `build/` 下的音频、入参批次已同步重建。
+**连带影响**：`york` 原本在 48 位，剔除后 pilot-100 由「`york`」换成「`discipline`」（原第 101 位），其余 99 词不变；`assets/examples/pilot-100-examples.json` 与 `build/` 下的音频、入参批次已同步重建。（`discipline` 在第三轮又因排序重排移出 pilot-100，见 §11.6。）
 
-> ⚠️ **破坏性语义**：若云端已导入过旧词表（3056 / 3041 词），必须用 `reset_words`（`purge`）清空后重导，**不能**直接 `seed_words` —— 它按 `word` 去重跳过，`contracts` 这类已删词会留在库里。
+> ⚠️ **破坏性语义**：若云端已导入过任何旧词表（3056 / 3041 / 3036 词），必须用 `reset_words`（`purge`）清空后重导，**不能**直接 `seed_words` —— 它按 `word` 去重跳过，`wheels` / `jobs` 这类已删词会留在库里。
 
 #### 新增
 
 - `scripts/pack_words.py` —— 把词表打包成 `seed_words` 入参：按 `--batch-size`（默认 200 词）切分，每批是一份**完整可用**的入参（约 38KB，控制台入参框吃得下），并产出 `index.json` 清单（含每批词数与首末词）。此前导词表只能手搓 JSON，或用 `offset/limit` 反复粘贴整份词表
 - `docs/deploy.md` 新增 **§0.1 老环境升级增量清单**（哪些云函数要重部署、词表为什么要先 purge）
+
+### 11.6 第三轮：名词复数归一（2026-09-28）
+
+**问题**：ECDICT 的词形标记不完整——`ielts` 标签打在**复数**上、原形反而被当基础词排除。结果是词表尾部堆了一整簇「只有复数、没有单数」的条目（`wheels` / `utensils` / `universities` / `volunteers` …），学习价值为零：该先学 `wheel` / `utensil`，而不是把复数形式当成独立词汇去背。
+
+**判据**（改取 ECDICT 自身的 `exchange` 字段，不再做字符串猜测）：
+
+| 条件 | 含义 |
+|---|---|
+| `exchange` 的 `0:` 指向**别的**词 | 本条目是变形词。`0:` 指向自身的 `outskirts` / `tweezers` / `stairs` / `surroundings` 是英语里天然只有复数形的名词，必须放行 |
+| 变形标记只有 `s` / `3` | 排除同样带 `0:` 但属独立词条的 `best`(`0:good`,t) / `further`(`0:far`,r) / `advanced`(dp) / `banking`(i) / `sophisticated`(dp) / `regarding`(i) / `provided`(dp) |
+
+两条同时满足即为「纯复数」，再按原形分三种处置：
+
+| 情形 | 处置 | 结果 |
+|---|---|---|
+| 原形已在表内 | 丢弃（冗余复数） | 15 个（`apes` / `contracts` / `opportunities` …） |
+| 原形是基础词（zk/gk） | 丢弃——不因复数把基础词拖回表 | 49 个（`wheels`→`wheel`、`jobs`→`job`、`universities`→`university` …） |
+| 原形查得到且非基础词 | **提升为原形**：音标/词性/释义取原形，`seq` 位不变，`source` 记为 `ecdict-ielts-lemma` | 14 个（`utensils`→`utensil`、`elements`→`element`、`threats`→`threat` …） |
+
+⚠️ 两个**看起来更简单、实际是错的**方案，已写进脚本注释避免重蹈：
+- 「一律剔除所有变形词」→ 连 `banking` / `housing` / `further` / `best` / `sophisticated` / `regarding` / `provided` 在内会杀掉 **161** 个合法词条（`guy` 之外的另一个大坑）
+- 「一律用原形替换」→ 把 `wheel` / `job` / `light` / `floor` / `tour` / `university` 这些中考/高考基础词重新拖回表，与筛选漏斗的目的直接冲突
+
+**排序**：提升的原形按**自身**词频落位（不沿用复数的词位），列表因此严格保持 BNC 序——`element` / `threat` / `inquiry` 这类常用词会回到它们该在的位置，而不是烂在词表尾部。代价是 seq 整体重排，前 100 词会换掉 2 个。
+
+**连带影响**：`pilot-100` 由 `discipline` / `housing` 换成 `element` / `threat`，其余 **98 词不变**；`assets/examples/` 与 `build/` 下的单词·例句音频、入参批次已重跑同步（音频以单词为 key、例句以整句文本为 key，seq 重排不会使已有文件失效）。
+
+词表 **3036 → 2987 词**；`seed_words` 入参由 16 批变为 **15 批**（`pack_words.py` 重跑生成）。

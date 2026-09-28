@@ -33,7 +33,7 @@ ielts-vocab/
 │   ├── word_lists/          # 词表（ECDICT 抽取结果 + 其 MIT 许可证副本）
 │   └── examples/            # 离线生成的例句 JSON（词表级资产，随仓库保留）
 ├── scripts/                 # 离线工具链（不进小程序包、不进云函数）
-│   ├── build_wordlist.py        # 从 ECDICT 抽雅思词表（专名剔除 + 单复数去重）
+│   ├── build_wordlist.py        # 从 ECDICT 抽雅思词表（专名剔除 + 名词复数归一）
 │   ├── gen_audio.py             # Kokoro 本地合成「单词」发音（默认只做美音）
 │   ├── gen_examples.py          # DeepSeek 离线生成例句（含 roots / etymology）
 │   ├── gen_sentence_audio.py    # Kokoro 本地合成「例句」发音

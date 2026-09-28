@@ -330,6 +330,16 @@
     "seq": 33
   },
   {
+    "word": "element",
+    "phoneticUK": "/'elimәnt/",
+    "phoneticUS": "/'elimәnt/",
+    "pos": "",
+    "meaning": "n. 元件, 元素, 要素；[计] 部分; 成分; 单元; 码元; 元件; 元素; 单元",
+    "level": 1,
+    "source": "ecdict-ielts-lemma",
+    "seq": 34
+  },
+  {
     "word": "industrial",
     "phoneticUK": "/in'dʌstriәl/",
     "phoneticUS": "/in'dʌstriәl/",
@@ -337,7 +347,7 @@
     "meaning": "a. 工业的, 供工业用的, 工业高度发展的, 产业的；n. 工业工人, 工业股票",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 34
+    "seq": 35
   },
   {
     "word": "united",
@@ -347,7 +357,7 @@
     "meaning": "a. 联合的, 团结的, 一致的, 和睦的；[法] 联合的, 统一的, 一致的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 35
+    "seq": 36
   },
   {
     "word": "commission",
@@ -357,7 +367,7 @@
     "meaning": "n. 委任状, 任官令, 所委职责, 佣金, 犯, 委托, 所托之事；vt. 委任, 委托制作, 使服役",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 36
+    "seq": 37
   },
   {
     "word": "image",
@@ -367,7 +377,7 @@
     "meaning": "n. 影像, 肖像, 想象, 图像, 形象, 翻版；vt. 作...的像, 反映, 想象, 象征；n. 图像；[计] 图象",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 37
+    "seq": 38
   },
   {
     "word": "client",
@@ -377,7 +387,7 @@
     "meaning": "n. 客户, 顾客, 委托人；[计] 客户, 客户机, 客户机程序",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 38
+    "seq": 39
   },
   {
     "word": "sector",
@@ -387,7 +397,7 @@
     "meaning": "n. 扇形, 部门, 部分, 函数尺, 象限仪, 段, 区段；vt. 把...分成扇形；[计] 扇面; 扇区; 段; 区段",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 39
+    "seq": 40
   },
   {
     "word": "original",
@@ -397,7 +407,7 @@
     "meaning": "a. 最初的, 原始的, 有创意的；n. 原物, 原作",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 40
+    "seq": 41
   },
   {
     "word": "employment",
@@ -407,7 +417,7 @@
     "meaning": "n. 雇用, 职业, 工作；[经] 职业, 雇用, 职工招请",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 41
+    "seq": 42
   },
   {
     "word": "professional",
@@ -417,7 +427,7 @@
     "meaning": "n. 专业人才；a. 专业的, 职业的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 42
+    "seq": 43
   },
   {
     "word": "item",
@@ -427,7 +437,7 @@
     "meaning": "n. 项目, 条款, 一则, 项；[计] 项",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 43
+    "seq": 44
   },
   {
     "word": "extent",
@@ -437,7 +447,7 @@
     "meaning": "n. 范围, 程度, 区域；[计] 范围",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 44
+    "seq": 45
   },
   {
     "word": "parliament",
@@ -447,7 +457,7 @@
     "meaning": "n. 国会, 议会；[法] 会议, 国会, 议院",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 45
+    "seq": 46
   },
   {
     "word": "effective",
@@ -457,7 +467,7 @@
     "meaning": "a. 有效的, 有力的, 实际的；n. 有生力量",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 46
+    "seq": 47
   },
   {
     "word": "payment",
@@ -467,7 +477,7 @@
     "meaning": "n. 付款, 支付的款项(或实物), 偿还, 报应, 惩罚；[经] 支付, 缴纳, 支付款额",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 47
+    "seq": 48
   },
   {
     "word": "facility",
@@ -477,7 +487,7 @@
     "meaning": "n. 容易, 灵巧, 设备；[计] 设施; 设备; 装备",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 48
+    "seq": 49
   },
   {
     "word": "survey",
@@ -487,7 +497,7 @@
     "meaning": "n. 纵览, 视察, 测量, 俯瞰, 调查；vt. 审视, 视察, 俯瞰, 通盘考虑；vi. 测量土地",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 49
+    "seq": 50
   },
   {
     "word": "context",
@@ -497,7 +507,7 @@
     "meaning": "n. 上下文, 背景, 来龙去脉；n. 上下文；[计] 上下文",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 50
+    "seq": 51
   },
   {
     "word": "extend",
@@ -507,7 +517,7 @@
     "meaning": "v. 扩充, 延伸, 伸展, 扩大；[计] 扩展",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 51
+    "seq": 52
   },
   {
     "word": "considerable",
@@ -517,7 +527,7 @@
     "meaning": "a. 相当的, 可观的, 重要的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 52
+    "seq": 53
   },
   {
     "word": "species",
@@ -527,7 +537,7 @@
     "meaning": "n. 种, 类, 外形；[医] 茶剂; 种",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 53
+    "seq": 54
   },
   {
     "word": "career",
@@ -537,7 +547,7 @@
     "meaning": "n. 事业, 生涯, 成功；[法] 职业, 专业, 履历",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 54
+    "seq": 55
   },
   {
     "word": "solution",
@@ -547,7 +557,7 @@
     "meaning": "n. 解决, 解答, 溶液；[化] 溶液",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 55
+    "seq": 56
   },
   {
     "word": "existing",
@@ -557,7 +567,7 @@
     "meaning": "a. 存在的, 目前的, 现存的, 现有的；[计] 现成的, 已有的, 现存的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 56
+    "seq": 57
   },
   {
     "word": "stock",
@@ -567,7 +577,7 @@
     "meaning": "n. 树干, 祖先, 血统, 原料, 备料, 库存, 牲畜, 股票, 股份, 保留剧目；a. 存货的, 常备的, 平凡的, 普通的, 股票的, 保留剧目的, 繁殖用的；vt. 装把手于, 进货, 备有, 放牧；vi. 出新芽, 备货, 囤积",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 57
+    "seq": 58
   },
   {
     "word": "option",
@@ -577,7 +587,7 @@
     "meaning": "n. 选择权, 挑选, 选项；[计] 选项",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 58
+    "seq": 59
   },
   {
     "word": "occasion",
@@ -587,7 +597,7 @@
     "meaning": "n. 场合, 时机, 机会, 诱因, 理由；vt. 惹起, 引起",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 59
+    "seq": 60
   },
   {
     "word": "executive",
@@ -597,7 +607,7 @@
     "meaning": "n. 执行部门, 执行委员会, 执行者, 经理主管人员；a. 执行的, 善于执行的, 善于经营的；[计] 执行程序",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 60
+    "seq": 61
   },
   {
     "word": "scale",
@@ -607,7 +617,7 @@
     "meaning": "n. 刻度, 衡量, 比例, 比例尺, 数值范围, 等级, 规模, 天平, 秤, 鳞, 积垢；vt. 依比例决定, 攀登, 测量, 绘制, 刮鳞, 使生垢, 过秤；vi. 剥落, 生水垢, 重量为, 攀登, 衡量；[计] 刻度",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 61
+    "seq": 62
   },
   {
     "word": "strategy",
@@ -617,7 +627,7 @@
     "meaning": "n. 战略, 策略；[经] 战略, 策略",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 62
+    "seq": 63
   },
   {
     "word": "employee",
@@ -627,7 +637,7 @@
     "meaning": "n. 职员, 员工, 受雇人员；[化] 职工; 雇员",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 63
+    "seq": 64
   },
   {
     "word": "essential",
@@ -637,7 +647,7 @@
     "meaning": "n. 要素, 要点, 本质；a. 必要的, 重要的, 本质的；[计] 本质冒险",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 64
+    "seq": 65
   },
   {
     "word": "environmental",
@@ -647,7 +657,7 @@
     "meaning": "a. 周围的, 环境的；[经] 环境的, 环保的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 65
+    "seq": 66
   },
   {
     "word": "contact",
@@ -657,7 +667,7 @@
     "meaning": "n. 联系, 交际, 熟人, 接触；vi. 接触, 联系；vt. 使接触",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 66
+    "seq": 67
   },
   {
     "word": "positive",
@@ -667,7 +677,7 @@
     "meaning": "a. 肯定的, 积极的, 有把握的；[医] 正的, 阳性的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 67
+    "seq": 68
   },
   {
     "word": "best",
@@ -677,7 +687,7 @@
     "meaning": "a. 最好的；adv. 最好地；n. 最好的人",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 68
+    "seq": 69
   },
   {
     "word": "presence",
@@ -687,7 +697,7 @@
     "meaning": "n. 出席, 面前, 存在, 仪态, 风度；[电] 出现",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 69
+    "seq": 70
   },
   {
     "word": "release",
@@ -697,7 +707,7 @@
     "meaning": "n. 释放, 发泄, 豁免, 发行, 释放证书；vt. 释放, 解除, 放松, 豁免, 免除, 发布, 放弃, 让与；n. 发布；[计] 版本, 发布",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 70
+    "seq": 71
   },
   {
     "word": "commercial",
@@ -707,7 +717,7 @@
     "meaning": "a. 商业的, 商用的, 商品化的；n. 商业广告节目",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 71
+    "seq": 72
   },
   {
     "word": "route",
@@ -717,7 +727,7 @@
     "meaning": "n. 路径, 途径, 路线；vt. 确定路线, 按规定路线发送；[计] 传递, 路由设定程序",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 72
+    "seq": 73
   },
   {
     "word": "proportion",
@@ -727,7 +737,7 @@
     "meaning": "n. 比例, 比率, 均衡, 部分, 面积；vt. 使成比例, 使均衡",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 73
+    "seq": 74
   },
   {
     "word": "emerge",
@@ -737,7 +747,7 @@
     "meaning": "vi. 浮现, 形成, 出现, (事实)显露",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 74
+    "seq": 75
   },
   {
     "word": "regional",
@@ -747,7 +757,7 @@
     "meaning": "a. 地方的, 地域性的；[医] 区的, 部位的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 75
+    "seq": 76
   },
   {
     "word": "deny",
@@ -757,7 +767,7 @@
     "meaning": "v. 否认, 拒绝",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 76
+    "seq": 77
   },
   {
     "word": "impact",
@@ -767,7 +777,7 @@
     "meaning": "n. 冲击, 冲突, 影响, 效果；vt. 挤入, 撞击, 压紧, 对...发生影响",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 77
+    "seq": 78
   },
   {
     "word": "estate",
@@ -777,7 +787,7 @@
     "meaning": "n. 不动产, (人生的)阶段, 阶层, 财产；[经] 房地产, 遗产, 财产",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 78
+    "seq": 79
   },
   {
     "word": "propose",
@@ -787,7 +797,7 @@
     "meaning": "vt. 计划, 打算, 建议, 提议, 求(婚)；vi. 打算, 求婚",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 79
+    "seq": 80
   },
   {
     "word": "additional",
@@ -797,7 +807,7 @@
     "meaning": "a. 附加的, 另外的, 额外的；[机] 加添的, 附加的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 80
+    "seq": 81
   },
   {
     "word": "writer",
@@ -807,7 +817,7 @@
     "meaning": "n. 作家, 撰稿者, 抄写员；[化] 记录器",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 81
+    "seq": 82
   },
   {
     "word": "employer",
@@ -817,7 +827,7 @@
     "meaning": "n. 雇主, 老板；[经] 雇主, 业主",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 82
+    "seq": 83
   },
   {
     "word": "objective",
@@ -827,7 +837,7 @@
     "meaning": "n. 目的, 目标, 宗旨, 宾格, 实物；a. 客观的, 如实的, 无偏见的, 宾格的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 83
+    "seq": 84
   },
   {
     "word": "nevertheless",
@@ -837,7 +847,7 @@
     "meaning": "adv. 然而, 虽然如此；conj. 然而",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 84
+    "seq": 85
   },
   {
     "word": "confidence",
@@ -847,7 +857,7 @@
     "meaning": "n. 信心；[电] 可靠",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 85
+    "seq": 86
   },
   {
     "word": "sample",
@@ -857,7 +867,7 @@
     "meaning": "n. 样品, 范例, 样本；vt. 抽样, 尝试；[计] 示例, 字样",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 86
+    "seq": 87
   },
   {
     "word": "volume",
@@ -867,7 +877,17 @@
     "meaning": "n. 册, 卷, 体积, 容量, 大量, 许多, 份量, 音量；vi. 成团卷起；vt. 把...收集成卷；a. 大量的；[计] 卷",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 87
+    "seq": 88
+  },
+  {
+    "word": "threat",
+    "phoneticUK": "/θret/",
+    "phoneticUS": "/θret/",
+    "pos": "",
+    "meaning": "n. 恐吓, 恶兆, 威胁；[经] 威胁",
+    "level": 1,
+    "source": "ecdict-ielts-lemma",
+    "seq": 89
   },
   {
     "word": "legislation",
@@ -877,7 +897,7 @@
     "meaning": "n. 立法, 法律；[医] 立法, 法规",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 88
+    "seq": 90
   },
   {
     "word": "stuff",
@@ -887,7 +907,7 @@
     "meaning": "n. 原料, 要素, 东西, 材料, 素质, 织品, 废物, 废话；vt. 装填；vi. 狼吞虎咽",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 89
+    "seq": 91
   },
   {
     "word": "cabinet",
@@ -897,7 +917,7 @@
     "meaning": "n. 橱柜, 内阁；a. 内阁的, 细木工做的；[计] 机柜",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 90
+    "seq": 92
   },
   {
     "word": "domestic",
@@ -907,7 +927,7 @@
     "meaning": "a. 家庭的, 国内的, 驯养的；[医] 家庭的, 家用的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 91
+    "seq": 93
   },
   {
     "word": "demonstrate",
@@ -917,7 +937,7 @@
     "meaning": "vt. 示范, 证明；vi. 示威",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 92
+    "seq": 94
   },
   {
     "word": "grant",
@@ -927,7 +947,7 @@
     "meaning": "n. 授予, 授予物, 允许；vt. 允许, 承认, 授与；[计] 授权命令",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 93
+    "seq": 95
   },
   {
     "word": "investigation",
@@ -937,7 +957,7 @@
     "meaning": "n. 调查, 审查；[医] 调查, 调查研究",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 94
+    "seq": 96
   },
   {
     "word": "internal",
@@ -947,7 +967,7 @@
     "meaning": "a. 内在的, 国内的；[医] 内的, 内部的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 95
+    "seq": 97
   },
   {
     "word": "launch",
@@ -957,7 +977,7 @@
     "meaning": "n. 下水, 汽艇, 发射；vt. 使下水, 发射, 发动；vi. 起飞, 下水, 投入, 开始",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 96
+    "seq": 98
   },
   {
     "word": "consumer",
@@ -967,7 +987,7 @@
     "meaning": "n. 消费者；[经] 消费者, 用户",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 97
+    "seq": 99
   },
   {
     "word": "improvement",
@@ -975,26 +995,6 @@
     "phoneticUS": "/im'pru:vmәnt/",
     "pos": "",
     "meaning": "n. 进步, 改善, 利用；[医] 改善, 好转, 进步",
-    "level": 1,
-    "source": "ecdict-ielts",
-    "seq": 98
-  },
-  {
-    "word": "housing",
-    "phoneticUK": "/'hausiŋ/",
-    "phoneticUS": "/'hausiŋ/",
-    "pos": "",
-    "meaning": "n. 遮盖, 住房供给, 居留(处), 房屋, 装饰；[化] 外壳",
-    "level": 1,
-    "source": "ecdict-ielts",
-    "seq": 99
-  },
-  {
-    "word": "discipline",
-    "phoneticUK": "/'disiplin/",
-    "phoneticUS": "/'disiplin/",
-    "pos": "",
-    "meaning": "n. 训练, 纪律；vt. 训练, 惩罚",
     "level": 1,
     "source": "ecdict-ielts",
     "seq": 100

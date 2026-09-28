@@ -26,7 +26,7 @@
 | 位置 | 必做 |
 |---|---|
 | **全部 15 个云函数** | 逐个重新「上传并部署：云端安装依赖」。`audio_cache` 与 `seed_audio` 有实质改动（例句分支 + 正则放宽），其余为依赖版本与超时声明统一 |
-| **词表**（3056 → **3036** 词） | 云端若已导过旧词表，**必须**先 `reset_words`（`mode:'purge'` + `confirm:'PURGE'`）再重导。⚠️ 直接跑 `seed_words` 无效——它按 `word` 去重跳过，`contracts` 这类已删除的词会留在库里 |
+| **词表**（3056 → 3041 → 3036 → **2987** 词） | 云端若已导过旧词表，**必须**先 `reset_words`（`mode:'purge'` + `confirm:'PURGE'`）再重导。⚠️ 直接跑 `seed_words` 无效——它按 `word` 去重跳过，`wheels` / `jobs` 这类已删除的词会留在库里 |
 | **云存储音频** | **无需重传**。`audio_cache` 与云存储 `audio/` 不参与 `reset_words`，同名文件重跑 `seed_audio` 会自动覆盖 |
 | **小程序前端** | 重新编译上传（`app.js` / `config.js` / `utils/*` / `pages/learn/*` 均有改动；包体已从 970KB 降到约 176KB） |
 | **环境变量** | 若曾轮换过 DeepSeek Key（旧 Key 暴露在历史代码中），需到 `enrich_word` → 配置 → 环境变量更新 `DEEPSEEK_API_KEY`；改动代码不会覆盖环境变量，**漏改则单词卡退化为只显示词表基础字段** |
@@ -178,7 +178,7 @@ openssl rand -hex 24
 
 ## 6. 导入词表（`seed_words`）
 
-词表已是仓库资产：`assets/word_lists/ielts-full.json`（**3036 词**，已做单复数同源去重 + 专名剔除）。
+词表已是仓库资产：`assets/word_lists/ielts-full.json`（**2987 词**，已做名词复数归一 + 专名剔除）。
 
 也可自己重新抽词（需要 ECDICT 的 `ecdict.csv`，约 63MB）：
 
@@ -188,18 +188,18 @@ python scripts/build_wordlist.py --src /tmp/ecdict.csv \
   --out assets/word_lists/ielts-full.json
 ```
 
-> 脚本会输出完整筛选漏斗（扫描行数 → 排除基础词 → 剔除专名 → 去重冗余复数 → 实收词数）。
-> 三道清洗规则都以常量形式放在脚本里，**重跑即复现**，不需要手工改词表：
+> 脚本会输出完整筛选漏斗（扫描行数 → 排除基础词 → 剔除专名 → 复数归一 → 实收词数）。
+> 三条清洗规则都以常量形式放在脚本里，**重跑即复现**，不需要手工改词表：
 > 1. `--exclude-tags zk,gk` —— 中考/高考基础词不入表
 > 2. `PROPER_NOUNS` —— 地名/机构/姓氏剔除（`york` / `sydney` / `forbes` / `tours` / `wollongong`），判据为「中文释义括号里的地名·姓氏标记」或「英文释义里的地名·王室指式」，实测 0 误报
-> 3. `KEEP_PLURAL` —— 冗余复数去重，保留 `economics` / `odds` / `pants` 这类语义已分化的独立词条
+> 3. **名词复数归一** —— 纯复数条目一律不作为词条：原形已在表内或是基础词的丢弃（`wheels` / `jobs` / `universities`），原形查得到的提升为原形（`utensils` → `utensil`）；`KEEP_PLURAL` 保留语义已分化的独立词条（`economics` / `odds` / `pants` / `bacteria` …）
 
 导入分三步：
 
 **① 打包入参**（本地，一次生成全部批次）
 
 ```bash
-python scripts/pack_words.py                     # 默认 200 词/批 → 约 16 批，每批约 38KB
+python scripts/pack_words.py                     # 默认 200 词/批 → 15 批，每批约 38KB
 python scripts/pack_words.py --batch-size 100    # 控制台入参框卡顿时改小
 python scripts/pack_words.py --wordlist assets/word_lists/pilot-100.json   # 100 词试点
 ```

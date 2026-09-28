@@ -26,10 +26,14 @@ build_wordlist.py —— 从 ECDICT 抽取雅思词表
 输出结构（数组，可直接作为 seed_words 的 words 入参）：
   [{ "word","phoneticUK","phoneticUS","pos","meaning","seq","level","source" }]
 
-三道清洗（顺序执行，规则都在下方常量里，重跑即复现）：
-  1. 基础词      —— 带 zk/gk 标签的中考/高考词不入表（--exclude-tags 控制）
-  2. 冗余复数     —— 单数已在表内的规则复数丢弃（KEEP_PLURAL 为例外）
-  3. 专名        —— 地名/机构/姓氏剔除（判据见 PROPER_NOUNS 上方说明）
+清洗（顺序执行，规则都在下方常量里，重跑即复现）：
+  1. 基础词       —— 带 zk/gk 标签的中考/高考词不入表（--exclude-tags 控制）
+  2. 名词复数归一 —— 纯复数条目一律不作为词条，按原形处置（KEEP_PLURAL 为例外）：
+                      · 原形已在表内  → 丢弃（冗余复数）
+                      · 原形是基础词  → 丢弃（不因复数把 wheel / job / light 拖回表）
+                      · 原形查得到    → 提升为原形（utensils → utensil）
+  3. 专名         —— 地名/机构/姓氏剔除（判据见 PROPER_NOUNS 上方说明）
+  判据取自 ECDICT 自身字段，不比拼字符串，详见 pure_plural_lemma() 的说明。
 
 文件名刻意不带词数：词表规模会随 ECDICT 版本与筛选规则变化（曾出现
 "ielts-5000.json 里其实只有 3056 词"的名不副实问题），用具名反而要反复改名。
@@ -48,13 +52,14 @@ import sys
 # ^[A-Za-z][A-Za-z'\u2019\- ]{0,39}$ —— 这里保持一致，避免出现"有词无音"。
 WORD_RE = re.compile(r"^[A-Za-z][A-Za-z'\u2019\- ]{0,39}$")
 
-# 复数形式已是**独立词条**的词：语义与单数明显不同，单复数必须都保留。
-# 不在这个名单里的规则复数（opportunities / contracts / tunnels …）会被丢弃 ——
-# 复数拼写可由单数推导，对雅思学习没有增量价值，却会挤占词表额度、让列表显得臃肿。
-# ⚠️ 新增例外前先确认：该复数是否真的不可由单数推得语义。
+# 形似复数、实为**独立词条**的词：单复数必须都保留，不参与「名词复数归一」。
+# 不在这个名单里的纯复数条目会被丢弃或提升为原形（见 pure_plural_lemma）——
+# 复数拼写可由单数推导，对雅思学习没有增量价值，却会挤占学习队列、让列表显得臃肿。
+# ⚠️ 新增例外前先确认：该复数的语义/用法是否真的无法由单数推得。
 KEEP_PLURAL = {
-    # 学科名词
+    # 学科名词（-ics 结尾，本身即单数）
     "economics", "statistics", "ethics", "politics", "physics", "mathematics",
+    "linguistics", "psycholinguistics",
     # 语义分化
     "odds",        # 单数 odd 是"奇怪的"，复数 odds 是"几率"
     "amends",      # make amends 是固定搭配，单数 amend 是动词"修正"
@@ -72,35 +77,62 @@ KEEP_PLURAL = {
     "regards",     # 书信固定用语
     "terms",       # 复数可指"条款/交情"
     "ways",        # 复数可指"船台/习惯"
-    # 单复数同形，避免被 -s 规则误删
+    "bacteria",    # 通常按集合名词整体使用（同 data）；原形 bacterium 是罕见技术词
+    # 单复数同形，避免被归一规则误删
     "news", "series", "species",
 }
 
 
-def singular_forms(word: str) -> list:
-    """推测一个以 s 结尾的词的规则单数形式（-ies / -es / -s 三条规则）。
+# ---------------------------------------------------------------------------
+# 名词复数归一（word-family normalization）
+#
+# 为什么必须做：ECDICT 的词形标记不完整——`ielts` 标签打在**复数**上、原形反而被
+# 当基础词排除的情况很多。结果是词表尾部堆了一整簇「只有复数、没有单数」的条目
+# （wheels / visas / utensils / universities …），对学习者毫无意义：该先学 wheel、
+# utensil，而不是把复数形式当成一个独立词汇去背。
+#
+# 判据直接取 ECDICT 的 `exchange` 字段，不做字符串猜测：
+#   · exchange 的 `0:` 键是**原形**，指向别的词即说明本条目是变形词
+#   · `1:` 键是变形类型（s=复数 / 3=三单 / d=过去分词 / i=现在分词 / r=比较级 / t=最高级 …）
+# 两个条件缺一不可：
+#   1. `0:` 指向别的词 —— `0:` 指向自身的（outskirts / tweezers / stairs / surroundings）
+#      是英语里天然只有复数形的名词，ECDICT 以自身为原形，必须放行。
+#   2. 变形标记只有 s / 3 —— 排除同样带 `0:` 但属于独立词条的词：
+#      best(0:good,t) / further(0:far,r) / advanced(0:advance,dp) / banking(0:bank,i) /
+#      sophisticated(0:sophisticate,dp) / regarding(0:regard,i) / provided(0:provide,dp)。
+#      早期用「以 s 结尾 + 去 s 的单数存在」这种字符串规则，既漏（wheels 抓到了但
+#      漏掉 tours）又误（ambitious / crisis / series / campus / debris 全被误判）；
+#      若粗暴地「一切变形词都丢」，则会连带杀掉 161 个合法词条（见到上方那串即可知）。
+# ---------------------------------------------------------------------------
+PLURAL_MARKS = frozenset("s3")      # exchange 中代表「复数 / 三单」的变形标记
 
-    只做规则还原，不做词典查询 —— 因此调用方必须用「候选集中确实存在该单数」
-    来兜底，避免把 business / access 这类本身以 s 收尾的词误判。
+
+def parse_exchange(ex: str):
+    """解析 ECDICT 的 exchange 字段 → (原形, 变形标记集合)。
+
+    形如 `p:toured/d:toured/i:touring/3:tours`；键 `0` 特殊，值是原形。
     """
-    out = []
-    if word.endswith("ies") and len(word) > 4:
-        out.append(word[:-3] + "y")     # studies -> study
-    if word.endswith("es") and len(word) > 3:
-        out.append(word[:-2])           # boxes -> box
-        out.append(word[:-1])           # cases -> case
-    if word.endswith("s") and len(word) > 2 and not word.endswith("ss"):
-        out.append(word[:-1])           # tunnels -> tunnel
-    return out
+    lemma, marks = None, set()
+    for seg in (ex or "").split("/"):
+        if ":" not in seg:
+            continue
+        key, val = seg.split(":", 1)
+        key, val = key.strip(), val.strip().lower()
+        if key == "0":
+            lemma = val or None
+        else:
+            marks.update(ch for ch in val if ch.isalnum())
+    return lemma, marks
 
 
-def is_redundant_plural(word: str, vocabulary: set) -> bool:
-    """该词是否是「同源单数已在词表中」的冗余复数。"""
-    if word in KEEP_PLURAL:
-        return False
-    if not word.endswith("s"):
-        return False
-    return any(s in vocabulary for s in singular_forms(word))
+def pure_plural_lemma(word: str, exchange: str):
+    """该词若是「纯名词复数变形」，返回其单数原形；否则返回 None。"""
+    lemma, marks = parse_exchange(exchange)
+    if not lemma or lemma == word:
+        return None
+    if not marks or not marks <= PLURAL_MARKS:
+        return None
+    return lemma
 
 
 # ---------------------------------------------------------------------------
@@ -111,7 +143,7 @@ def is_redundant_plural(word: str, vocabulary: set) -> bool:
 # ——york 曾被词频排到第 48 位（因为 New York 语料频次极高），等于让用户很早就
 # 学到一个人名/地名。
 #
-# 判据取自 ECDICT 自身的两个字段（实测在 3041 词上命中 5 个、**0 误报**）：
+# 判据取自 ECDICT 自身的两个字段（在合格候选池上命中 5 个、**0 误报**）：
 #   A. 中文释义的括号注释是「地名/姓氏/王朝」类标记
 #      → 悉尼（澳大利亚港市）、福布斯（美国出版及媒体集团）、图尔斯（姓氏）
 #   B. 英文释义是地名 / 王室的「指认句式」
@@ -286,15 +318,62 @@ def main():
                 "level": 1,
                 "source": f"ecdict-{args.tag}",
                 "_freq": freq_key(r, sort_order),
+                "_exchange": r.get("exchange") or "",   # 供后续复数归一使用，输出前丢弃
             })
 
-    # 单复数同源去重（见 KEEP_PLURAL / is_redundant_plural 的说明）
+    # --- 名词复数归一（见 KEEP_PLURAL / pure_plural_lemma 的说明）----------------
     qualified = len(rows)
     vocabulary = {r["word"] for r in rows}
-    dropped_plural = [r["word"] for r in rows if is_redundant_plural(r["word"], vocabulary)]
+
+    plural_of = {}
+    for r in rows:
+        lemma = pure_plural_lemma(r["word"], r.pop("_exchange", ""))
+        if lemma:
+            plural_of[r["word"]] = lemma
+
+    # 原形不在候选池内的，需要它的音标/释义/标签 → 再扫一遍源文件取原形行
+    needs = {lem for lem in plural_of.values() if lem not in vocabulary}
+    lemma_meta = {}
+    if needs:
+        with open(args.src, "r", encoding="utf-8", errors="replace", newline="") as f:
+            for r in csv.DictReader(f):
+                key = (r.get("word") or "").strip().lower()
+                if key in needs and key not in lemma_meta:
+                    lemma_meta[key] = r
+
+    dropped_plural, promoted, used_lemma = [], {}, set()
+    for r in rows:
+        word = r["word"]
+        lemma = plural_of.get(word)
+        if not lemma or word in KEEP_PLURAL:
+            continue
+        meta = lemma_meta.get(lemma)
+        # 不具备「提升为原形」条件的一律丢弃：
+        #   原形已在表内（冗余复数）/ 原形是基础词（不该因复数把 wheel 拖回表）
+        #   / 原形查不到 / 已在本次提升中用掉 / 原形没有音标或释义
+        if (lemma in vocabulary or meta is None or lemma in used_lemma
+                or (excl and set((meta.get("tag") or "").lower().split()) & set(excl))
+                or not norm_phonetic(meta.get("phonetic"))
+                or not norm_meaning(meta.get("translation"))):
+            dropped_plural.append(word)
+            continue
+        used_lemma.add(lemma)
+        promoted[word] = lemma
+
     if dropped_plural:
         dropped_set = set(dropped_plural)
         rows = [r for r in rows if r["word"] not in dropped_set]
+    for r in rows:                        # 提升：改用原形自己的字段与词频参与排序
+        lemma = promoted.get(r["word"])
+        if not lemma:
+            continue
+        meta = lemma_meta[lemma]
+        r["word"] = lemma
+        r["phoneticUK"] = r["phoneticUS"] = norm_phonetic(meta.get("phonetic"))
+        r["pos"] = norm_pos(meta.get("pos"))
+        r["meaning"] = norm_meaning(meta.get("translation"))
+        r["_freq"] = freq_key(meta, sort_order)      # 按原形词频落位，而非沿用复数的词位
+        r["source"] = f"ecdict-{args.tag}-lemma"     # 便于区分「由复数提升」的词条
 
     # 按词频排序（最常用优先），同名去重
     seen, picked = set(), []
@@ -309,6 +388,7 @@ def main():
     out = []
     for i, r in enumerate(picked, 1):
         r.pop("_freq", None)
+        r.pop("_exchange", None)
         r["seq"] = i
         out.append(r)
 
@@ -335,11 +415,15 @@ def main():
     stale = sorted(PROPER_NOUNS - set(dropped_proper))
     if stale:
         print(f"    ⚠️ PROPER_NOUNS 中未命中判据的条目（请复核）：{', '.join(stale)}")
-    print(f"  实收：{qualified} − 单复数同源去重 {len(dropped_plural)} = {qualified - len(dropped_plural)} 词")
+    print(f"  实收：{qualified} − 复数归一丢弃 {len(dropped_plural)} = {qualified - len(dropped_plural)} 词")
+    if promoted:
+        preview = ", ".join(f"{p}→{l}" for p, l in sorted(promoted.items())[:10])
+        print(f"    复数提升为原形（{len(promoted)} 个）：{preview}"
+              f"{' ...' if len(promoted) > 10 else ''}")
     if dropped_plural:
-        preview = ", ".join(dropped_plural[:12])
-        print(f"    去重明细（{len(dropped_plural)} 个冗余复数）：{preview}"
-              f"{' ...' if len(dropped_plural) > 12 else ''}")
+        preview = ", ".join(sorted(dropped_plural)[:14])
+        print(f"    丢弃的纯复数（{len(dropped_plural)} 个）：{preview}"
+              f"{' ...' if len(dropped_plural) > 14 else ''}")
     print(f"按词频取前 {len(out)} 词 → {args.out}")
     if args.limit and len(out) < args.limit:
         print(f"  ℹ️ 只有 {len(out)} 词达标（不足 {args.limit}）——ECDICT 中符合条件的就是这么多")

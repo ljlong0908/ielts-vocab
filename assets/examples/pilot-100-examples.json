@@ -670,6 +670,21 @@
     "etymology": "源自拉丁语 significare（表示、意味着），由 signum（标记）和 facere（做）组合而成，引申为“有意义的、重要的”。"
   },
   {
+    "word": "element",
+    "example": {
+      "en": "Trust is a key element in any successful business partnership.",
+      "cn": "信任是任何成功商业伙伴关系中的关键要素。"
+    },
+    "roots": [
+      {
+        "part": "element-",
+        "type": "root",
+        "meaning": "基本构成，初始字母"
+      }
+    ],
+    "etymology": "源自拉丁语 elementum，意为“基本构成、初始原理”，13世纪进入英语，指事物的基本组成部分。"
+  },
+  {
     "word": "industrial",
     "example": {
       "en": "The industrial revolution transformed Britain into a manufacturing powerhouse.",
@@ -1831,6 +1846,15 @@
     "etymology": "源自拉丁语 volumen，指书卷，来自 volvere（卷）。因古书是卷起来的，后引申为体积、容量、音量等。"
   },
   {
+    "word": "threat",
+    "example": {
+      "en": "Climate change poses a serious threat to coastal cities.",
+      "cn": "气候变化对沿海城市构成严重威胁。"
+    },
+    "roots": [],
+    "etymology": "源自古英语 thrēat（压迫、威胁），与德语 Drohung 同源，本义为“压迫、强迫”。"
+  },
+  {
     "word": "legislation",
     "example": {
       "en": "New legislation on data protection will affect all tech companies.",
@@ -2041,50 +2065,5 @@
       }
     ],
     "etymology": "源自拉丁语 improbare（使更好），由 in-（使）和 probare（证明、检验）构成，后经古法语进入英语，指使事物变得更好。"
-  },
-  {
-    "word": "housing",
-    "example": {
-      "en": "The government must invest more in affordable housing for low-income families.",
-      "cn": "政府必须为低收入家庭增加经济适用房的投资。"
-    },
-    "roots": [
-      {
-        "part": "hous-",
-        "type": "root",
-        "meaning": "房屋，住所"
-      },
-      {
-        "part": "-ing",
-        "type": "suffix",
-        "meaning": "名词后缀，表示行为、状态或集合"
-      }
-    ],
-    "etymology": "源自古英语 hūs（房屋），加 -ing 后缀构成集合名词，指房屋的总称或供给。"
-  },
-  {
-    "word": "discipline",
-    "example": {
-      "en": "Academic success requires discipline and consistent effort.",
-      "cn": "学业成功需要纪律和持续的努力。"
-    },
-    "roots": [
-      {
-        "part": "dis-",
-        "type": "prefix",
-        "meaning": "分开，离"
-      },
-      {
-        "part": "-cipl-",
-        "type": "root",
-        "meaning": "抓，取（来自拉丁语 capere）"
-      },
-      {
-        "part": "-ine",
-        "type": "suffix",
-        "meaning": "名词或动词后缀"
-      }
-    ],
-    "etymology": "源自拉丁语 disciplina，来自 discere（学习），与 discipulus（学生）相关，原指教导、学习，后引申为训练和纪律。"
   }
 ]
