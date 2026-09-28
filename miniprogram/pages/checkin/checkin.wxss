@@ -1,0 +1,69 @@
+.ck {
+  text-align: center;
+  padding: 96rpx 24rpx 64rpx;
+}
+
+.ck-check {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 50%;
+  background: #e1f5ee;
+  margin: 0 auto 40rpx;
+  position: relative;
+}
+
+.ck-check::after {
+  content: '';
+  position: absolute;
+  left: 46rpx;
+  top: 34rpx;
+  width: 34rpx;
+  height: 62rpx;
+  border-right: 10rpx solid #1d9e75;
+  border-bottom: 10rpx solid #1d9e75;
+  transform: rotate(45deg);
+}
+
+.ck-title {
+  font-size: 44rpx;
+  font-weight: 500;
+}
+
+.ck-sub {
+  margin-top: 12rpx;
+}
+
+.ck-streak {
+  margin-top: 64rpx;
+}
+
+.ck-streak-num {
+  font-size: 120rpx;
+  font-weight: 500;
+  color: #185fa5;
+  line-height: 1.1;
+}
+
+.ck-streak-label {
+  color: #646a73;
+  font-size: 26rpx;
+}
+
+.ck-total {
+  margin-top: 16rpx;
+}
+
+.btn.primary {
+  margin-top: 32rpx;
+}
+
+/* 分享按钮：button 组件自带默认样式，这里重置后与 .btn 外观保持一致 */
+.share-btn {
+  margin-top: 24rpx;
+  padding: 0;
+  font-weight: normal;
+}
+
+.share-btn::after {
+  border: none;
+}

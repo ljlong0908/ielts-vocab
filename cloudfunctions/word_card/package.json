@@ -1,0 +1,9 @@
+{
+  "name": "word_card",
+  "version": "1.0.0",
+  "description": "获取单词卡，含 AI 补全与缓存",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "timeout": 30,
+  "triggers": [
+    {
+      "name": "enrichRetryTimer",
+      "type": "timer",
+      "config": "0 0 3 * * * *"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="loading">加载中</view>
+
+  <block wx:else>
+    <view class="card hero">
+      <view class="between">
+        <view class="stat">
+          <view class="stat-num">{{summary.streak}}</view>
+          <view class="muted">连续打卡（天）</view>
+        </view>
+        <view class="stat stat-right">
+          <view class="stat-num">{{summary.totalLearned}}</view>
+          <view class="muted">累计学习（词）</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="between">
+        <view class="title">今日进度</view>
+        <view class="tag">{{summary.learnedToday}} / {{summary.dailyGoal}}</view>
+      </view>
+      <view class="progress">
+        <view class="progress-bar" style="width: {{percent}}%"></view>
+      </view>
+      <view class="hint progress-hint">{{statusText}}</view>
+    </view>
+
+    <view class="btn primary cta" bindtap="onStart">{{ctaText}}</view>
+
+    <view class="grid">
+      <view class="grid-item" bindtap="goStats">
+        <view class="grid-title">统计</view>
+        <view class="hint">打卡日历</view>
+      </view>
+      <view class="grid-item" bindtap="goWrong">
+        <view class="grid-title">错题本</view>
+        <view class="hint">易错单词</view>
+      </view>
+      <view class="grid-item" bindtap="goProfile">
+        <view class="grid-title">我的</view>
+        <view class="hint">目标设置</view>
+      </view>
+    </view>
+  </block>
+</view>

@@ -1,0 +1,106 @@
+/**
+ * build_questions —— 生成练习题（双向题型 1:1 混合）
+ *
+ * 题型：cn_option 中选项（题干英文 → 选项中文）
+ *       en_option 英选中（题干中文 → 选项英文）
+ *
+ * 说明：题目连同 answerIndex 一起保存在 daily_plans 服务端字段中，
+ *       下发给客户端的题目已剔除答案，判题由 submit_answer 在服务端完成。
+ */
+const cloud = require('wx-server-sdk')
+
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
+const db = cloud.database()
+const _ = db.command
+const plans = db.collection('daily_plans')
+const words = db.collection('words')
+
+function dateStr(offset = 0) {
+  const d = new Date(Date.now() + 8 * 3600 * 1000 + offset * 86400000)
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`
+}
+
+function shuffle(arr) {
+  const a = arr.slice()
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+function sample(arr, n) {
+  return shuffle(arr).slice(0, n)
+}
+
+function buildQuestion(w, type, pool, idx) {
+  const isCn = type === 'cn_option'
+  const correctText = isCn ? w.meaning : w.word
+  const candidates = pool.filter((p) => {
+    const t = isCn ? p.meaning : p.word
+    return t && t !== correctText
+  })
+  const distractors = sample(candidates, 3).map((p) => (isCn ? p.meaning : p.word))
+  const options = shuffle([correctText].concat(distractors))
+  return {
+    id: `${w._id}_${idx}`,
+    wordId: w._id,
+    type,
+    stem: isCn ? w.word : w.meaning,
+    phonetic: isCn ? w.phoneticUS || w.phoneticUK || '' : '',
+    options,
+    answerIndex: options.indexOf(correctText),
+    passed: false,
+    wrong: false
+  }
+}
+
+/** 剔除答案后再下发 */
+function sanitize(queue) {
+  return queue.map((q) => ({
+    id: q.id,
+    wordId: q.wordId,
+    type: q.type,
+    stem: q.stem,
+    phonetic: q.phonetic,
+    options: q.options
+  }))
+}
+
+exports.main = async (event = {}) => {
+  const { OPENID } = cloud.getWXContext()
+  const { phase = 'practice' } = event
+  const today = dateStr(0)
+
+  try {
+    const planRes = await plans.where({ _openid: OPENID, date: today }).get()
+    const plan = planRes.data[0]
+    if (!plan) return { code: -1, message: '请先初始化当日计划' }
+
+    const key = phase === 'review' ? 'reviewQueue' : 'practiceQueue'
+    if (Array.isArray(plan[key]) && plan[key].length) {
+      return { code: 0, data: { questions: sanitize(plan[key]), reused: true } }
+    }
+
+    const wordIds = phase === 'review' ? plan.reviewWordIds || [] : plan.newWordIds || []
+    if (!wordIds.length) return { code: 0, data: { questions: [], reused: false } }
+
+    const target = (await words.where({ _id: _.in(wordIds) }).get()).data
+    if (!target.length) return { code: 0, data: { questions: [], reused: false } }
+
+    let pool = (await words.where({ _id: _.nin(wordIds) }).limit(300).get()).data
+    if (pool.length < 3) pool = (await words.limit(300).get()).data
+
+    const queue = target.map((w, i) =>
+      buildQuestion(w, i % 2 === 0 ? 'cn_option' : 'en_option', pool, i)
+    )
+    const mixed = shuffle(queue)
+
+    await plans.doc(plan._id).update({ data: { [key]: mixed, updatedAt: new Date() } })
+
+    return { code: 0, data: { questions: sanitize(mixed), reused: false } }
+  } catch (e) {
+    return { code: -1, message: (e && e.message) || 'BUILD_QUESTIONS_FAILED' }
+  }
+}

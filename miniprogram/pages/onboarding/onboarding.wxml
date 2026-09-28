@@ -1,0 +1,21 @@
+<view class="page ob">
+  <view class="ob-head">
+    <view class="ob-title">每天背几个单词？</view>
+    <view class="muted">目标要小到不会放弃。之后可以随时修改。</view>
+  </view>
+
+  <view
+    wx:for="{{options}}"
+    wx:key="*this"
+    class="ob-option {{selected === item ? 'active' : ''}}"
+    data-value="{{item}}"
+    bindtap="choose"
+  >
+    <view class="ob-option-num">{{item}}</view>
+    <view class="ob-option-text">个单词 / 天</view>
+  </view>
+
+  <view class="btn primary ob-btn {{submitting ? 'disabled' : ''}}" bindtap="confirm">
+    开始学习
+  </view>
+</view>

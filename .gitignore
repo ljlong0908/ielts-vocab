@@ -1,0 +1,36 @@
+# 依赖
+node_modules/
+
+# AI 协作工作区（含内部笔记：本机路径、主体策略、安全加固细节，不公开）
+.workbuddy/
+
+# 微信开发者工具私有配置（含个人设置，不建议入库）
+project.private.config.json
+miniprogram/project.private.config.json
+
+# 环境变量文件（云函数密钥请在云开发控制台配置，勿写成文件入库）
+.env
+.env.local
+.env.*.local
+
+# 编辑器 / IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+npm-debug.log*
+
+# 构建产物（本地生成的发音音频、seed_audio 入参等，不入库）
+build/
+
+# Python（scripts/ 离线工具链）
+__pycache__/
+*.py[cod]
+.venv/
+venv/

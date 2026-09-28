@@ -1,0 +1,535 @@
+# 雅词本 — 项目结构与业务逻辑说明
+
+> **文档用途**：供 AI 或其他协作者快速理解本项目的**目录结构**与**业务逻辑**，作为上下文注入。
+> **权威性**：本文档以**源码为准**（`miniprogram/` + `cloudfunctions/`）。`README.md`、`specs/` 为设计阶段产出，部分内容（发音方案、出词策略、字段命名）已与代码不一致，**以本文档为准**。
+> **最后核对**：2026-09-28（本轮完成死代码清理、数据表初始化函数、部署文档，详见 §11）。
+
+---
+
+## 1. 项目概览
+
+| 项 | 值 |
+|---|---|
+| 产品名 | 雅词本（工程代号 `ielts-vocab`） |
+| 形态 | 微信小程序（原生，非 uni-app/Taro） |
+| 定位 | 雅思词汇**每日学习闭环**工具 |
+| 核心闭环 | 微信静默登录 → 设每日目标(5/10) → **先复习旧词** → 学今日新词 → 做题 → **全对才打卡** → 次日循环 |
+| 后端 | 微信云开发 CloudBase（**15 个云函数** + 7 个文档型集合 + 云存储），无自建服务器 |
+| AI 能力 | DeepSeek（`deepseek-chat`）生成例句 / 词根拆解 / 词源演变 |
+| 发音 | **本地 Kokoro-82M（Apache-2.0）离线预生成 → 云存储**，运行时零 TTS 外呼；dictvoice 仅作词表外单词兜底 |
+| 部署 | 见 `docs/deploy.md`（从零到可用的唯一权威清单） |
+
+**一句话业务本质**：每天先清「复习债」（昨日及所有到期的未掌握词，全对才解锁新词），再学当日新词，做完题全答对才能打卡；次日待复习的单词 = 昨天新学的单词。
+
+---
+
+## 2. 技术栈与架构
+
+```
+┌──────────────────────────────────────────────┐
+│ 小程序端 (miniprogram/)                        │
+│   页面层 WXML/WXSS  +  逻辑层 JS               │
+│   utils/api.js  →  wx.cloud.callFunction       │
+│   utils/audio.js →  三层缓存 + InnerAudioContext│
+│   无第三方 UI 库（design 提过 Vant，未引入）    │
+└───────────────────────┬──────────────────────┘
+                        │ callFunction / 云存储 fileID
+┌───────────────────────▼──────────────────────┐
+│ 微信云开发 CloudBase                           │
+│   云函数 (cloudfunctions/, Node.js)            │
+│   云数据库（文档型，7 个集合）                  │
+│   云存储（音频 audio/{type}/{slug}.mp3、s_{hash}.mp3）│
+└───────┬───────────────────────┬───────────────┘
+        │ HTTPS                 │ openapi
+┌───────▼──────────┐   ┌────────▼──────────────┐
+│ DeepSeek API      │   │ security.msgSecCheck  │
+│ api.deepseek.com  │   │ 内容安全（AI 内容入库前）│
+└───────────────────┘   └───────────────────────┘
+        ▲
+        │ HTTPS（**仅词表外单词兜底**；主音源是云存储里的本地预生成音频）
+┌───────┴──────────┐
+│ 有道 dictvoice    │
+│ dict.youdao.com   │
+└───────────────────┘
+```
+
+**分层职责**：
+- **前端**：只做渲染、交互、云函数调用、音频播放；不持有任何密钥；不直接写数据库。
+- **云函数**：所有写操作、AI 调用、内容安全、并发锁、判题都在服务端完成。
+- **云数据库**：业务数据存储 + **AI 生成内容缓存**（`words.enriched`）。
+- **云存储**：音频缓存（跨用户共享）。
+
+---
+
+## 3. 目录结构（文件级）
+
+```
+ielts-vocab/
+├── project.config.json           # 开发者工具项目配置（含 appid、miniprogramRoot、cloudfunctionRoot）
+├── project.private.config.json   # 开发者工具私有配置（不入库）
+├── .gitignore                    # 忽略 node_modules / 私有配置 / .env / build 等
+├── LICENSE                       # MIT
+├── README.md                     # 上手文档
+├── specs/ielts-vocab-miniprogram/
+│   ├── requirements.md           # PRD（EARS 验收标准 R1–R10）——范围基准，仍然有效
+│   └── design.md                 # ⚠️ 历史稿 v0.2（提到 Vant / 同声传译插件，均已不用），以本文档为准
+├── docs/
+│   ├── deploy.md                 # ★ 部署与上线步骤（从零到可用）
+│   ├── intro.md                  # 小程序简介（含 ≤120 字后台版本）
+│   ├── 隐私保护指引.md            # 隐私合规文案
+│   └── project-spec.md           # ★ 本文档
+├── assets/
+│   ├── brand/                    # 品牌素材（头像 / 图标源文件；在 miniprogramRoot 之外，不进小程序包）
+│   ├── word_lists/               # 词表源文件（ECDICT 抽取结果 + 其 MIT 许可证副本）
+│   └── examples/                 # 离线生成的例句 JSON（词表级资产，随仓库保留）
+├── scripts/                      # ★ 离线工具链（不进小程序包、不进云函数）
+│   ├── build_wordlist.py         # 从 ECDICT 抽雅思词表 → assets/word_lists/*.json
+│   ├── gen_audio.py              # Kokoro 合成**单词**发音（默认只做美音）→ build/audio/us/*.mp3
+│   ├── gen_examples.py           # DeepSeek 离线生成例句 → assets/examples/*-examples.json
+│   ├── gen_sentence_audio.py     # Kokoro 合成**例句**发音 → build/sentence_audio/us/s_{hash}.mp3
+│   ├── install_spacy_model.py    # 装 en_core_web_sm（不在 PyPI，走 HF 镜像）
+│   ├── make_audition_page.py     # 本地预检 + 生成音频试听页（单词/例句通用）→ build/audition*.html
+│   ├── pack_audio.py             # 打包成 seed_audio 的入参（分批 base64，单词/例句通用）
+│   ├── fill_token.py             # 批量把 batch-*.json 的 __ADMIN_TOKEN__ 换成真实密钥
+│   └── requirements.txt
+├── miniprogram/                  # 小程序前端根（miniprogramRoot）
+│   ├── app.js                    # 启动：仅 wx.cloud.init（不缓存用户态，由各页面按需拉取）
+│   ├── app.json                  # 页面注册、窗口样式（无插件声明）
+│   ├── app.wxss                  # 全局样式
+│   ├── config.js                 # ENV_ID / DAILY_GOAL_OPTIONS / TTS_LANG / 云函数名常量 FN
+│   ├── sitemap.json
+│   ├── images/                   # 小程序内用图（暂无；自定义分享配图 share.png 放这里）
+│   ├── utils/
+│   │   ├── api.js                # 云函数调用统一封装（约定 {code,data,message}）+ 各接口快捷方法
+│   │   ├── audio.js              # 发音：三层缓存 + 整句播放（单词/例句共用 playSrc）
+│   │   └── share.js              # 分享转发统一配置（toFriend()，路径统一回首页）
+│   └── pages/
+│       ├── index/                # 首页：今日进度、streak、入口；首次未 onboarded → 跳 onboarding
+│       ├── onboarding/           # 首次设置每日目标 5/10
+│       ├── learn/                # 单词卡逐张学习（单词 + 例句发音均已启用，见 7.9）
+│       ├── practice/             # 练习（review / practice 两阶段共用）
+│       ├── checkin/              # 打卡结果页（进入即调 finishCheckin）
+│       ├── stats/                # 统计 + 打卡日历
+│       ├── wrongbook/            # 错题本
+│       └── profile/              # 我的 / 目标设置 / 入口
+└── cloudfunctions/               # 云函数根（cloudfunctionRoot）
+    ├── user_profile/             # 登录 + 设置目标
+    ├── home_summary/             # 首页聚合
+    ├── today_flow/               # 当日流程状态编排（前端唯一状态来源）
+    ├── start_new_words/          # 幂等生成当日新词队列（只取 audioReady=true 的词）
+    ├── word_card/                # 单词卡（触发 AI 补全 + 返回缓存）
+    ├── build_questions/          # 生成双向题型题目（答案留服务端）
+    ├── submit_answer/            # 服务端判题 + 复习推进
+    ├── finish_checkin/           # 打卡（幂等）+ 注册复习池（wordCursor 按 seq 推进）
+    ├── stats/                    # 统计 + 错题
+    ├── audio_cache/              # 音频读缓存：查 audio_cache 集合命中即返回 fileID
+    ├── enrich_word/              # AI 内容补全（乐观锁 + 定时重试）
+    ├── seed_words/               # 词表导入（管理用，按 word 去重跳过、seq 续号）
+    ├── seed_audio/               # 音频入库：上传云存储 + 写索引 + 点亮 audioReady（管理用）
+    ├── reset_words/              # 词库重置（管理用，⚠️ 破坏性，带 preview 预检 + confirm 二次确认）
+    └── init_db/                  # ★ 数据表体检 / 初始化（管理用，幂等；顺带返回手工索引清单）
+```
+
+---
+
+## 4. 数据模型（云数据库集合，共 7 个）
+
+> 云开发文档型数据库（类 MongoDB）。所有集合字段如下为**代码实际写入**的字段。
+> 建表 / 建索引 / 安全规则的完整清单见 `docs/deploy.md` 第 5 节（也可直接调 `init_db` 云函数一键建表并取回索引清单）。
+
+### 4.1 `users` — 用户
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `_openid` | string | 微信用户唯一标识（逻辑主键，建议唯一索引） |
+| ~~`nickname` / `avatarUrl`~~ | — | **不收集**（未接入微信头像/昵称授权，前端不调 `getUserProfile`，源码中已注释）。如后续新增个人主页功能再恢复 |
+| `dailyGoal` | number | 每日新词数，`5` 或 `10`，默认 5 |
+| `streak` | number | 连续打卡天数 |
+| `lastCheckinDate` | string | 最近打卡日 `YYYY-MM-DD` |
+| `totalLearned` | number | 累计学习词数 |
+| `wordCursor` | number | **出词游标**：已学到的最大 `words.seq`。打卡时取当日已学词的最大 seq 写入（**不是**按词数累加——出词条件带 `audioReady` 过滤后词可能不连续，按数量累加会错位并重复出词） |
+| `createdAt` / `updatedAt` | date | 时间戳 |
+
+### 4.2 `words` — 词库 + AI 缓存（关键表）
+| 字段 | 类型 | 来源 | 说明 |
+|---|---|---|---|
+| `word` | string | 词表 | 单词，唯一 |
+| `phoneticUK` / `phoneticUS` | string | 词表 | 英/美音标 |
+| `pos` | string | 词表 | 词性 |
+| `meaning` | string | 词表 | 中文释义 |
+| `seq` | number | 系统 | **顺序出词序号**，导入时自动续号 |
+| `audioReady` | boolean | 系统 | **发音音频是否就绪**。导入时默认 `false`，由 `seed_audio` 上传音频后置 `true`。`start_new_words` 只取 `audioReady === true` 的词，故**没有读音的词不会进入学习流程** |
+| `audioReadyAt` | date | 系统 | 音频就绪时间 |
+| `level` | number | 词表 | 难度，默认 1 |
+| `source` | string | 词表 | 来源标记，默认 `seed` |
+| `example` | object\|null | **AI** | `{ en, cn }` 例句 |
+| `roots` | array | **AI** | `[{ part, type, meaning }]`，type ∈ prefix/root/suffix |
+| `etymology` | string | **AI** | 词源演变简述 |
+| `enriched` | boolean | 系统 | 扩展内容是否已补全（**缓存命中判据**） |
+| `enrichStatus` | string | 系统 | `pending` / `generating` / `ok` / `failed` |
+| `enrichLockAt` | date\|null | 系统 | 抢锁时间，用于超时释放 |
+| `enrichedAt` | date | 系统 | 补全完成时间 |
+| `enrichError` | string | 系统 | 失败原因（排查用） |
+| `createdAt` | date | 系统 | |
+
+### 4.3 `user_words` — 用户单词学习状态（复习调度核心）
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `_openid` / `wordId` | string | 联合唯一 |
+| `status` | string | `reviewing`（待复习）/ `mastered`（已掌握） |
+| `round` | number | 复习轮次（预留 v2 升级 FSRS） |
+| `wrongCount` | number | 累计答错次数 |
+| `firstLearnedDate` | string | 首次学习日 |
+| `lastReviewDate` | string | 最近复习日 |
+| `nextReviewDate` | string | 下次复习日；mastered 时为空字符串 |
+| `createdAt` / `updatedAt` | date | |
+
+### 4.4 `daily_plans` — 每日计划（当日状态机载体）
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `_openid` / `date` | string | 联合唯一 |
+| `reviewWordIds` | array | 当日待复习词 ID（非 mastered 且 nextReviewDate ≤ 今天） |
+| `newWordIds` | array | 当日新词队列 ID |
+| `learnedIds` | array | 已完成学习的词 ID（`markLearned` 累加） |
+| `reviewQueue` | array | 复习题目（**含答案**，不下发） |
+| `practiceQueue` | array | 练习题目（**含答案**，不下发） |
+| `stage` | string | `review` / `learning` / `practice` / `practice_done` / `done` |
+| `createdAt` / `updatedAt` | date | |
+
+### 4.5 `records` — 答题记录
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `_openid` / `wordId` / `date` | string | |
+| `phase` | string | `review` / `practice` |
+| `questionType` | string | `cn_option` / `en_option` |
+| `isCorrect` | boolean | 本次是否答对 |
+| `choice` | number | 用户选择的选项下标 |
+| `createdAt` | date | |
+
+> 注意：每次提交（含答错重选）都会新增一条记录。
+
+### 4.6 `checkins` — 打卡记录
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `_openid` / `date` | string | 联合唯一 |
+| `streakAtCheckin` | number | 打卡时的连续天数 |
+| `learnedCount` | number | 当日学习词数（= newWordIds.length） |
+| `createdAt` | date | |
+
+### 4.7 `audio_cache` — 音频缓存索引（跨用户共享）
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `text` | string | 缓存键：**单词**为词本身（≤40 字符）；**例句**为整句英文（≤200 字符） |
+| `type` | number | 1=英音 / 2=美音 |
+| `fileID` | string | 云存储文件 ID |
+| `kind` | string | `word` / `sentence`，区分音频类型（由 `seed_audio` / `audio_cache` 写入） |
+| `source` | string | `preseed`（本地预生成上传） / `dictvoice`（旧兜底路径） |
+| `bytes` | number | 音频字节数（预生成路径写入，便于估算存储） |
+| `createdAt` / `updatedAt` | date | |
+
+> 建议索引：`audio_cache(text, type)` 唯一。
+> ⚠️ 例句同样以 `text` 为键（内容为整句），故该字段可能很长；不要对它做前缀查询。
+
+---
+
+## 5. 云函数契约（共 15 个）
+
+> 统一返回 `{ code: 0, data }` 成功 / `{ code: -1, message }` 失败。前端 `api.js` 依据 `code` 判定。
+> 所有函数均 `cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })`，用户身份取自 `cloud.getWXContext().OPENID`（无需前端传）。
+>
+> ⚠️ **安全前提**：云函数是**对全体小程序用户开放的接口**——任何人都能 `wx.cloud.callFunction({ name, data })` 调用任意函数，且 `data` 可任意伪造，函数名也无法在前端隐藏。因此**不能靠「前端不调用」实现安全**，每个函数都要自己校验入参/权限。当前已加固五处：`enrich_word` 的 `force`，以及 `seed_words` / `seed_audio` / `reset_words` / `init_db` 的管理密钥鉴权；另有 `audio_cache` 的入参正则兜底（见各函数头注释）。
+
+| # | 云函数 | 入参 | 出参（data） | 职责与关键逻辑 |
+|---|---|---|---|---|
+| 1 | `user_profile` | `{ action?: 'get'\|'setGoal', dailyGoal? }` | 用户对象 | 登录：按 openid 查/建用户；`setGoal` 时写 `dailyGoal`（仅接受 5 或 10） |
+| 2 | `home_summary` | `{}` | `{dailyGoal,streak,totalLearned,totalCheckins,learnedToday,stage,todayDone}` | 首页聚合。`todayDone` 判据 = 今日 checkins 存在 |
+| 3 | `today_flow` | `{}` 或 `{action:'markLearned', wordId}` | `{plan,dailyGoal,streak,totalLearned}` | **前端唯一状态来源**。首次进入创建当日 plan：有待复习→`review`，否则→`learning`；若今日已打卡则强制 `stage='done'`。`markLearned` 轻量累加 `learnedIds` |
+| 4 | `start_new_words` | `{}` | `{newWordIds,reused,exhausted}` | **幂等**生成当日新词：若 plan 已有 newWordIds 直接复用；否则按 `seq > wordCursor` **且 `audioReady === true`** 的顺序取 `dailyGoal` 个。✅ 没音频的词不会出（见 7.3） |
+| 5 | `word_card` | `{ wordId }` | 单词卡文档 + `enriching` | 读词；`enriched=false` 时**同步调用** `enrich_word` 再读一次；仍失败则返回基础字段 + `enriching:true` |
+| 6 | `build_questions` | `{ phase:'review'\|'practice' }` | `{questions,reused}` | 生成题目（**先查缓存复用**）。题型 `i%2` 交替 cn_option/en_option，再 shuffle；干扰项从**非本批**词库随机取 3 个；答案存服务端，下发前 `sanitize` 剔除 |
+| 7 | `submit_answer` | `{ phase, questionIndex, choice }` | `{correct,answerIndex,wordId,word,meaning,phaseDone}` | 服务端判题；写 `records`；推进 `user_words` 复习状态；全对时推进 `stage` |
+| 8 | `finish_checkin` | `{}` | `{already,streak,learnedCount,totalLearned}` | **幂等**打卡。前置：practiceQueue 全部 passed。写 `checkins`、更新 `streak`/`totalLearned`、**`wordCursor` 取当日已学词的最大 `seq`**（`words.where({_id: _.in(newWordIds)}).orderBy('seq','desc')`）、新词入复习池（`nextReviewDate=次日`）、`stage='done'` |
+| 9 | `stats` | `{}` | `{streak,totalLearned,dailyGoal,totalCheckins,dates[],wrongWords[]}` | 打卡日历日期列表 + 错题（`records.isCorrect=false` 去重取最近 50）+ 词条 |
+| 10 | `audio_cache` | `{ text, type, kind? }` | `{fileID,cached}` | **两类文本两种策略**。① 单词（`kind` 缺省）：查 `audio_cache` 命中直接返回；未命中下载 dictvoice → 上传云存储 → 写索引 → 返回 fileID。② 例句（`kind:'sentence'`）：**只查库，未命中直接返回 `NOT_PRESEEDED`，不调第三方也不写云存储**（整句 dictvoice 必返回 null；且在此开放「下载+写存储」等于给任意长文本开滥用口子）。**入参校验**：单词 `^[A-Za-z][A-Za-z'\u2019\- ]{0,39}$`（≤40 字符）、例句 `^[A-Za-z][^\x00-\x1F\x7F\\`]{0,199}$`（≤200 字符，**排除集**写法，见 7.8），`type` 收敛为 1/2 |
+| 11 | `enrich_word` | `{ wordId, force?, _token? }` 或定时事件 `{Type:'Timer'}` | `{enriched}` / `{locked}` / `{skipped}` | AI 补全：乐观锁 `pending→generating`，调 DeepSeek（JSON Output），`msgSecCheck` 后写回 `enriched=true`。定时任务释放超时锁 + 批量重试。**鉴权**：`force` 仅在 `_token === ADMIN_TOKEN` 时生效，否则忽略（防绕过缓存无限烧余额） |
+| 12 | `seed_words` | `{ _token, words[], offset?, limit?, startSeq? }` | `{inserted,skipped,total,nextOffset,hasMore,lastSeq}` | 词表导入。`seq` 自动续号、按 `word` 去重、支持分批。写入时 `audioReady: false`。**鉴权**：必须携带 `_token === ADMIN_TOKEN`；未配 `ADMIN_TOKEN` 时拒绝一切调用 |
+| 13 | `seed_audio` | `{ _token, items: [{ word \| kind:'sentence'+text, type, base64 }] }` | `{received,uploaded,cached,updated,marked,sentences,notInWords?,failed?}` | **音频入库**（一次调用做几件事）：① `uploadFile` 到云存储（单词 `audio/{type}/{slug}.mp3`，例句 `audio/{type}/s_{hash}.mp3`）；② upsert `audio_cache`（以文本+type 为键，存在则更新 fileID）；③ **仅单词**把 `words` 中同名词的 `audioReady` 置 `true`（分批 50 条，`where({word: _.in(chunk), audioReady: _.neq(true)})`）——例句不参与出词，故不点亮。单次 ≤80 条 / 单条 base64 ≤600KB。**鉴权**：同 `seed_words`。配套脚本：单词 `gen_audio.py`、例句 `gen_examples.py`+`gen_sentence_audio.py`，统一由 `pack_audio.py` 打包 |
+| 14 | `reset_words` | `{ _token, mode?: 'preview'\|'purge', confirm?, collections?, resetCursor?, resetStats? }` | `preview`：`{mode,before,wouldPurge,keptByDefault}`；`purge`：`{targets,removed,cursorReset,before,after,errors?}` | **词库重置（破坏性）**。用于「换词表、推倒重来」。默认清 `words` + `user_words` + `records` + `daily_plans`（后三者按 `wordId` 引用 `words._id`），并把 `users.wordCursor` 归零（否则新词从 seq 1 开始会被旧游标跳过）。**保留** `audio_cache`（按 `text` 建索引，重导可复用）与 `checkins`（不含词引用）。分批 100 条删除。**鉴权**：`_token === ADMIN_TOKEN` **且** `mode:'purge'` 时必须额外传 `confirm:'PURGE'`（双保险防误触） |
+| 15 | `init_db` | `{ _token, mode?: 'preview'\|'create', collections?: string[] }` | `{mode,total,created[],missing[],ready,collections{name:{exists,docs}},descriptions[],indexes[]}` | **数据表体检 / 初始化（幂等）**。云开发的集合必须先「存在」才能读写，否则抛 `Db not exist`；本函数用 `db.createCollection()` 建缺失集合（已存在的按 `already exist` / `-501001` 识别后跳过），`preview` 模式只体检、不写任何数据。**⚠️ 云开发 SDK 只能建集合、不能建索引**，故返回体 `indexes` 是必须在控制台手工创建的清单（含 `words` 的 `audioReady + seq` 出词关键索引）。**鉴权**：`_token === ADMIN_TOKEN`，未配置则拒绝一切调用。见 `docs/deploy.md` 第 5 节 |
+
+---
+
+## 6. 前端页面（共 8 个）
+
+| 页面 | 路径 | 数据来源（云函数） | 关键行为 |
+|---|---|---|---|
+| 首页 | `pages/index` | `home_summary` + `today_flow` | 计算进度百分比；按 `stage` 生成 CTA 文案与跳转目标；未 `onboarded` 则 redirect 到 onboarding |
+| 引导 | `pages/onboarding` | `user_profile(setGoal)` | 选 5/10 → 写目标 + `wx.setStorageSync('onboarded',true)` → reLaunch 首页 |
+| 单词卡 | `pages/learn` | `today_flow` / `start_new_words` / `word_card` / `today_flow(markLearned)` | 逐张卡片；**预取下一张**触发 AI 生成；`next()` 时 `markLearned`；最后一张跳 `practice?phase=practice`；单词/例句发音 |
+| 练习 | `pages/practice` | `build_questions` / `submit_answer` | `phase` 由 URL 参数决定；答对自动进下一题（900ms），答错标错并**禁用该选项要求重选**；答对播放发音；review 全对跳 learn，practice 全对跳 checkin |
+| 打卡 | `pages/checkin` | `finish_checkin` | 进入即打卡（幂等）；展示 streak / 当日词数 / 累计 |
+| 统计 | `pages/stats` | `stats` | 本地生成当月日历格子，标记已打卡日 |
+| 错题本 | `pages/wrongbook` | `stats`（wrongWords） | 展示错词，点击发音 |
+| 我的 | `pages/profile` | `user_profile` | 展示用户；改目标（提示「次日生效」）；统计/错题本入口 |
+
+---
+
+## 7. 核心业务逻辑
+
+### 7.1 每日闭环状态机（`daily_plans.stage`）
+
+```
+[首次进今日流程] today_flow 创建 plan
+      │
+      ├─ 有 pending review（status≠mastered 且 nextReviewDate≤今天） → stage = review
+      └─ 否则                                                   → stage = learning
+      （若今日已存在 checkins → 直接 stage = done）
+
+review ──(reviewQueue 全对)──▶ learning ──(学完 newWordIds)──▶ practice
+                                                                    │
+                                              (practiceQueue 全对)   ▼
+                                                          practice_done
+                                                                    │ finish_checkin
+                                                                    ▼
+                                                                  done
+```
+
+- 前端不做状态推断，一切以 `today_flow` 返回的 `plan.stage` 为准。
+- `stage` 的推进由 `submit_answer`（review→learning、practice→practice_done）与 `finish_checkin`（→done）完成。
+
+### 7.2 登录与首次引导
+- 无账号体系，用 `OPENID` 作为唯一标识（云函数自动注入上下文）。
+- 用户记录在各云函数内**惰性创建**（`getUser` 查无则建，默认 `dailyGoal:5, wordCursor:0`）。
+- 首次进入首页若本地无 `onboarded` 标记 → 跳 onboarding 选目标。
+
+### 7.3 出词策略（顺序学习，非随机）
+- `word_card` 不参与出词。`start_new_words` 按 `words.seq` **升序**取满足 `seq > user.wordCursor` **且 `audioReady === true`** 的前 `dailyGoal` 个。
+- **只出有发音音频的词**：音频由本地离线预生成后经 `seed_audio` 上传并置 `audioReady=true`，因此没音频的词永远不出现在学习流程里（见 7.8 / 7.9）。
+- `wordCursor` **只在打卡成功时**更新，取当日已学词的最大 `seq`（**不是** `+learnedCount`）。因为带 `audioReady` 过滤后词可能不连续，按数量累加会错位、导致重复出词。当日队列在未打卡前保持不变（幂等、可恢复）。
+- 词库取尽（`newWordIds` 为空）→ `exhausted:true`，且 `stage` 置 `done`。
+- ⚠️ 音频应**按 seq 从前往后连续生成**。跳着生成不会出错，但学习顺序会出现空洞。
+
+### 7.4 复习调度（简化版，预留升级位）
+- 待复习集合：`user_words` 中 `status != mastered` **且** `nextReviewDate <= today`，上限 50 条。
+- **答对时**（review 阶段）：
+  - `clean = !本次答错 && 历史 wrongCount === 0` → `status='mastered'`，`nextReviewDate=''`
+  - 否则 → `status='reviewing'`，`nextReviewDate = 明天`（继续留存复习）
+- **答错时**：`wrongCount+1`，`status='reviewing'`，`nextReviewDate = 明天`。
+- 新学词在打卡时注册进复习池：`status='reviewing'`，`nextReviewDate = 明天`，`round=1`。
+- > 未实现完整艾宾浩斯/FSRS，`round` 字段为 v2 预留。
+
+### 7.5 题型生成与服务端判题
+- **两种题型**：`cn_option`（中选项：题干英文单词→选中文释义）/ `en_option`（英选中：题干中文释义→选英文单词）。
+- 同一批题目按 `i % 2` **交替**分配题型，再整体 shuffle 混合。
+- **干扰项**：从**不在本批**的词库中随机取 3 个（`_id nin wordIds` 的池，池不足 3 则放宽到全库）。
+- **题干**：cn_option 用 `w.word` 且带音标；en_option 用 `w.meaning`。
+- **答案不下发**：题目携带 `answerIndex` 存 `daily_plans`，`sanitize()` 后只下发 `{id,wordId,type,stem,phonetic,options}`。
+- **判题**：`submit_answer` 服务端比对 `choice === answerIndex`；答错**不移除题目**，前端禁用该选项要求重选，直到答对。
+
+### 7.6 打卡（`finish_checkin`）
+- 前置校验：`practiceQueue` 非空且 `every(q => q.passed)`。
+- 幂等：今日已有 `checkins` 记录 → 返回 `already:true`，不重复累加。
+- 更新：`streak`（昨天打过则 +1，否则置 1）、`lastCheckinDate`、`totalLearned` 各按 `learnedCount` 累加；`wordCursor` **取当日已学词的最大 `seq`**（不再按词数累加，理由见 7.3）。
+- 新词注册复习池 + `stage='done'`。
+
+### 7.7 AI 内容生成与缓存（降本关键）
+```
+word_card(wordId)
+  └─ enriched === true ? ──是──▶ 直接返回（命中缓存，不调模型）
+        │否
+        ▼
+   callFunction(enrich_word, {wordId})
+     └─ 乐观锁：update where enrichStatus != 'generating'
+          ├─ 抢锁成功 → 调 DeepSeek(JSON Output) → msgSecCheck → 写回 enriched=true
+          └─ 抢锁失败（他人生成中）→ 返回 {locked:true}
+     └─ word_card 再读一次，返回最新内容 + enriching 标记
+```
+- **乐观锁**：`enrichStatus: pending → generating → ok/failed`，保证同一单词**全局只生成一次**。
+- **失败降级**：写 `enrichStatus:'failed'` + `enrichError`，返回词表基础字段，不阻断学习。
+- **定时重试**：`enrich_word` 配置定时触发器（`event.Type === 'Timer'`）——释放超过 60s 的 `generating` 锁、批量重试 `pending/failed` 词条（每批 10 条）。
+- **JSON 解析失败**重试 1 次（`MAX_ATTEMPTS=2`）；鉴权/余额/超时类错误不重试。
+- **写回注意**：`example`/`roots` 用 `_.set()` 整体替换，避免 SDK 对嵌套对象做点操作（字段为 `null` 时会报 `Cannot create field 'x' in element {y:null}`）。
+
+### 7.8 离线音频生产流水线（本地）
+音频**全部在本地生成，云端只负责存储与索引**，运行时不调用任何 TTS。四步：
+
+```
+① 抽词表   build_wordlist.py   ECDICT(ecdict.csv) → assets/word_lists/*.json
+                               （筛 tag 含 ielts，按 bnc 排序，排除基础词/无音标/词组）
+                               同形异音词另存 *-homographs.json
+② 生成音频 gen_audio.py        Kokoro-82M(本地 CPU) → build/audio/us/{slug}.mp3
+                               --offset/--limit 增量续跑，已存在文件自动跳过
+                               默认 --types us（只做美音，type=2）
+③ 预检试听 make_audition_page.py → build/audition.html + build/audition_check.json
+                               校验 TEXT_RE / slug 撞车 / mp3 头 / 体积 / 缺音频
+④ 打包上传 pack_audio.py       → build/seed_audio/batch-NN.json（base64，按 --max-bytes 分批）
+                               → 控制台「云端测试」调 seed_audio 云函数
+```
+
+**为什么用 base64 走云函数而不是直接传文件**：云函数入参只能是 JSON，无法携带二进制；
+`pack_audio.py` 把 mp3 编码成 base64 内嵌进 `items[].base64`（体积膨胀约 1/3，故按
+`--max-bytes`（默认 350KB）自动分批，避免超过云函数入参上限）。
+
+**一次 `seed_audio` 调用做三件事**（幂等，可重跑）：
+1. `cloud.uploadFile` → 云存储 `audio/{type}/{slug}.mp3`
+2. upsert `audio_cache` 集合 `{text, type, fileID, source:'preseed', bytes}`
+3. `words` 中同名词置 `audioReady=true`（分批 `_.in(chunk)` 更新）
+
+**关键约束**：
+- 音频必须按 `words.seq` **从前往后连续**生成（`finish_checkin` 的游标按 seq 推进，见 7.6）
+- `slug()` 必须两处一致：`scripts/gen_audio.py` 与 `cloudfunctions/seed_audio`；`scripts/make_audition_page.py` 直接 `from gen_audio import slug` 复用，**不另写实现**（少一处要同步的地方）
+- 词名必须满足 `TEXT_RE = /^[A-Za-z][A-Za-z'\u2019\- ]{0,39}$/`，否则云端抛 `INVALID_WORD`
+- 同形异音词（`contract` 合同/收缩 等）TTS 只念一个读音，需人工试听后定向重生成
+
+**例句音频（额外一条流水线，可选）**
+
+难点：例句文本原本由 `enrich_word` 在**运行时**调 DeepSeek 生成，本地合成音频那一刻并不知道要念什么，
+因此必须先把例句**离线化**，再合成音频：
+
+```
+① 生成例句 gen_examples.py       词表 + DeepSeek(JSON Output) → assets/examples/*-examples.json
+                                 prompt/model/temperature 与 enrich_word 逐字对齐；顺带落盘 roots/etymology
+                                 已存在自动跳过；失败清单同目录，重跑补齐
+② 合成音频 gen_sentence_audio.py Kokoro → build/sentence_audio/us/s_{hash}.mp3
+③ 本地自测 make_audition_page.py --examples <例句JSON> → 预检 + build/audition_sentence.html 试听页
+④ 打包     pack_audio.py         按 manifest 条目是否含 text 自动生成句子入参（kind:'sentence' + text）
+⑤ 填密钥   fill_token.py         整目录一次性替换 __ADMIN_TOKEN__（批次多，手工改易漏）
+⑥ 上传     seed_audio 云端测试   → 云存储 + audio_cache(kind='sentence')；**不点亮 audioReady**
+```
+
+- 例句**不能用 slug 命名**：整句长达数十字符且含标点，转 slug 会超长、句末标点被替换为空后还易碰撞 → 统一用 `s_{hash}`
+- `hashText()` 必须三处一致：`gen_sentence_audio.py` / `seed_audio` / `audio_cache`（均为 JS int32 语义，已用同一组样本实测比对一致）
+- 例句音频**只能由 `seed_audio` 预置**：`audio_cache` 对 `kind:'sentence'` 只查库、不下载也不写存储（见 7.9）
+- ⚠️ 例句音频以**整句文本**为 key → 若用 `force:true` 重新生成 AI 内容，例句文本一变旧音频即失效，需重跑 ②③④⑤⑥
+- 例句入参校验用 `TEXT_RE_SENTENCE = /^[A-Za-z][^\x00-\x1F\x7F\\`]{0,199}$/`，即**排除集**而非标点白名单：真实例句含 `%`（`over 70% of ...`），白名单漏一个标点该条音频就查不到；该正则需在 `seed_audio` / `audio_cache` / `make_audition_page.py` **三处同步**。本地已实测该正则对 100 条真实例句的判定三处逐条一致
+- 体量：实测约 21KB/条（单词约 6KB），按每批 base64 ≤600KB 切 → 100 条例句分 5 批；3000 词约 65MB 存储
+- `gen_examples.py` 的 prompt 模板**不要用 `str.format()`**：模板里塞着 JSON，花括号成对出现，必须逐个转义成 `{{ }}`，漏一个就报 `KeyError`（曾踩过，已改为 `__WORD__` 风格的手动替换）
+
+### 7.9 发音（离线预生成音频 + 前端 fileID 缓存）
+```
+playWord(word)
+  ① 前端 wx.storage 查 fileID ──命中──▶ 秒播（不联网、不调云函数）
+  ② 未命中 → callFunction(audio_cache)
+        └─ 查 audio_cache 集合 {text,type} ──命中──▶ 返回云存储 fileID → 存前端缓存 → 播放
+        └─ 未命中 → 下载 dictvoice → 上传云存储 → 写索引 → 返回 fileID   ← 仅词表外单词会走到这里
+  ③ 云函数失败 → 降级直播 dictvoice URL（不缓存）
+```
+- **主音源是云存储里的离线音频**，由本地 `scripts/gen_audio.py` 用 **Kokoro-82M（Apache-2.0）** 批量合成，**当前先只做美音**（type=2，voice=`af_heart`，lang_code=`a`）——因为前端 `config.TTS_LANG='en_US'` 映射出的就是 type 2，足够覆盖全部播放场景；英音（type=1）留到将来做「英美音切换」时用 `--types uk` 增量补。mp3 约 5KB/词。经 `seed_audio` 上传并写入 `audio_cache` 索引后，运行时**零第三方外呼**。
+- `audioReady` 机制保证学习流程里出现的词都已有音频，故第 ② 步的 dictvoice 分支实际不会触发；保留它主要为词表外单词兜底。
+- 音频全部自持后，可**移除** downloadFile 合法域名 `https://dict.youdao.com`。
+- 缓存键：前端 `audio_cache_{type}_{text}`，`text` 为单词或整句；`audio_cache` 集合跨用户共享。
+- 云存储路径有两种，别混：**预置音频**是 `audio/{type}/{slug}.mp3`（单词）与 `audio/{type}/s_{hash}.mp3`（例句，见 7.8）；**dictvoice 兜底**落盘为 `audio/{type}_{hash}.mp3`。两者互不影响，排查时按来源看 `audio_cache.source`（`preseed` / `dictvoice`）。
+- `playSentence(text)`：播放**整句音频**（本地 Kokoro 预生成，见 7.8 例句流水线）。走 `resolveSrc(text, type, 'sentence')` → 以**整句文本**为 key 查 `audio_cache` → 命中即播。**无 dictvoice 兜底**（整句必失败）；云函数返回 `NOT_PRESEEDED` 时**静默不播** —— 补音频是渐进的，期间大量例句尚无音频，弹提示会持续打扰学习。早期的「逐词链式朗读」实现已废弃（听感生硬）。
+- 停止：`stop()` 中断并清事件监听。
+- 配置：`config.TTS_LANG` 映射 type（`en_US`→2，`en_GB`→1）。
+
+### 7.10 日期与时区
+- 云函数统一 `dateStr(offset)`：`Date.now() + 8h` 后取 UTC 部分格式化 `YYYY-MM-DD`（即 **GMT+8** 自然日）。
+- 前端 `stats` 页日历用**本地时间** `new Date()` 生成——理论上两端时区应都为 GMT+8，无差异。
+
+### 7.11 分享转发（`utils/share.js`）
+- 8 个页面**全部**实现 `onShareAppMessage()`，内容由 `share.toFriend(opts)` 统一生成，缺省标题 `雅词本｜每天记住几个雅思词`。
+- **分享路径统一回首页** `pages/index/index`（含 learn / practice / checkin 等强流程页）。原因：新用户从卡片直接进入流程页会立刻创建当日学习计划，体验突兀；回首页最干净，未设置目标的新用户由 index 自动引导到 onboarding。
+- 部分页面用**上下文文案**增强信息量：`learn` 带当前单词、`checkin` 带连续天数、`stats` 带累计词数、`wrongbook` 带错题数；数据缺失时回落到默认文案。
+- **不启用朋友圈（`onShareTimeline`）**：朋友圈进入的是「单页模式」——无登录态、不允许跳转，云开发必须开启「未登录访问」才能读到数据；本项目数据全部依赖 openid，单页模式必然空白，而放开未登录访问会带来越权读写风险。**除非将来专门做一个不依赖登录的内容页，否则不要开。**
+- 打卡成功页（`checkin.wxml`）内置 `<button open-type="share">分享给朋友</button>`，是唯一的前端显式分享入口。
+- 分享卡片配图：`share.js` 中 `SHARE_IMAGE` 常量，默认留空（用系统页面截图 + 小程序 Logo）；如需自定义，放图到 `miniprogram/images/share.png`（建议 5:4，500x400）并改常量。
+- 文案红线：不得出现「分享得奖励」「帮我点一下」等诱导性表述（《微信小程序平台运营规范》诱导分享条款）。
+
+---
+
+## 8. 关键约定与已知边界
+
+| 项 | 约定 / 约束 |
+|---|---|
+| 云函数返回 | 一律 `{code, data?, message?}`；`code===0` 成功 |
+| 云函数命名 | **不得以下划线开头**（腾讯云 SCF 规范）。历史 `_enrich_word`/`_seed_words` 已改名 |
+| 用户身份 | 只用 `OPENID`，云函数侧取上下文，前端不传 |
+| 密钥 | DeepSeek Key 只配在 `enrich_word` 环境变量；**前端包体不得出现 `sk-`**；`ADMIN_TOKEN` 需在 `enrich_word` / `seed_words` / `seed_audio` / `reset_words` / `init_db` **五个函数**上分别配置（同一值），用于锁住管理类能力。⚠️ 环境变量是**函数级隔离**的，逐个配、别漏 |
+| 云函数鉴权 | 云函数 = 公开接口，入参可伪造。管理/花钱/写库类能力必须自带校验：`enrich_word.force` 需 `_token`；`seed_words` / `seed_audio` / `reset_words` / `init_db` 强制 `_token`（`reset_words` 执行删除还需 `confirm:'PURGE'`）；`audio_cache` 限制 `text` 正则 |
+| 数据表初始化 | 集合必须先存在才能读写。用 `init_db` 云函数建表（幂等），索引与安全规则只能手工设（见 `docs/deploy.md` 第 5 节） |
+| 词表导入语义 | `seed_words` = 按 `word` 去重**跳过**，**永不覆盖**已存在词条（只 `skipped++`）。要替换词库必须先 `reset_words` 清空。⚠️ 不可只删 `words`：`user_words` / `records` / `daily_plans` 均按 `wordId` 引用 `words._id`，只删词会留下孤儿数据；`users.wordCursor` 也必须归零 |
+| 词库重置范围 | `reset_words` 默认清 `words` + `user_words` + `records` + `daily_plans` + 归零 `wordCursor`；**保留** `audio_cache`（按 `text` 建索引，重导可复用）与 `checkins`（不含词引用，`resetStats:true` 时才清）。云存储 `audio/` 目录不删，同名文件重跑 `seed_audio` 覆盖即可 |
+| 数据库写操作 | 全部在云函数（管理端）；前端只读 `words`（可选直连） |
+| 答案安全 | 题目答案存服务端，下发前剔除 |
+| 防重复 | `start_new_words` / `build_questions` / `finish_checkin` 均幂等 |
+| 集合权限 | `words` 建议「所有用户可读，仅管理端可写」，其余「仅创建者可读写」 |
+| 超时 | 20s：`user_profile`/`home_summary`/`today_flow`/`start_new_words`/`submit_answer`/`audio_cache`；30s：`word_card`/`enrich_word`/`build_questions`/`finish_checkin`/`stats`；60s：`seed_words`/`seed_audio`/`reset_words`/`init_db`。均由各函数 `config.json` 声明，部署后可在控制台核对 |
+| 分享 | 只用 `onShareAppMessage`（转发给朋友/群），路径统一回首页；**不开朋友圈**（单页模式无登录态，云开发读不到数据） |
+
+---
+
+## 9. ⚠️ 已知问题与上线前待办
+
+| 级别 | 问题 | 说明 / 处理建议 |
+|---|---|---|
+| **高（安全）** | ~~`enrich_word/index.js` 硬编码 DeepSeek API Key 作为 fallback~~ | ✅ **已修复**（2026-09-27）：已改为只读 `process.env.DEEPSEEK_API_KEY`，无 fallback 字面量；新增 `.gitignore`（忽略 `node_modules`、`project.private.config.json`、`.env`）。**仍需到 DeepSeek 后台吊销旧 Key 并重发**（旧 Key 已暴露在历史代码中）。 |
+| **高（安全）** | ~~`enrich_word` 的 `force` 参数可由客户端任意传入~~ | ✅ **已修复**（2026-09-28）：`force` 仅在 `_token === ADMIN_TOKEN` 时生效，否则忽略并记日志。未配置 `ADMIN_TOKEN` 时恒为忽略（安全默认）。修复前任何人可 `force:true` 循环调用绕过缓存烧余额。 |
+| **高（安全）** | ~~`seed_words` 零鉴权，任何用户可往词库写入数据~~ | ✅ **已修复**（2026-09-28）：强制 `_token === ADMIN_TOKEN`；未配 `ADMIN_TOKEN` 时**拒绝一切调用**。⚠️ **副作用**：控制台执行导入时必须带 `_token` 入参。 |
+| 中（安全） | ~~`audio_cache` 入参无限制，可被用来写满云存储~~ | ✅ **已修复**（2026-09-28）：`text` 限定为字母开头的英文单词/短语（≤40 字符），`type` 收敛为 1/2。后续新增的例句路径（`kind:'sentence'`，≤200 字符）**只查库、不下载也不写存储**，故放宽长度不会重新打开写存储的口子。 |
+| 中 | 发音版权 | 有道 dictvoice 非官方开放商用接口，商用属灰色地带（每日约 1000 次上限）。**现状已大幅缓解**：单词与例句音频均由本地 **Kokoro-82M（Apache-2.0）** 预生成后上传云存储，运行时零外呼；dictvoice 仅作词表外单词兜底，可随时移除。 |
+| 中 | AI 内容展示合规 | 展示 AI 生成内容需符合平台对生成式内容的相关要求。实现上是「**有则展示、无则留空**」：`enrich_word` 未成功生成的词，`word_card` 只返回词表基础字段（单词/音标/释义），扩展区块自动留空——因此展示范围可通过控制生成范围来调节。 |
+| 中 | 词库版权 | 需使用明确开源许可（CC-BY / 公有领域）的雅思词表。 |
+| 低 | 配置项 | `project.config.json` 的 `appid` 与 `miniprogram/config.js` 的 `ENV_ID` 已填为作者本人的真实值（二者均非密钥）。**fork 或二次开发后必须替换为你自己的**，否则无法调用你自己的云环境。 |
+| 低 | 合规 | 小程序发布前需完成 ICP 备案。 |
+| 低 | 文档漂移 | `README.md`、`design.md` 的发音方案（写的是同声传译插件）、出词策略、字段名（`questionQueue` vs `reviewQueue`）与代码不一致，**以本文档为准**。 |
+
+---
+
+## 10. 快速定位索引（改需求看这里）
+
+| 想改什么 | 去哪个文件/函数 |
+|---|---|
+| 每日目标选项（5/10） | `miniprogram/config.js` `DAILY_GOAL_OPTIONS` + `user_profile` |
+| 出词顺序/策略 | `cloudfunctions/start_new_words/index.js`（`seq` + `wordCursor` + `audioReady`） |
+| 复习调度逻辑 | `cloudfunctions/submit_answer/index.js`（correct 分支） |
+| 题型比例/干扰项 | `cloudfunctions/build_questions/index.js`（`i % 2`、`sample(pool,3)`） |
+| AI Prompt / 模型 | `cloudfunctions/enrich_word/index.js`（`buildPrompt` / `callModel`） |
+| 发音音源（单词） | `scripts/gen_audio.py`（本地生成）→ `cloudfunctions/seed_audio`（上传+点亮）→ `miniprogram/utils/audio.js`（`resolveSrc` / `fallbackUrl`）/ `cloudfunctions/audio_cache`（读缓存） |
+| **数据表初始化 / 建索引** | `cloudfunctions/init_db`（建集合 + 返回索引清单）→ `docs/deploy.md` 第 5 节 |
+| **部署步骤 / 报错排查** | `docs/deploy.md` |
+| 例句文本来源 | 运行时：`cloudfunctions/enrich_word`（`buildPrompt`）；离线批量：`scripts/gen_examples.py` |
+| 发音音源（例句） | `scripts/gen_examples.py` → `scripts/gen_sentence_audio.py`（本地生成，`s_{hash}`）→ `seed_audio`（`kind:'sentence'` 上传）→ `audio.js` 的 `playSentence` / `audio_cache`（**只读不写**） |
+| 词表来源/筛选 | `scripts/build_wordlist.py`（ECDICT → `assets/word_lists/*.json`） |
+| 分享标题/路径/配图 | `miniprogram/utils/share.js`（`toFriend`），各页 `onShareAppMessage()` |
+| 状态机流转 | `cloudfunctions/today_flow` + `submit_answer` + `finish_checkin` |
+| 页面跳转 | 各 `pages/*/index.js`（`wx.navigateTo`） |
+
+---
+
+## 11. 本轮整理记录（2026-09-28）
+
+### 11.1 删除的死代码（均先核验零引用）
+
+| 位置 | 内容 | 判据 |
+|---|---|---|
+| `miniprogram/utils/util.js` | 整个文件（`today` / `shuffle` / `sample`） | 全项目无 `require` 命中 |
+| `miniprogram/app.js` | `globalData` + `ensureUser()` | 无调用方；用户态改由各页面按需 `getProfile()` |
+| `miniprogram/config.js` | `Q_TYPE` 常量 | 题型标识只在云函数内部流转 |
+| `cloudfunctions/today_flow` | `module.exports.dateStr` | 云函数相互隔离，导出后无人 `require` |
+| `build_questions` / `submit_answer` | `attempts` 字段及其自增 | 写入后全项目从未读取 |
+| `build_questions` / `utils/api.js` | `wordIds` 入参 | 词范围由云函数从当日 `plan` 自行推导 |
+| `app.wxss` / `practice.wxss` | `.row` / `.btn.success` / `.option.dim` | wxml 中只有 `pf-row` / `word-row` / `q-stem-row` |
+| `pages/learn/learn.js` | 重复的「预取下一张」 | `loadCard()` 内部已含预取，`onLoad` 里那次是重复调用 |
+
+### 11.2 合并与优化
+
+- `home_summary`：去掉 `totalCheckins` 的额外 `count()` 与无人读的 `stage` 字段 —— 每次进首页省一次 DB 往返
+- `utils/audio.js`：抽出 `playSrc()`，单词与例句共用「停 → 清监听 → 设源 → 播放 → 挂 onError」，消除两处重复（原单词版还漏了 `offEnded`，与例句版不一致）
+- `utils/share.js`：只导出 `toFriend`（`HOME_PATH` / `BRAND` 无外部引用）
+- **品牌素材移出小程序包**：`雅词本-头像-1024.png` / `-144.png` / AI 原始图标 → `assets/brand/`。原位置在 `miniprogramRoot` 内会被打进包（约 0.8MB），且代码零引用
+- **统一依赖版本**：`audio_cache` 的 `wx-server-sdk` `latest` → `~2.6.3`、`axios` `^1.6.0` → `^1.6.8`（与其余 14 个函数一致）
+- **补齐 8 个缺失的 `config.json`**：`user_profile` / `home_summary` / `today_flow` / `start_new_words` / `build_questions` / `submit_answer` / `finish_checkin` / `stats`。此前超时值只能靠控制台默认，现在随代码声明
+
+### 11.3 新增
+
+- `cloudfunctions/init_db` —— 数据表体检 / 初始化（幂等），顺带返回手工索引清单
+- `docs/deploy.md` —— 从零到可用的部署清单（含验收表、报错排查表、提审检查表）
+
+### 11.4 有意保留（勿删，附理由）
+
+- `audio_cache` 的 dictvoice 兜底分支与前端 `fallbackUrl`：词表外单词的能力。`audioReady` 机制保证学习流程不会触发它
+- `cloudfunctions/seed_words/words.json`：被 `seed_words/index.js` 实际 `require` 的内置 24 词示例
+- 各云函数独立的 `ADMIN_TOKEN` 读取块：环境变量是**函数级隔离**的，代码虽重复但无法共享
+- 跨运行时的 `hashText` / `TEXT_RE*` / `slug` / `sentence_slug`：JS 与 Python 无法共享代码，**只能靠同步**。改动其中一处后务必跑 `scripts/make_audition_page.py` 预检（它会校验正则与文件头）
+- 各函数内注释掉的 `nickname` / `avatarUrl`：合规说明（证明「未接入授权、不收集」）
+- `specs/design.md`：已标注为历史稿（提到 Vant、同声传译插件，均未使用）。不需要可直接删除整个 `specs/` 目录

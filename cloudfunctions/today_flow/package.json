@@ -1,0 +1,9 @@
+{
+  "name": "today_flow",
+  "version": "1.0.0",
+  "description": "当日流程状态编排",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

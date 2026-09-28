@@ -1,0 +1,9 @@
+{
+  "name": "finish_checkin",
+  "version": "1.0.0",
+  "description": "完成打卡并推进复习池",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

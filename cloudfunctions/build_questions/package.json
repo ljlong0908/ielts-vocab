@@ -1,0 +1,9 @@
+{
+  "name": "build_questions",
+  "version": "1.0.0",
+  "description": "生成双向题型选择题",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

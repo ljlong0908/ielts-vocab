@@ -1,0 +1,1002 @@
+[
+  {
+    "word": "council",
+    "phoneticUK": "/'kaunsәl/",
+    "phoneticUS": "/'kaunsәl/",
+    "pos": "",
+    "meaning": "n. 会议, 委员会；[经] 委员会",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 1
+  },
+  {
+    "word": "community",
+    "phoneticUK": "/kә'mju:niti/",
+    "phoneticUS": "/kә'mju:niti/",
+    "pos": "",
+    "meaning": "n. 社区, 公众, 共有, 共同体；[经] 公众, 共有, 社会",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 2
+  },
+  {
+    "word": "issue",
+    "phoneticUK": "/'isju/",
+    "phoneticUS": "/'isju/",
+    "pos": "",
+    "meaning": "n. 发行, 问题, 后果, 流出, 出口, 争端；vi. 发行, 流出, 造成...结果, 传下；vt. 使流出, 放出, 发行, 发布, 发给",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 3
+  },
+  {
+    "word": "economic",
+    "phoneticUK": "/.i:kә'nɒmik/",
+    "phoneticUS": "/.i:kә'nɒmik/",
+    "pos": "",
+    "meaning": "a. 经济上的, 实用的, 节省的；[经] 经济的",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 4
+  },
+  {
+    "word": "involve",
+    "phoneticUK": "/in'vɒlv/",
+    "phoneticUS": "/in'vɒlv/",
+    "pos": "",
+    "meaning": "vt. 包括, 使陷于, 潜心于, 包围；[医] 累及, 牵涉, 包含",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 5
+  },
+  {
+    "word": "management",
+    "phoneticUK": "/'mænidʒmәnt/",
+    "phoneticUS": "/'mænidʒmәnt/",
+    "pos": "",
+    "meaning": "n. 经营, 支配, 管理；[化] 管理处",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 6
+  },
+  {
+    "word": "claim",
+    "phoneticUK": "/kleim/",
+    "phoneticUS": "/kleim/",
+    "pos": "",
+    "meaning": "n. 要求, 要求权, 断言, 权利；vt. 要求, 认领, 主张；vi. 提出要求, 主张, 断言",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 7
+  },
+  {
+    "word": "detail",
+    "phoneticUK": "/'di:teil/",
+    "phoneticUS": "/'di:teil/",
+    "pos": "",
+    "meaning": "n. 细节, 详情；vt. 详述, 选派；vi. 画详图；[计] 详细数据",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 8
+  },
+  {
+    "word": "establish",
+    "phoneticUK": "/i'stæbliʃ/",
+    "phoneticUS": "/i'stæbliʃ/",
+    "pos": "",
+    "meaning": "vt. 建立, 确立, 制定；vi. 移植生长",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 9
+  },
+  {
+    "word": "scheme",
+    "phoneticUK": "/ski:m/",
+    "phoneticUS": "/ski:m/",
+    "pos": "",
+    "meaning": "n. 方案, 计划, 组合, 系统, 图解, 诡计, 阴谋；v. 计划, 设计, 图谋, 策划",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 10
+  },
+  {
+    "word": "property",
+    "phoneticUK": "/'prɒpәti/",
+    "phoneticUS": "/'prɒpәti/",
+    "pos": "",
+    "meaning": "n. 财产, 所有权, 性质, 属性；[计] 属性",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 11
+  },
+  {
+    "word": "financial",
+    "phoneticUK": "/fai'nænʃәl/",
+    "phoneticUS": "/fai'nænʃәl/",
+    "pos": "",
+    "meaning": "a. 财政的, 金融的；[经] 财政的, 金融的, 财务的",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 12
+  },
+  {
+    "word": "opportunity",
+    "phoneticUK": "/.ɒpә'tju:niti/",
+    "phoneticUS": "/.ɒpә'tju:niti/",
+    "pos": "",
+    "meaning": "n. 机会, 时机",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 13
+  },
+  {
+    "word": "contract",
+    "phoneticUK": "/'kɒntrækt/",
+    "phoneticUS": "/'kɒntrækt/",
+    "pos": "",
+    "meaning": "n. 合约, 婚约, 契约；vt. 使皱缩, 使缩短, 感染, 订约, 缔结；vi. 皱缩, 订约, 收缩",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 14
+  },
+  {
+    "word": "source",
+    "phoneticUK": "/sɒ:s/",
+    "phoneticUS": "/sɒ:s/",
+    "pos": "",
+    "meaning": "n. 来源, 水源, 根源, 原始资料, 源；[计] 来源, 源程序",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 15
+  },
+  {
+    "word": "site",
+    "phoneticUK": "/sait/",
+    "phoneticUS": "/sait/",
+    "pos": "",
+    "meaning": "n. 位置, 场所, 地点；vt. 给...择址",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 16
+  },
+  {
+    "word": "factor",
+    "phoneticUK": "/'fæktә/",
+    "phoneticUS": "/'fæktә/",
+    "pos": "",
+    "meaning": "n. 因素, 因数, 系数, 基因, 代理人；[计] 因式",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 17
+  },
+  {
+    "word": "further",
+    "phoneticUK": "/'fә:ðә/",
+    "phoneticUS": "/'fә:ðә/",
+    "pos": "",
+    "meaning": "a. 更远的, 此外的, 更多的；vt. 促进, 增进, 助长；adv. 更进一步地, 更远地, 此外",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 18
+  },
+  {
+    "word": "series",
+    "phoneticUK": "/'siәri:z/",
+    "phoneticUS": "/'siәri:z/",
+    "pos": "",
+    "meaning": "n. 串联, 序列, 连续, 系列, 丛书, 套, 级数, 组；[计] 系列",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 19
+  },
+  {
+    "word": "region",
+    "phoneticUK": "/'ri:dʒәn/",
+    "phoneticUS": "/'ri:dʒәn/",
+    "pos": "",
+    "meaning": "n. 区域, 地带, 地区, 领域, 范围, 区；[计] 区, 区域",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 20
+  },
+  {
+    "word": "individual",
+    "phoneticUK": "/.indi'vidʒuәl/",
+    "phoneticUS": "/.indi'vidʒuәl/",
+    "pos": "",
+    "meaning": "n. 人, 个人, 个体；a. 个别的, 个人的, 独特的",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 21
+  },
+  {
+    "word": "feature",
+    "phoneticUK": "/'fi:tʃә/",
+    "phoneticUS": "/'fi:tʃә/",
+    "pos": "",
+    "meaning": "n. 面孔的一部分(如眼、口等), 特征, 容貌, 特色, 特写；vt. 是...的特色, 特写, 放映；vi. 起重要作用；[计] 特性",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 22
+  },
+  {
+    "word": "current",
+    "phoneticUK": "/'kʌrәnt/",
+    "phoneticUS": "/'kʌrәnt/",
+    "pos": "",
+    "meaning": "n. 涌流, 趋势, 流；a. 流通的, 现在的, 当前的, 流行的；[计] 当前的",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 23
+  },
+  {
+    "word": "identify",
+    "phoneticUK": "/ai'dentifai/",
+    "phoneticUS": "/ai'dentifai/",
+    "pos": "",
+    "meaning": "vt. 识别, 认为...等同于, 确定, 使参与；vi. 一致, 认同",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 24
+  },
+  {
+    "word": "provision",
+    "phoneticUK": "/prә'viʒәn/",
+    "phoneticUS": "/prә'viʒәn/",
+    "pos": "",
+    "meaning": "n. (政府提供的)钱和设备, 准备, 供应品, 规定, 条款；vt. 供给...食物及必需品",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 25
+  },
+  {
+    "word": "resource",
+    "phoneticUK": "/ri'sɒ:s/",
+    "phoneticUS": "/ri'sɒ:s/",
+    "pos": "",
+    "meaning": "n. 资源, 财力, 办法, 策略, 急智, 消遣；[计] 资源",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 26
+  },
+  {
+    "word": "response",
+    "phoneticUK": "/ri'spɒns/",
+    "phoneticUS": "/ri'spɒns/",
+    "pos": "",
+    "meaning": "n. 反应, 回答, 响应；[计] 应答",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 27
+  },
+  {
+    "word": "investment",
+    "phoneticUK": "/in'vestmәnt/",
+    "phoneticUS": "/in'vestmәnt/",
+    "pos": "",
+    "meaning": "n. 投资；[医] 包埋料, 围模料, 包埋法, 围模法",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 28
+  },
+  {
+    "word": "economy",
+    "phoneticUK": "/i'kɒnәmi/",
+    "phoneticUS": "/i'kɒnәmi/",
+    "pos": "",
+    "meaning": "n. 经济, 理财, 节约；[医] 经济, 整体",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 29
+  },
+  {
+    "word": "previous",
+    "phoneticUK": "/'pri:viәs/",
+    "phoneticUS": "/'pri:viәs/",
+    "pos": "",
+    "meaning": "a. 早先的, 前面的, 过急的；[法] 以前的, 生前的, 前述的",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 30
+  },
+  {
+    "word": "maintain",
+    "phoneticUK": "/mein'tein/",
+    "phoneticUS": "/mein'tein/",
+    "pos": "",
+    "meaning": "vt. 维持, 维修, 保持, 坚持, 供养, 主张；[化] 维修",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 31
+  },
+  {
+    "word": "prime",
+    "phoneticUK": "/praim/",
+    "phoneticUS": "/praim/",
+    "pos": "",
+    "meaning": "n. 最佳部分, 初期, 全盛期；a. 主要的, 最初的, 根本的；v. 加油启动, 灌注, 填装",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 32
+  },
+  {
+    "word": "significant",
+    "phoneticUK": "/sig'nifikәnt/",
+    "phoneticUS": "/sig'nifikәnt/",
+    "pos": "",
+    "meaning": "a. 重要的, 有效的, 有含义的, 暗示的, 值得注意的",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 33
+  },
+  {
+    "word": "industrial",
+    "phoneticUK": "/in'dʌstriәl/",
+    "phoneticUS": "/in'dʌstriәl/",
+    "pos": "",
+    "meaning": "a. 工业的, 供工业用的, 工业高度发展的, 产业的；n. 工业工人, 工业股票",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 34
+  },
+  {
+    "word": "united",
+    "phoneticUK": "/ju:'naitid/",
+    "phoneticUS": "/ju:'naitid/",
+    "pos": "",
+    "meaning": "a. 联合的, 团结的, 一致的, 和睦的；[法] 联合的, 统一的, 一致的",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 35
+  },
+  {
+    "word": "commission",
+    "phoneticUK": "/kә'miʃәn/",
+    "phoneticUS": "/kә'miʃәn/",
+    "pos": "",
+    "meaning": "n. 委任状, 任官令, 所委职责, 佣金, 犯, 委托, 所托之事；vt. 委任, 委托制作, 使服役",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 36
+  },
+  {
+    "word": "image",
+    "phoneticUK": "/'imidʒ/",
+    "phoneticUS": "/'imidʒ/",
+    "pos": "",
+    "meaning": "n. 影像, 肖像, 想象, 图像, 形象, 翻版；vt. 作...的像, 反映, 想象, 象征；n. 图像；[计] 图象",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 37
+  },
+  {
+    "word": "client",
+    "phoneticUK": "/'klaiәnt/",
+    "phoneticUS": "/'klaiәnt/",
+    "pos": "",
+    "meaning": "n. 客户, 顾客, 委托人；[计] 客户, 客户机, 客户机程序",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 38
+  },
+  {
+    "word": "sector",
+    "phoneticUK": "/'sektә/",
+    "phoneticUS": "/'sektә/",
+    "pos": "",
+    "meaning": "n. 扇形, 部门, 部分, 函数尺, 象限仪, 段, 区段；vt. 把...分成扇形；[计] 扇面; 扇区; 段; 区段",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 39
+  },
+  {
+    "word": "original",
+    "phoneticUK": "/ә'ridʒәnl/",
+    "phoneticUS": "/ә'ridʒәnl/",
+    "pos": "",
+    "meaning": "a. 最初的, 原始的, 有创意的；n. 原物, 原作",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 40
+  },
+  {
+    "word": "employment",
+    "phoneticUK": "/im'plɒimәnt/",
+    "phoneticUS": "/im'plɒimәnt/",
+    "pos": "",
+    "meaning": "n. 雇用, 职业, 工作；[经] 职业, 雇用, 职工招请",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 41
+  },
+  {
+    "word": "professional",
+    "phoneticUK": "/prә'feʃәnl/",
+    "phoneticUS": "/prә'feʃәnl/",
+    "pos": "",
+    "meaning": "n. 专业人才；a. 专业的, 职业的",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 42
+  },
+  {
+    "word": "item",
+    "phoneticUK": "/'aitәm/",
+    "phoneticUS": "/'aitәm/",
+    "pos": "",
+    "meaning": "n. 项目, 条款, 一则, 项；[计] 项",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 43
+  },
+  {
+    "word": "extent",
+    "phoneticUK": "/ik'stent/",
+    "phoneticUS": "/ik'stent/",
+    "pos": "",
+    "meaning": "n. 范围, 程度, 区域；[计] 范围",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 44
+  },
+  {
+    "word": "parliament",
+    "phoneticUK": "/'pɑ:lәmәnt/",
+    "phoneticUS": "/'pɑ:lәmәnt/",
+    "pos": "",
+    "meaning": "n. 国会, 议会；[法] 会议, 国会, 议院",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 45
+  },
+  {
+    "word": "effective",
+    "phoneticUK": "/i'fektiv/",
+    "phoneticUS": "/i'fektiv/",
+    "pos": "",
+    "meaning": "a. 有效的, 有力的, 实际的；n. 有生力量",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 46
+  },
+  {
+    "word": "payment",
+    "phoneticUK": "/'peimәnt/",
+    "phoneticUS": "/'peimәnt/",
+    "pos": "",
+    "meaning": "n. 付款, 支付的款项(或实物), 偿还, 报应, 惩罚；[经] 支付, 缴纳, 支付款额",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 47
+  },
+  {
+    "word": "york",
+    "phoneticUK": "/jɔ:k/",
+    "phoneticUS": "/jɔ:k/",
+    "pos": "",
+    "meaning": "n. 约克郡；约克王朝",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 48
+  },
+  {
+    "word": "facility",
+    "phoneticUK": "/fә'siliti/",
+    "phoneticUS": "/fә'siliti/",
+    "pos": "",
+    "meaning": "n. 容易, 灵巧, 设备；[计] 设施; 设备; 装备",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 49
+  },
+  {
+    "word": "survey",
+    "phoneticUK": "/sә'vei/",
+    "phoneticUS": "/sә'vei/",
+    "pos": "",
+    "meaning": "n. 纵览, 视察, 测量, 俯瞰, 调查；vt. 审视, 视察, 俯瞰, 通盘考虑；vi. 测量土地",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 50
+  },
+  {
+    "word": "context",
+    "phoneticUK": "/'kɒntekst/",
+    "phoneticUS": "/'kɒntekst/",
+    "pos": "",
+    "meaning": "n. 上下文, 背景, 来龙去脉；n. 上下文；[计] 上下文",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 51
+  },
+  {
+    "word": "extend",
+    "phoneticUK": "/ik'stend/",
+    "phoneticUS": "/ik'stend/",
+    "pos": "",
+    "meaning": "v. 扩充, 延伸, 伸展, 扩大；[计] 扩展",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 52
+  },
+  {
+    "word": "considerable",
+    "phoneticUK": "/kәn'sidәrәbl/",
+    "phoneticUS": "/kәn'sidәrәbl/",
+    "pos": "",
+    "meaning": "a. 相当的, 可观的, 重要的",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 53
+  },
+  {
+    "word": "species",
+    "phoneticUK": "/'spi:ʃiz/",
+    "phoneticUS": "/'spi:ʃiz/",
+    "pos": "",
+    "meaning": "n. 种, 类, 外形；[医] 茶剂; 种",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 54
+  },
+  {
+    "word": "career",
+    "phoneticUK": "/kә'riә/",
+    "phoneticUS": "/kә'riә/",
+    "pos": "",
+    "meaning": "n. 事业, 生涯, 成功；[法] 职业, 专业, 履历",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 55
+  },
+  {
+    "word": "solution",
+    "phoneticUK": "/sә'lu:ʃәn/",
+    "phoneticUS": "/sә'lu:ʃәn/",
+    "pos": "",
+    "meaning": "n. 解决, 解答, 溶液；[化] 溶液",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 56
+  },
+  {
+    "word": "existing",
+    "phoneticUK": "/i^'zistiŋ/",
+    "phoneticUS": "/i^'zistiŋ/",
+    "pos": "",
+    "meaning": "a. 存在的, 目前的, 现存的, 现有的；[计] 现成的, 已有的, 现存的",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 57
+  },
+  {
+    "word": "stock",
+    "phoneticUK": "/stɒk/",
+    "phoneticUS": "/stɒk/",
+    "pos": "",
+    "meaning": "n. 树干, 祖先, 血统, 原料, 备料, 库存, 牲畜, 股票, 股份, 保留剧目；a. 存货的, 常备的, 平凡的, 普通的, 股票的, 保留剧目的, 繁殖用的；vt. 装把手于, 进货, 备有, 放牧；vi. 出新芽, 备货, 囤积",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 58
+  },
+  {
+    "word": "option",
+    "phoneticUK": "/'ɒpʃәn/",
+    "phoneticUS": "/'ɒpʃәn/",
+    "pos": "",
+    "meaning": "n. 选择权, 挑选, 选项；[计] 选项",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 59
+  },
+  {
+    "word": "occasion",
+    "phoneticUK": "/ә'keiʒәn/",
+    "phoneticUS": "/ә'keiʒәn/",
+    "pos": "",
+    "meaning": "n. 场合, 时机, 机会, 诱因, 理由；vt. 惹起, 引起",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 60
+  },
+  {
+    "word": "executive",
+    "phoneticUK": "/ig'zekjutiv/",
+    "phoneticUS": "/ig'zekjutiv/",
+    "pos": "",
+    "meaning": "n. 执行部门, 执行委员会, 执行者, 经理主管人员；a. 执行的, 善于执行的, 善于经营的；[计] 执行程序",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 61
+  },
+  {
+    "word": "scale",
+    "phoneticUK": "/skeil/",
+    "phoneticUS": "/skeil/",
+    "pos": "",
+    "meaning": "n. 刻度, 衡量, 比例, 比例尺, 数值范围, 等级, 规模, 天平, 秤, 鳞, 积垢；vt. 依比例决定, 攀登, 测量, 绘制, 刮鳞, 使生垢, 过秤；vi. 剥落, 生水垢, 重量为, 攀登, 衡量；[计] 刻度",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 62
+  },
+  {
+    "word": "strategy",
+    "phoneticUK": "/'strætidʒi/",
+    "phoneticUS": "/'strætidʒi/",
+    "pos": "",
+    "meaning": "n. 战略, 策略；[经] 战略, 策略",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 63
+  },
+  {
+    "word": "employee",
+    "phoneticUK": "/.emplɒi'i:/",
+    "phoneticUS": "/.emplɒi'i:/",
+    "pos": "",
+    "meaning": "n. 职员, 员工, 受雇人员；[化] 职工; 雇员",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 64
+  },
+  {
+    "word": "essential",
+    "phoneticUK": "/i'senʃәl/",
+    "phoneticUS": "/i'senʃәl/",
+    "pos": "",
+    "meaning": "n. 要素, 要点, 本质；a. 必要的, 重要的, 本质的；[计] 本质冒险",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 65
+  },
+  {
+    "word": "environmental",
+    "phoneticUK": "/in.vaiәrәn'mentәl/",
+    "phoneticUS": "/in.vaiәrәn'mentәl/",
+    "pos": "",
+    "meaning": "a. 周围的, 环境的；[经] 环境的, 环保的",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 66
+  },
+  {
+    "word": "contact",
+    "phoneticUK": "/'kɒntækt/",
+    "phoneticUS": "/'kɒntækt/",
+    "pos": "",
+    "meaning": "n. 联系, 交际, 熟人, 接触；vi. 接触, 联系；vt. 使接触",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 67
+  },
+  {
+    "word": "positive",
+    "phoneticUK": "/'pɒzitiv/",
+    "phoneticUS": "/'pɒzitiv/",
+    "pos": "",
+    "meaning": "a. 肯定的, 积极的, 有把握的；[医] 正的, 阳性的",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 68
+  },
+  {
+    "word": "best",
+    "phoneticUK": "/best/",
+    "phoneticUS": "/best/",
+    "pos": "",
+    "meaning": "a. 最好的；adv. 最好地；n. 最好的人",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 69
+  },
+  {
+    "word": "presence",
+    "phoneticUK": "/'prezns/",
+    "phoneticUS": "/'prezns/",
+    "pos": "",
+    "meaning": "n. 出席, 面前, 存在, 仪态, 风度；[电] 出现",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 70
+  },
+  {
+    "word": "release",
+    "phoneticUK": "/ri'li:s/",
+    "phoneticUS": "/ri'li:s/",
+    "pos": "",
+    "meaning": "n. 释放, 发泄, 豁免, 发行, 释放证书；vt. 释放, 解除, 放松, 豁免, 免除, 发布, 放弃, 让与；n. 发布；[计] 版本, 发布",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 71
+  },
+  {
+    "word": "commercial",
+    "phoneticUK": "/kә'mә:ʃәl/",
+    "phoneticUS": "/kә'mә:ʃәl/",
+    "pos": "",
+    "meaning": "a. 商业的, 商用的, 商品化的；n. 商业广告节目",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 72
+  },
+  {
+    "word": "route",
+    "phoneticUK": "/ru:t/",
+    "phoneticUS": "/ru:t/",
+    "pos": "",
+    "meaning": "n. 路径, 途径, 路线；vt. 确定路线, 按规定路线发送；[计] 传递, 路由设定程序",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 73
+  },
+  {
+    "word": "proportion",
+    "phoneticUK": "/prә'pɒ:ʃәn/",
+    "phoneticUS": "/prә'pɒ:ʃәn/",
+    "pos": "",
+    "meaning": "n. 比例, 比率, 均衡, 部分, 面积；vt. 使成比例, 使均衡",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 74
+  },
+  {
+    "word": "emerge",
+    "phoneticUK": "/i'mә:dʒ/",
+    "phoneticUS": "/i'mә:dʒ/",
+    "pos": "",
+    "meaning": "vi. 浮现, 形成, 出现, (事实)显露",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 75
+  },
+  {
+    "word": "regional",
+    "phoneticUK": "/'ri:dʒәnәl/",
+    "phoneticUS": "/'ri:dʒәnәl/",
+    "pos": "",
+    "meaning": "a. 地方的, 地域性的；[医] 区的, 部位的",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 76
+  },
+  {
+    "word": "deny",
+    "phoneticUK": "/di'nai/",
+    "phoneticUS": "/di'nai/",
+    "pos": "",
+    "meaning": "v. 否认, 拒绝",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 77
+  },
+  {
+    "word": "impact",
+    "phoneticUK": "/'impækt/",
+    "phoneticUS": "/'impækt/",
+    "pos": "",
+    "meaning": "n. 冲击, 冲突, 影响, 效果；vt. 挤入, 撞击, 压紧, 对...发生影响",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 78
+  },
+  {
+    "word": "estate",
+    "phoneticUK": "/i'steit/",
+    "phoneticUS": "/i'steit/",
+    "pos": "",
+    "meaning": "n. 不动产, (人生的)阶段, 阶层, 财产；[经] 房地产, 遗产, 财产",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 79
+  },
+  {
+    "word": "propose",
+    "phoneticUK": "/prә'pәuz/",
+    "phoneticUS": "/prә'pәuz/",
+    "pos": "",
+    "meaning": "vt. 计划, 打算, 建议, 提议, 求(婚)；vi. 打算, 求婚",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 80
+  },
+  {
+    "word": "additional",
+    "phoneticUK": "/ә'diʃәnәl/",
+    "phoneticUS": "/ә'diʃәnәl/",
+    "pos": "",
+    "meaning": "a. 附加的, 另外的, 额外的；[机] 加添的, 附加的",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 81
+  },
+  {
+    "word": "writer",
+    "phoneticUK": "/'raitә/",
+    "phoneticUS": "/'raitә/",
+    "pos": "",
+    "meaning": "n. 作家, 撰稿者, 抄写员；[化] 记录器",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 82
+  },
+  {
+    "word": "employer",
+    "phoneticUK": "/im'plɒiә/",
+    "phoneticUS": "/im'plɒiә/",
+    "pos": "",
+    "meaning": "n. 雇主, 老板；[经] 雇主, 业主",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 83
+  },
+  {
+    "word": "objective",
+    "phoneticUK": "/әb'dʒektiv/",
+    "phoneticUS": "/әb'dʒektiv/",
+    "pos": "",
+    "meaning": "n. 目的, 目标, 宗旨, 宾格, 实物；a. 客观的, 如实的, 无偏见的, 宾格的",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 84
+  },
+  {
+    "word": "nevertheless",
+    "phoneticUK": "/.nevәðә'les/",
+    "phoneticUS": "/.nevәðә'les/",
+    "pos": "",
+    "meaning": "adv. 然而, 虽然如此；conj. 然而",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 85
+  },
+  {
+    "word": "confidence",
+    "phoneticUK": "/'kɒnfidәns/",
+    "phoneticUS": "/'kɒnfidәns/",
+    "pos": "",
+    "meaning": "n. 信心；[电] 可靠",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 86
+  },
+  {
+    "word": "sample",
+    "phoneticUK": "/'sæmpl/",
+    "phoneticUS": "/'sæmpl/",
+    "pos": "",
+    "meaning": "n. 样品, 范例, 样本；vt. 抽样, 尝试；[计] 示例, 字样",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 87
+  },
+  {
+    "word": "volume",
+    "phoneticUK": "/'vɒljum/",
+    "phoneticUS": "/'vɒljum/",
+    "pos": "",
+    "meaning": "n. 册, 卷, 体积, 容量, 大量, 许多, 份量, 音量；vi. 成团卷起；vt. 把...收集成卷；a. 大量的；[计] 卷",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 88
+  },
+  {
+    "word": "legislation",
+    "phoneticUK": "/.ledʒis'leiʃәn/",
+    "phoneticUS": "/.ledʒis'leiʃәn/",
+    "pos": "",
+    "meaning": "n. 立法, 法律；[医] 立法, 法规",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 89
+  },
+  {
+    "word": "stuff",
+    "phoneticUK": "/stʌf/",
+    "phoneticUS": "/stʌf/",
+    "pos": "",
+    "meaning": "n. 原料, 要素, 东西, 材料, 素质, 织品, 废物, 废话；vt. 装填；vi. 狼吞虎咽",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 90
+  },
+  {
+    "word": "cabinet",
+    "phoneticUK": "/'kæbinit/",
+    "phoneticUS": "/'kæbinit/",
+    "pos": "",
+    "meaning": "n. 橱柜, 内阁；a. 内阁的, 细木工做的；[计] 机柜",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 91
+  },
+  {
+    "word": "domestic",
+    "phoneticUK": "/dәu'mestik/",
+    "phoneticUS": "/dәu'mestik/",
+    "pos": "",
+    "meaning": "a. 家庭的, 国内的, 驯养的；[医] 家庭的, 家用的",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 92
+  },
+  {
+    "word": "demonstrate",
+    "phoneticUK": "/'demәnstreit/",
+    "phoneticUS": "/'demәnstreit/",
+    "pos": "",
+    "meaning": "vt. 示范, 证明；vi. 示威",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 93
+  },
+  {
+    "word": "grant",
+    "phoneticUK": "/grænt/",
+    "phoneticUS": "/grænt/",
+    "pos": "",
+    "meaning": "n. 授予, 授予物, 允许；vt. 允许, 承认, 授与；[计] 授权命令",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 94
+  },
+  {
+    "word": "investigation",
+    "phoneticUK": "/in.vesti'geiʃәn/",
+    "phoneticUS": "/in.vesti'geiʃәn/",
+    "pos": "",
+    "meaning": "n. 调查, 审查；[医] 调查, 调查研究",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 95
+  },
+  {
+    "word": "internal",
+    "phoneticUK": "/in'tә:nәl/",
+    "phoneticUS": "/in'tә:nәl/",
+    "pos": "",
+    "meaning": "a. 内在的, 国内的；[医] 内的, 内部的",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 96
+  },
+  {
+    "word": "launch",
+    "phoneticUK": "/lɒ:ntʃ/",
+    "phoneticUS": "/lɒ:ntʃ/",
+    "pos": "",
+    "meaning": "n. 下水, 汽艇, 发射；vt. 使下水, 发射, 发动；vi. 起飞, 下水, 投入, 开始",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 97
+  },
+  {
+    "word": "consumer",
+    "phoneticUK": "/kәn'sju:mә/",
+    "phoneticUS": "/kәn'sju:mә/",
+    "pos": "",
+    "meaning": "n. 消费者；[经] 消费者, 用户",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 98
+  },
+  {
+    "word": "improvement",
+    "phoneticUK": "/im'pru:vmәnt/",
+    "phoneticUS": "/im'pru:vmәnt/",
+    "pos": "",
+    "meaning": "n. 进步, 改善, 利用；[医] 改善, 好转, 进步",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 99
+  },
+  {
+    "word": "housing",
+    "phoneticUK": "/'hausiŋ/",
+    "phoneticUS": "/'hausiŋ/",
+    "pos": "",
+    "meaning": "n. 遮盖, 住房供给, 居留(处), 房屋, 装饰；[化] 外壳",
+    "level": 1,
+    "source": "ecdict-ielts",
+    "seq": 100
+  }
+]

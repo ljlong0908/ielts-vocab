@@ -1,0 +1,9 @@
+{
+  "name": "start_new_words",
+  "version": "1.0.0",
+  "description": "幂等生成当日新词队列",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

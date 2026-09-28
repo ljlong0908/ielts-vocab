@@ -1,0 +1,36 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="loading">加载中</view>
+
+  <block wx:else>
+    <view class="metrics">
+      <view class="metric">
+        <view class="metric-num">{{streak}}</view>
+        <view class="metric-label">连续天数</view>
+      </view>
+      <view class="metric">
+        <view class="metric-num">{{totalCheckins}}</view>
+        <view class="metric-label">累计打卡</view>
+      </view>
+      <view class="metric">
+        <view class="metric-num">{{totalLearned}}</view>
+        <view class="metric-label">累计单词</view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="cal-head">{{monthLabel}}</view>
+      <view class="cal-week">
+        <view wx:for="{{weekdays}}" wx:key="*this" class="cal-week-cell">{{item}}</view>
+      </view>
+      <view class="cal-grid">
+        <view wx:for="{{cells}}" wx:key="key" class="cal-cell">
+          <view
+            wx:if="{{!item.empty}}"
+            class="cal-day {{item.checked ? 'checked' : ''}} {{item.isToday ? 'today' : ''}}"
+          >{{item.day}}</view>
+        </view>
+      </view>
+      <view class="hint cal-tip">绿色为已打卡日期</view>
+    </view>
+  </block>
+</view>

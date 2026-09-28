@@ -1,0 +1,63 @@
+.hero {
+  background: #185fa5;
+  border: none;
+}
+
+.stat-num {
+  font-size: 56rpx;
+  font-weight: 500;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.hero .muted {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 24rpx;
+}
+
+.stat-right {
+  text-align: right;
+}
+
+.progress {
+  height: 16rpx;
+  background: #eef0f3;
+  border-radius: 999rpx;
+  margin-top: 24rpx;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #1d9e75;
+  border-radius: 999rpx;
+  transition: width 0.3s ease;
+}
+
+.progress-hint {
+  margin-top: 16rpx;
+}
+
+.cta {
+  margin: 8rpx 0 32rpx;
+}
+
+.grid {
+  display: flex;
+  gap: 24rpx;
+}
+
+.grid-item {
+  flex: 1;
+  background: #ffffff;
+  border: 1rpx solid #e5e6eb;
+  border-radius: 20rpx;
+  padding: 28rpx 20rpx;
+  text-align: center;
+}
+
+.grid-title {
+  font-size: 28rpx;
+  font-weight: 500;
+  margin-bottom: 6rpx;
+}

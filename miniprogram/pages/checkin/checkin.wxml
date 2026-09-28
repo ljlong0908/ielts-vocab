@@ -1,0 +1,21 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="loading">打卡中</view>
+
+  <block wx:else>
+    <view class="ck">
+      <view class="ck-check"></view>
+      <view class="ck-title">{{already ? '今日已打卡' : '打卡成功'}}</view>
+      <view class="ck-sub muted">今天学了 {{learnedCount}} 个单词</view>
+
+      <view class="ck-streak">
+        <view class="ck-streak-num">{{streak}}</view>
+        <view class="ck-streak-label">连续打卡（天）</view>
+      </view>
+
+      <view class="ck-total hint">累计学习 {{totalLearned}} 个单词</view>
+    </view>
+
+    <view class="btn primary" bindtap="goHome">回到首页</view>
+    <button class="btn share-btn" open-type="share">分享给朋友</button>
+  </block>
+</view>

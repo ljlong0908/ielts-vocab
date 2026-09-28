@@ -1,0 +1,45 @@
+.wb-item {
+  padding: 28rpx 32rpx;
+}
+
+.wb-main {
+  flex: 1;
+}
+
+.wb-word {
+  font-size: 38rpx;
+  font-weight: 500;
+}
+
+.wb-phonetic {
+  font-size: 24rpx;
+  color: #8f959e;
+  margin-top: 4rpx;
+}
+
+.wb-meaning {
+  font-size: 28rpx;
+  color: #646a73;
+  margin-top: 8rpx;
+}
+
+.speaker {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background: #e6f1fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: 20rpx;
+}
+
+.speaker-icon {
+  width: 0;
+  height: 0;
+  border-top: 13rpx solid transparent;
+  border-bottom: 13rpx solid transparent;
+  border-left: 20rpx solid #185fa5;
+  margin-left: 5rpx;
+}

@@ -1,0 +1,10 @@
+{
+  "name": "enrich_word",
+  "version": "1.0.0",
+  "description": "AI 内容补全（例句/词根/词源），带乐观锁与缓存",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3",
+    "axios": "^1.6.8"
+  }
+}

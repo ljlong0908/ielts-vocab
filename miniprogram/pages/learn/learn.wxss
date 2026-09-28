@@ -1,0 +1,133 @@
+.head {
+  margin-bottom: 24rpx;
+}
+
+.word-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.word {
+  font-size: 60rpx;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.speaker {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: #e6f1fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.speaker-icon {
+  width: 0;
+  height: 0;
+  border-top: 14rpx solid transparent;
+  border-bottom: 14rpx solid transparent;
+  border-left: 22rpx solid #185fa5;
+  margin-left: 6rpx;
+}
+
+.phonetic {
+  color: #646a73;
+  font-size: 28rpx;
+  margin-top: 8rpx;
+}
+
+.pos {
+  display: inline-block;
+  margin-top: 12rpx;
+  padding: 2rpx 14rpx;
+  border-radius: 6rpx;
+  background: #f1efe8;
+  color: #5f5e5a;
+  font-size: 22rpx;
+}
+
+.meaning {
+  font-size: 34rpx;
+  font-weight: 500;
+  margin-top: 16rpx;
+}
+
+.enriching-tip {
+  margin-top: 16rpx;
+}
+
+.sec-title {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #185fa5;
+  margin-bottom: 16rpx;
+}
+
+.sec-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.speaker-sm {
+  width: 48rpx;
+  height: 48rpx;
+}
+
+.speaker-sm .speaker-icon {
+  border-top: 10rpx solid transparent;
+  border-bottom: 10rpx solid transparent;
+  border-left: 16rpx solid #185fa5;
+  margin-left: 4rpx;
+}
+
+.example-en {
+  font-size: 30rpx;
+  line-height: 1.7;
+}
+
+.example-cn {
+  color: #646a73;
+  font-size: 26rpx;
+  margin-top: 8rpx;
+}
+
+.root-item {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid #f1f2f4;
+}
+
+.root-item:last-child {
+  border-bottom: none;
+}
+
+.root-part {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #1d9e75;
+}
+
+.root-type {
+  font-size: 22rpx;
+  color: #8f959e;
+  background: #f5f6f7;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+}
+
+.root-meaning {
+  font-size: 28rpx;
+  color: #1f2329;
+}
+
+.etymology {
+  font-size: 28rpx;
+  line-height: 1.8;
+  color: #1f2329;
+}

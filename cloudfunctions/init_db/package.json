@@ -1,0 +1,9 @@
+{
+  "name": "init_db",
+  "version": "1.0.0",
+  "description": "云数据库一键体检 / 初始化（管理用，幂等）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

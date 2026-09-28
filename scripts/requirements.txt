@@ -1,0 +1,31 @@
+# 音频预生成工具链依赖（本地跑，不进小程序包、不进云函数）
+#
+# 安装（使用项目托管的 venv，避免污染系统环境）：
+#   /Users/lijinlong/.workbuddy/binaries/python/envs/default/bin/pip install -r scripts/requirements.txt
+#
+# 国内网络慢时可用镜像。注意：pip 在本机会因 sdist 解包目录冲突报
+# 「EEXIST ... docopt_xxx」，改用 uv 更稳：
+#   pip install uv
+#   uv pip install --python <venv>/bin/python \
+#     --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
+#     --index-strategy unsafe-best-match -r scripts/requirements.txt
+
+kokoro>=0.9.4          # Apache-2.0 的 TTS 模型，纯 CPU 可跑
+soundfile>=0.12.1      # 音频读写（兼作 mp3 编码兜底）
+lameenc>=1.7.0         # 纯 wheel 的 LAME 绑定，输出 mp3 无需 ffmpeg
+numpy<2                # 静音裁剪 / PCM 转换（kokoro 依赖链尚未适配 numpy 2）
+
+# ---------------------------------------------------------------------------
+# 额外两步（不在 requirements 里，因为都不在 PyPI 上、且必须走镜像）
+#
+# 1) HuggingFace 模型走镜像（GitHub / huggingface.co 在境内不可达）：
+#      export HF_ENDPOINT=https://hf-mirror.com
+#    首次运行 gen_audio.py 会自动从镜像拉 hexgrad/Kokoro-82M（约 326MB）。
+#
+# 2) spaCy 英文小模型 en_core_web_sm（misaki 做英文 G2P 时强制要求）：
+#    ⚠️ 它不在 PyPI。misaki 默认调 spacy.cli.download()，会去
+#       raw.githubusercontent.com 拉 compatibility.json —— 境内必失败。
+#    解决办法：跑本目录下的一键脚本（自动从 HF 镜像取、修文件名、装、校验）：
+#      export HF_ENDPOINT=https://hf-mirror.com
+#      <venv>/bin/python scripts/install_spacy_model.py
+# ---------------------------------------------------------------------------

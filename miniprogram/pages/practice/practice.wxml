@@ -1,0 +1,38 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="loading">生成练习中</view>
+  <view wx:elif="{{empty}}" class="empty">暂无题目</view>
+
+  <block wx:else>
+    <view class="between head">
+      <view class="tag">{{phase === 'review' ? '复习昨日单词' : '今日练习'}}</view>
+      <view class="hint">{{index + 1}} / {{questions.length}}</view>
+    </view>
+
+    <view class="card">
+      <view class="q-type">{{q.type === 'cn_option' ? '选出正确的中文释义' : '选出正确的英文单词'}}</view>
+      <view class="q-stem-row">
+        <text class="q-stem">{{q.stem}}</text>
+        <view wx:if="{{q.phonetic}}" class="speaker" bindtap="playStem">
+          <view class="speaker-icon"></view>
+        </view>
+      </view>
+      <view wx:if="{{q.phonetic}}" class="phonetic">{{q.phonetic}}</view>
+    </view>
+
+    <view class="options">
+      <view
+        wx:for="{{q.options}}"
+        wx:key="*this"
+        class="option {{selected === index ? (correct ? 'ok' : 'bad') : ''}} {{revealed && index === answerIndex && !correct ? 'answer' : ''}}"
+        data-index="{{index}}"
+        bindtap="choose"
+      >
+        <view class="opt-key">{{optKeys[index]}}</view>
+        <view class="opt-text">{{item}}</view>
+      </view>
+    </view>
+
+    <view wx:if="{{revealed && !correct}}" class="feedback bad-text">答错了，正确答案已标出，请重新选择</view>
+    <view wx:if="{{revealed && correct}}" class="feedback ok-text">答对了</view>
+  </block>
+</view>

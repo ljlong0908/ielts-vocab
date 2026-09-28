@@ -1,0 +1,63 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="loading">加载中</view>
+  <view wx:elif="{{empty}}" class="empty">词库已学完，明天再来吧</view>
+
+  <block wx:else>
+    <view class="between head">
+      <view class="hint">今日新词</view>
+      <view class="tag">{{index + 1}} / {{total}}</view>
+    </view>
+
+    <view wx:if="{{cardLoading}}" class="loading">正在生成学习内容</view>
+
+    <block wx:elif="{{card}}">
+      <view class="card">
+        <view class="word-row">
+          <text class="word">{{card.word}}</text>
+          <view class="speaker" bindtap="play">
+            <view class="speaker-icon"></view>
+          </view>
+        </view>
+        <view class="phonetic">{{card.phoneticUS || card.phoneticUK}}</view>
+        <view wx:if="{{card.pos}}" class="pos">{{card.pos}}</view>
+        <view class="meaning">{{card.meaning}}</view>
+        <view wx:if="{{card.enriching}}" class="hint enriching-tip">扩展内容生成中，稍后自动补全</view>
+      </view>
+
+      <view class="card">
+        <view class="sec-title sec-head">
+          <text>例句</text>
+          <!-- 例句发音：整句音频由本地 Kokoro 预生成，未预置时静默不播 -->
+          <view wx:if="{{card.example}}" class="speaker speaker-sm" bindtap="playExample">
+            <view class="speaker-icon"></view>
+          </view>
+        </view>
+        <block wx:if="{{card.example}}">
+          <view class="example-en">{{card.example.en}}</view>
+          <view class="example-cn">{{card.example.cn}}</view>
+        </block>
+        <view wx:else class="hint">暂缺</view>
+      </view>
+
+      <view class="card">
+        <view class="sec-title">词根拆解</view>
+        <block wx:if="{{card.roots.length}}">
+          <view wx:for="{{card.roots}}" wx:key="part" class="root-item">
+            <text class="root-part">{{item.part}}</text>
+            <text class="root-type">{{item.type}}</text>
+            <text class="root-meaning">{{item.meaning}}</text>
+          </view>
+        </block>
+        <view wx:else class="hint">暂缺</view>
+      </view>
+
+      <view class="card">
+        <view class="sec-title">单词演变</view>
+        <view wx:if="{{card.etymology}}" class="etymology">{{card.etymology}}</view>
+        <view wx:else class="hint">暂缺</view>
+      </view>
+
+      <view class="btn primary" bindtap="next">{{isLast ? '开始练习' : '下一个'}}</view>
+    </block>
+  </block>
+</view>

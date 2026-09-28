@@ -1,0 +1,86 @@
+.metrics {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.metric {
+  flex: 1;
+  background: #ffffff;
+  border: 1rpx solid #e5e6eb;
+  border-radius: 20rpx;
+  padding: 28rpx 16rpx;
+  text-align: center;
+}
+
+.metric-num {
+  font-size: 44rpx;
+  font-weight: 500;
+  color: #185fa5;
+}
+
+.metric-label {
+  font-size: 22rpx;
+  color: #8f959e;
+  margin-top: 6rpx;
+}
+
+.cal-head {
+  font-size: 30rpx;
+  font-weight: 500;
+  margin-bottom: 24rpx;
+  text-align: center;
+}
+
+.cal-week {
+  display: flex;
+}
+
+.cal-week-cell {
+  width: 14.28%;
+  text-align: center;
+  font-size: 22rpx;
+  color: #8f959e;
+  padding-bottom: 12rpx;
+}
+
+.cal-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.cal-cell {
+  width: 14.28%;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cal-day {
+  width: 60rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  text-align: center;
+  border-radius: 50%;
+  font-size: 26rpx;
+  color: #1f2329;
+}
+
+.cal-day.checked {
+  background: #1d9e75;
+  color: #ffffff;
+}
+
+.cal-day.today {
+  border: 2rpx solid #185fa5;
+}
+
+.cal-day.checked.today {
+  color: #ffffff;
+}
+
+.cal-tip {
+  margin-top: 16rpx;
+  text-align: center;
+}

@@ -1,0 +1,42 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="loading">加载中</view>
+
+  <block wx:else>
+    <view class="card">
+      <view class="pf-row">
+        <view class="muted">连续打卡</view>
+        <view class="pf-val">{{user.streak}} 天</view>
+      </view>
+      <view class="pf-row">
+        <view class="muted">累计学习</view>
+        <view class="pf-val">{{user.totalLearned}} 词</view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="sec-title">每日学习量</view>
+      <view class="pf-goals">
+        <view
+          wx:for="{{options}}"
+          wx:key="*this"
+          class="pf-goal {{user.dailyGoal === item ? 'active' : ''}}"
+          data-value="{{item}}"
+          bindtap="setGoal"
+        >
+          {{item}} 个
+        </view>
+      </view>
+      <view class="hint pf-tip">修改后从下一个自然日生效</view>
+    </view>
+
+    <view class="card pf-link" bindtap="goStats">
+      <view>学习统计</view>
+      <view class="hint">打卡日历</view>
+    </view>
+
+    <view class="card pf-link" bindtap="goWrong">
+      <view>错题本</view>
+      <view class="hint">易错单词</view>
+    </view>
+  </block>
+</view>

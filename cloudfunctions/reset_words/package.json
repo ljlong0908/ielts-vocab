@@ -1,0 +1,9 @@
+{
+  "name": "reset_words",
+  "version": "1.0.0",
+  "description": "词库重置（管理用，破坏性）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

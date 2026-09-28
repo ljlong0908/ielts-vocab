@@ -1,0 +1,50 @@
+.pf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+}
+
+.pf-val {
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.sec-title {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #185fa5;
+  margin-bottom: 20rpx;
+}
+
+.pf-goals {
+  display: flex;
+  gap: 24rpx;
+}
+
+.pf-goal {
+  flex: 1;
+  text-align: center;
+  padding: 24rpx 0;
+  border: 2rpx solid #e5e6eb;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  color: #1f2329;
+}
+
+.pf-goal.active {
+  border-color: #185fa5;
+  background: #e6f1fb;
+  color: #185fa5;
+  font-weight: 500;
+}
+
+.pf-tip {
+  margin-top: 16rpx;
+}
+
+.pf-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}

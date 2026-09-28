@@ -1,0 +1,7 @@
+# 小程序内用图目录（当前为空）
+#
+# 目前所有 UI 图标都用 CSS 绘制，无需图片资源；品牌头像与图标源文件在
+# 仓库的 assets/brand/ 下（那个目录在 miniprogramRoot 之外，不会被打进小程序包）。
+#
+# 需要自定义分享卡片配图时，把 5:4 的图片（建议 500x400）放成
+# miniprogram/images/share.png，再把 utils/share.js 的 SHARE_IMAGE 改成 '/images/share.png'。

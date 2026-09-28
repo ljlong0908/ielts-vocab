@@ -1,0 +1,2074 @@
+[
+  {
+    "word": "council",
+    "example": {
+      "en": "The city council approved the new housing plan.",
+      "cn": "市议会批准了新的住房计划。"
+    },
+    "roots": [
+      {
+        "part": "con-",
+        "type": "prefix",
+        "meaning": "共同，一起"
+      },
+      {
+        "part": "cil-",
+        "type": "root",
+        "meaning": "召集，召唤"
+      }
+    ],
+    "etymology": "源自拉丁语 concilium，由 con-（共同）和 calare（召集）构成，意为被召集到一起的群体，后指会议或委员会。"
+  },
+  {
+    "word": "community",
+    "example": {
+      "en": "Local community groups organized a cleanup to protect the river.",
+      "cn": "当地社区团体组织了一次清理活动来保护河流。"
+    },
+    "roots": [
+      {
+        "part": "com-",
+        "type": "prefix",
+        "meaning": "共同，一起"
+      },
+      {
+        "part": "mun-",
+        "type": "root",
+        "meaning": "服务，职责"
+      },
+      {
+        "part": "-ity",
+        "type": "suffix",
+        "meaning": "名词后缀，表状态或集合"
+      }
+    ],
+    "etymology": "源自拉丁语 communitas，由 communis（共同的）演变而来，指共同分享或承担的关系。"
+  },
+  {
+    "word": "issue",
+    "example": {
+      "en": "The government must address the issue of climate change urgently.",
+      "cn": "政府必须紧急应对气候变化问题。"
+    },
+    "roots": [],
+    "etymology": "源自拉丁语 exire（出去），由 ex-（出）和 ire（走）组成，后演变为古法语 issue，指流出、结果或问题。"
+  },
+  {
+    "word": "economic",
+    "example": {
+      "en": "The government's economic policies aim to reduce inflation.",
+      "cn": "政府的经济政策旨在降低通货膨胀。"
+    },
+    "roots": [
+      {
+        "part": "eco-",
+        "type": "prefix",
+        "meaning": "家、环境"
+      },
+      {
+        "part": "-nom-",
+        "type": "root",
+        "meaning": "管理、法则"
+      },
+      {
+        "part": "-ic",
+        "type": "suffix",
+        "meaning": "……的"
+      }
+    ],
+    "etymology": "源自希腊语 oikonomia（持家），由 oikos（家）和 nomos（管理）组成，后引申为经济。"
+  },
+  {
+    "word": "involve",
+    "example": {
+      "en": "The research project involves collecting data from various sources.",
+      "cn": "这个研究项目涉及从各种来源收集数据。"
+    },
+    "roots": [
+      {
+        "part": "in-",
+        "type": "prefix",
+        "meaning": "进入，在内"
+      },
+      {
+        "part": "volv",
+        "type": "root",
+        "meaning": "卷，转"
+      },
+      {
+        "part": "-e",
+        "type": "suffix",
+        "meaning": "动词后缀"
+      }
+    ],
+    "etymology": "源自拉丁语 involvere，由 in-（进入）和 volvere（卷、转）组成，意为“卷入、包围”。"
+  },
+  {
+    "word": "management",
+    "example": {
+      "en": "Effective time management is crucial for academic success.",
+      "cn": "有效的时间管理对学业成功至关重要。"
+    },
+    "roots": [
+      {
+        "part": "man-",
+        "type": "root",
+        "meaning": "手"
+      },
+      {
+        "part": "-age-",
+        "type": "suffix",
+        "meaning": "名词后缀，表行为或结果"
+      },
+      {
+        "part": "-ment",
+        "type": "suffix",
+        "meaning": "名词后缀，表行为或结果"
+      }
+    ],
+    "etymology": "源自拉丁语 manus（手），经意大利语 maneggiare（用手处理）进入英语，引申为管理、经营。"
+  },
+  {
+    "word": "claim",
+    "example": {
+      "en": "The company claims that its new drug can cure the disease.",
+      "cn": "该公司声称其新药能治愈这种疾病。"
+    },
+    "roots": [
+      {
+        "part": "claim",
+        "type": "root",
+        "meaning": "喊叫，呼喊"
+      }
+    ],
+    "etymology": "源自拉丁语 clamare（喊叫），经古法语 claim 进入英语，原指大声呼喊以主张权利。"
+  },
+  {
+    "word": "detail",
+    "example": {
+      "en": "The report outlines the plan in detail for the committee.",
+      "cn": "这份报告为委员会详细概述了该计划。"
+    },
+    "roots": [
+      {
+        "part": "de-",
+        "type": "prefix",
+        "meaning": "完全，彻底"
+      },
+      {
+        "part": "tail",
+        "type": "root",
+        "meaning": "切割"
+      }
+    ],
+    "etymology": "源自法语 détail，指“切成的碎片”，来自 de-（完全）+ tailler（切割），引申为细节。"
+  },
+  {
+    "word": "establish",
+    "example": {
+      "en": "The university established a new research center for climate studies.",
+      "cn": "这所大学建立了一个新的气候研究中心。"
+    },
+    "roots": [
+      {
+        "part": "e-",
+        "type": "prefix",
+        "meaning": "出，向外"
+      },
+      {
+        "part": "stabl-",
+        "type": "root",
+        "meaning": "站立，稳固"
+      },
+      {
+        "part": "-ish",
+        "type": "suffix",
+        "meaning": "动词后缀，使……"
+      }
+    ],
+    "etymology": "源自拉丁语 stabilire（使稳固），经古法语 establir 进入英语，本义为“使站稳”，引申为建立、确立。"
+  },
+  {
+    "word": "scheme",
+    "example": {
+      "en": "The government launched a new scheme to reduce carbon emissions.",
+      "cn": "政府启动了一项减少碳排放的新方案。"
+    },
+    "roots": [],
+    "etymology": "源自希腊语 schema（形状、计划），经拉丁语 schema 进入英语，原指图表或规划，后引申为方案、诡计等。"
+  },
+  {
+    "word": "property",
+    "example": {
+      "en": "The property was sold for a record price.",
+      "cn": "这处房产以创纪录的价格售出。"
+    },
+    "roots": [
+      {
+        "part": "pro-",
+        "type": "prefix",
+        "meaning": "向前，为了"
+      },
+      {
+        "part": "pri-",
+        "type": "root",
+        "meaning": "自己的，私人的"
+      },
+      {
+        "part": "-ty",
+        "type": "suffix",
+        "meaning": "名词后缀，表性质或状态"
+      }
+    ],
+    "etymology": "源自拉丁语 proprietas，意为“所有权、特性”，由 proprius（自己的）派生而来，经古法语传入英语。"
+  },
+  {
+    "word": "financial",
+    "example": {
+      "en": "The company's financial report showed a significant profit increase.",
+      "cn": "公司的财务报告显示利润大幅增长。"
+    },
+    "roots": [
+      {
+        "part": "fin-",
+        "type": "root",
+        "meaning": "结束, 界限"
+      },
+      {
+        "part": "-ance",
+        "type": "suffix",
+        "meaning": "名词后缀，表状态或行为"
+      },
+      {
+        "part": "-ial",
+        "type": "suffix",
+        "meaning": "形容词后缀，表相关"
+      }
+    ],
+    "etymology": "源自拉丁语finis（结束），经古法语finance（清偿债务）演变而来，后指财政、金融。"
+  },
+  {
+    "word": "opportunity",
+    "example": {
+      "en": "Studying abroad offers a valuable opportunity to experience diverse cultures.",
+      "cn": "出国留学提供了体验多元文化的宝贵机会。"
+    },
+    "roots": [
+      {
+        "part": "op-",
+        "type": "prefix",
+        "meaning": "向，朝向"
+      },
+      {
+        "part": "port-",
+        "type": "root",
+        "meaning": "港口"
+      },
+      {
+        "part": "-unity",
+        "type": "suffix",
+        "meaning": "名词后缀，表状态"
+      }
+    ],
+    "etymology": "源自拉丁语 opportunitas，由 ob-（朝向）和 portus（港口）构成，原指顺风驶入港口的良机，后引申为有利时机。"
+  },
+  {
+    "word": "contract",
+    "example": {
+      "en": "The company signed a contract to reduce carbon emissions by 2030.",
+      "cn": "该公司签署了一份到2030年减少碳排放的合同。"
+    },
+    "roots": [
+      {
+        "part": "con-",
+        "type": "prefix",
+        "meaning": "共同，一起"
+      },
+      {
+        "part": "tract",
+        "type": "root",
+        "meaning": "拉，拽"
+      }
+    ],
+    "etymology": "源自拉丁语 contractus，由 con-（共同）和 trahere（拉）构成，原意“拉到一起”，引申为缔结契约或收缩。"
+  },
+  {
+    "word": "source",
+    "example": {
+      "en": "The source of the river is in the mountains.",
+      "cn": "这条河的源头在群山之中。"
+    },
+    "roots": [],
+    "etymology": "源自古法语 sourse（涌出），源自拉丁语 surgere（升起、涌出），与 surge 同源。"
+  },
+  {
+    "word": "site",
+    "example": {
+      "en": "The new library will be sited near the main campus.",
+      "cn": "新图书馆将选址在主校区附近。"
+    },
+    "roots": [],
+    "etymology": "源自拉丁语 situs，意为位置、地点，经古法语 site 进入英语。"
+  },
+  {
+    "word": "factor",
+    "example": {
+      "en": "Cost is a key factor in choosing a university.",
+      "cn": "费用是选择大学的一个关键因素。"
+    },
+    "roots": [
+      {
+        "part": "fact-",
+        "type": "root",
+        "meaning": "做，制造"
+      },
+      {
+        "part": "-or",
+        "type": "suffix",
+        "meaning": "表示施动者或事物"
+      }
+    ],
+    "etymology": "源自拉丁语 factor，意为“做者、制造者”，来自 facere（做）。后引申为“促成某事的因素”。"
+  },
+  {
+    "word": "further",
+    "example": {
+      "en": "Further research is needed to confirm these findings.",
+      "cn": "需要进一步研究来证实这些发现。"
+    },
+    "roots": [
+      {
+        "part": "forth",
+        "type": "root",
+        "meaning": "向前、向外"
+      },
+      {
+        "part": "-er",
+        "type": "suffix",
+        "meaning": "比较级后缀"
+      }
+    ],
+    "etymology": "源自古英语 furthra，与 forth（向前）同源，比较级后缀 -er 表更远，引申为促进、进一步。"
+  },
+  {
+    "word": "series",
+    "example": {
+      "en": "The professor published a series of papers on climate change.",
+      "cn": "这位教授发表了一系列关于气候变化的论文。"
+    },
+    "roots": [],
+    "etymology": "源自拉丁语 series，意为“连续、顺序”，来自 serere（连接、排列），进入英语后表示一系列相关事物。"
+  },
+  {
+    "word": "region",
+    "example": {
+      "en": "This region is known for its rich cultural heritage and diverse ecosystems.",
+      "cn": "这个地区以其丰富的文化遗产和多样的生态系统而闻名。"
+    },
+    "roots": [
+      {
+        "part": "reg-",
+        "type": "root",
+        "meaning": "统治，管理"
+      },
+      {
+        "part": "-ion",
+        "type": "suffix",
+        "meaning": "名词后缀，表示状态或结果"
+      }
+    ],
+    "etymology": "源自拉丁语 regio，意为“方向、边界、地区”，来自 regere“统治、指导”。"
+  },
+  {
+    "word": "individual",
+    "example": {
+      "en": "Each individual has a unique learning style.",
+      "cn": "每个人都有独特的学习风格。"
+    },
+    "roots": [
+      {
+        "part": "in-",
+        "type": "prefix",
+        "meaning": "不，非"
+      },
+      {
+        "part": "divid-",
+        "type": "root",
+        "meaning": "分，分开"
+      },
+      {
+        "part": "-ual",
+        "type": "suffix",
+        "meaning": "形容词后缀，表示“…的”"
+      }
+    ],
+    "etymology": "源自拉丁语individuus，由in-（不）和dividuus（可分的）组成，意为“不可分割的”，后引申指个体。"
+  },
+  {
+    "word": "feature",
+    "example": {
+      "en": "The new smartphone features a high-resolution camera and a longer battery life.",
+      "cn": "这款新智能手机以高分辨率摄像头和更长电池寿命为特色。"
+    },
+    "roots": [
+      {
+        "part": "fact-",
+        "type": "root",
+        "meaning": "做，制作"
+      },
+      {
+        "part": "-ure",
+        "type": "suffix",
+        "meaning": "名词后缀，表行为或结果"
+      }
+    ],
+    "etymology": "源自拉丁语 factura（制作），经古法语 faiture 进入英语，原指“制作、形状”，后引申为“容貌特征”。"
+  },
+  {
+    "word": "current",
+    "example": {
+      "en": "The current trend towards remote work is reshaping urban economies.",
+      "cn": "当前的远程工作趋势正在重塑城市经济。"
+    },
+    "roots": [
+      {
+        "part": "curr-",
+        "type": "root",
+        "meaning": "跑，流动"
+      },
+      {
+        "part": "-ent",
+        "type": "suffix",
+        "meaning": "形容词或名词后缀"
+      }
+    ],
+    "etymology": "源自拉丁语 currere（跑），经古法语 corant 进入英语，本义为“流动的”，后引申出“当前的”含义。"
+  },
+  {
+    "word": "identify",
+    "example": {
+      "en": "Researchers must identify the key factors affecting climate change.",
+      "cn": "研究人员必须识别影响气候变化的关键因素。"
+    },
+    "roots": [
+      {
+        "part": "ident-",
+        "type": "root",
+        "meaning": "相同，同一"
+      },
+      {
+        "part": "-ify",
+        "type": "suffix",
+        "meaning": "使……化，使成为"
+      }
+    ],
+    "etymology": "源自拉丁语 identificare，由 idem（相同）和 facere（做）构成，意为“使相同”，后引申为“识别、确认”。"
+  },
+  {
+    "word": "provision",
+    "example": {
+      "en": "The government made provision for affordable housing in the new budget.",
+      "cn": "政府在新预算中为经济适用房做了拨款准备。"
+    },
+    "roots": [
+      {
+        "part": "pro-",
+        "type": "prefix",
+        "meaning": "向前，预先"
+      },
+      {
+        "part": "vid-",
+        "type": "root",
+        "meaning": "看，见"
+      },
+      {
+        "part": "-ion",
+        "type": "suffix",
+        "meaning": "名词后缀，表行为或结果"
+      }
+    ],
+    "etymology": "源自拉丁语 providere（预先看到、预备），由 pro-（向前）和 videre（看）构成，后引申为供应、规定。"
+  },
+  {
+    "word": "resource",
+    "example": {
+      "en": "The library provides abundant resources for academic research.",
+      "cn": "图书馆为学术研究提供了丰富的资源。"
+    },
+    "roots": [
+      {
+        "part": "re-",
+        "type": "prefix",
+        "meaning": "再，重新"
+      },
+      {
+        "part": "sourc",
+        "type": "root",
+        "meaning": "升起，出现（源自拉丁语 surgere）"
+      },
+      {
+        "part": "-e",
+        "type": "suffix",
+        "meaning": "名词或动词后缀"
+      }
+    ],
+    "etymology": "源自拉丁语 resurgere（重新升起），经法语 ressource 进入英语，原指‘重新振作的手段’，后引申为‘资源’。"
+  },
+  {
+    "word": "response",
+    "example": {
+      "en": "The survey showed a positive response to the new environmental policy.",
+      "cn": "调查显示人们对新环境政策反应积极。"
+    },
+    "roots": [
+      {
+        "part": "re-",
+        "type": "prefix",
+        "meaning": "回，再次"
+      },
+      {
+        "part": "-spons-",
+        "type": "root",
+        "meaning": "承诺，回答"
+      },
+      {
+        "part": "-e",
+        "type": "suffix",
+        "meaning": "名词或动词后缀"
+      }
+    ],
+    "etymology": "源自拉丁语 respondere，由 re-（回）和 spondere（承诺）组成，意为“回答、回应”。"
+  },
+  {
+    "word": "investment",
+    "example": {
+      "en": "Foreign investment in renewable energy has risen sharply this decade.",
+      "cn": "这十年间，对可再生能源的外国投资急剧增加。"
+    },
+    "roots": [
+      {
+        "part": "in-",
+        "type": "prefix",
+        "meaning": "进入，在内"
+      },
+      {
+        "part": "vest",
+        "type": "root",
+        "meaning": "衣服；引申为“赋予、投入”"
+      },
+      {
+        "part": "-ment",
+        "type": "suffix",
+        "meaning": "名词后缀，表行为或结果"
+      }
+    ],
+    "etymology": "源自拉丁语 investire（穿衣、覆盖），经意大利语 investire 进入英语，由“给钱穿上外衣”引申为投入资金。"
+  },
+  {
+    "word": "economy",
+    "example": {
+      "en": "The global economy is recovering slowly after the pandemic.",
+      "cn": "疫情后全球经济正在缓慢复苏。"
+    },
+    "roots": [
+      {
+        "part": "eco-",
+        "type": "prefix",
+        "meaning": "房屋、家庭"
+      },
+      {
+        "part": "-nomy",
+        "type": "suffix",
+        "meaning": "管理、法则"
+      }
+    ],
+    "etymology": "源自希腊语 oikonomia，由 oikos（房屋）和 nomos（管理）组成，意为持家之道，后引申为经济。"
+  },
+  {
+    "word": "previous",
+    "example": {
+      "en": "The previous research focused on urban pollution in developing countries.",
+      "cn": "先前的研究主要关注发展中国家的城市污染。"
+    },
+    "roots": [
+      {
+        "part": "pre-",
+        "type": "prefix",
+        "meaning": "在前，预先"
+      },
+      {
+        "part": "-vi-",
+        "type": "root",
+        "meaning": "道路，途径"
+      },
+      {
+        "part": "-ous",
+        "type": "suffix",
+        "meaning": "形容词后缀，表示“…的”"
+      }
+    ],
+    "etymology": "源自拉丁语 praevius，由 prae（在前）和 via（道路）组成，意为“走在前面的”，后引申为“先前的”。"
+  },
+  {
+    "word": "maintain",
+    "example": {
+      "en": "It is crucial to maintain a balanced diet for good health.",
+      "cn": "保持均衡饮食对健康至关重要。"
+    },
+    "roots": [
+      {
+        "part": "main-",
+        "type": "root",
+        "meaning": "手"
+      },
+      {
+        "part": "-tain",
+        "type": "root",
+        "meaning": "握持"
+      }
+    ],
+    "etymology": "源自拉丁语 manu tenere，意为“用手握住”，后引申为“保持、维持”。"
+  },
+  {
+    "word": "prime",
+    "example": {
+      "en": "The prime minister will address the nation on climate policy tonight.",
+      "cn": "首相今晚将就气候政策向全国发表讲话。"
+    },
+    "roots": [
+      {
+        "part": "prim-",
+        "type": "root",
+        "meaning": "第一，最初"
+      }
+    ],
+    "etymology": "源自拉丁语 primus（第一），经古法语进入英语，引申为“首要的、最佳的”。"
+  },
+  {
+    "word": "significant",
+    "example": {
+      "en": "The study found a significant difference in test scores between the two groups.",
+      "cn": "研究发现两组之间的测试成绩存在显著差异。"
+    },
+    "roots": [
+      {
+        "part": "sign-",
+        "type": "root",
+        "meaning": "标记，符号"
+      },
+      {
+        "part": "-fic-",
+        "type": "root",
+        "meaning": "做，制造"
+      },
+      {
+        "part": "-ant",
+        "type": "suffix",
+        "meaning": "形容词后缀，表示“具有…性质的”"
+      }
+    ],
+    "etymology": "源自拉丁语 significare（表示、意味着），由 signum（标记）和 facere（做）组合而成，引申为“有意义的、重要的”。"
+  },
+  {
+    "word": "industrial",
+    "example": {
+      "en": "The industrial revolution transformed Britain into a manufacturing powerhouse.",
+      "cn": "工业革命将英国转变为制造业强国。"
+    },
+    "roots": [
+      {
+        "part": "industri-",
+        "type": "root",
+        "meaning": "工业、产业"
+      },
+      {
+        "part": "-al",
+        "type": "suffix",
+        "meaning": "形容词后缀，表示“与…有关的”"
+      }
+    ],
+    "etymology": "源自拉丁语industria（勤勉），经法语industriel进入英语，18世纪后专指工业。"
+  },
+  {
+    "word": "united",
+    "example": {
+      "en": "The united efforts of the team led to a breakthrough in the research.",
+      "cn": "团队的联合努力促成了研究的突破。"
+    },
+    "roots": [
+      {
+        "part": "uni-",
+        "type": "prefix",
+        "meaning": "一，单一"
+      },
+      {
+        "part": "-ed",
+        "type": "suffix",
+        "meaning": "形容词后缀，表示“具有…特征的”"
+      }
+    ],
+    "etymology": "源自拉丁语'unire'（使合一），由'unus'（一）演变而来，经古法语进入英语，意为“使成为一个整体”。"
+  },
+  {
+    "word": "commission",
+    "example": {
+      "en": "The artist received a commission to paint a portrait of the university's founder.",
+      "cn": "这位艺术家收到了一份为大学创始人绘制肖像的委托。"
+    },
+    "roots": [
+      {
+        "part": "com-",
+        "type": "prefix",
+        "meaning": "共同，一起"
+      },
+      {
+        "part": "miss",
+        "type": "root",
+        "meaning": "送，派"
+      },
+      {
+        "part": "-ion",
+        "type": "suffix",
+        "meaning": "名词后缀，表示行为或结果"
+      }
+    ],
+    "etymology": "源自拉丁语commissio，由com-（一起）和mittere（送）构成，原指‘委托、交付’，后引申为‘佣金、委任状’等。"
+  },
+  {
+    "word": "image",
+    "example": {
+      "en": "The media often projects a distorted image of scientific research.",
+      "cn": "媒体常常塑造出对科学研究的扭曲形象。"
+    },
+    "roots": [
+      {
+        "part": "imit-",
+        "type": "root",
+        "meaning": "模仿，复制"
+      }
+    ],
+    "etymology": "源自拉丁语 imago（画像、复制品），词根 imit- 意为模仿，引申为图像、形象。"
+  },
+  {
+    "word": "client",
+    "example": {
+      "en": "The lawyer met with her client to discuss the contract.",
+      "cn": "律师与她的委托人会面讨论合同。"
+    },
+    "roots": [
+      {
+        "part": "cli-",
+        "type": "root",
+        "meaning": "倾斜、弯曲"
+      },
+      {
+        "part": "-ent",
+        "type": "suffix",
+        "meaning": "名词后缀，表示人"
+      }
+    ],
+    "etymology": "源自拉丁语 cliens，意为“依附者、追随者”，由 cluere（倾听、服从）演变而来，后指受保护者，再转为客户。"
+  },
+  {
+    "word": "sector",
+    "example": {
+      "en": "The service sector accounts for over 70% of the country's GDP.",
+      "cn": "服务业占该国GDP的70%以上。"
+    },
+    "roots": [
+      {
+        "part": "sect-",
+        "type": "root",
+        "meaning": "切, 割"
+      },
+      {
+        "part": "-or",
+        "type": "suffix",
+        "meaning": "名词后缀，表示物或人"
+      }
+    ],
+    "etymology": "源自拉丁语 sector，意为'切割者'，来自 secare（切）。最初指几何中的扇形，后引申为部门、区域等。"
+  },
+  {
+    "word": "original",
+    "example": {
+      "en": "The original manuscript was lost, so we rely on later copies.",
+      "cn": "原始手稿已丢失，因此我们只能依赖后来的副本。"
+    },
+    "roots": [
+      {
+        "part": "ori-",
+        "type": "root",
+        "meaning": "升起，开始"
+      },
+      {
+        "part": "-gin-",
+        "type": "root",
+        "meaning": "产生，出生"
+      },
+      {
+        "part": "-al",
+        "type": "suffix",
+        "meaning": "形容词后缀，表示“……的”"
+      }
+    ],
+    "etymology": "源自拉丁语 originalis，来自 origo（起源、开始），而 origo 源于 oriri（升起、开始）。"
+  },
+  {
+    "word": "employment",
+    "example": {
+      "en": "The government aims to boost employment among young graduates.",
+      "cn": "政府旨在促进年轻毕业生的就业。"
+    },
+    "roots": [
+      {
+        "part": "em-",
+        "type": "prefix",
+        "meaning": "使进入，使处于"
+      },
+      {
+        "part": "ploy",
+        "type": "root",
+        "meaning": "折叠，卷入"
+      },
+      {
+        "part": "-ment",
+        "type": "suffix",
+        "meaning": "名词后缀，表示行为或结果"
+      }
+    ],
+    "etymology": "源自拉丁语 implicare（卷入），经古法语 employer（使用、雇用）进入英语，原指“使卷入工作”，后引申为“雇用、职业”。"
+  },
+  {
+    "word": "professional",
+    "example": {
+      "en": "She is a true professional who always meets deadlines.",
+      "cn": "她是一位总能按时完成任务的专业人士。"
+    },
+    "roots": [
+      {
+        "part": "pro-",
+        "type": "prefix",
+        "meaning": "向前，公开"
+      },
+      {
+        "part": "fess-",
+        "type": "root",
+        "meaning": "说，声明"
+      },
+      {
+        "part": "-ional",
+        "type": "suffix",
+        "meaning": "形容词或名词后缀"
+      }
+    ],
+    "etymology": "源自拉丁语 professio，意为公开声明、宣誓，后指从事需宣誓的职业，如律师、医生。"
+  },
+  {
+    "word": "item",
+    "example": {
+      "en": "Each item on the agenda will be discussed in detail.",
+      "cn": "议程上的每一项都将被详细讨论。"
+    },
+    "roots": [],
+    "etymology": "源自拉丁语 item，意为“同样地”，原用于列举条款，后引申为“项目、条款”。"
+  },
+  {
+    "word": "extent",
+    "example": {
+      "en": "To some extent, climate change affects global agriculture.",
+      "cn": "在某种程度上，气候变化影响全球农业。"
+    },
+    "roots": [
+      {
+        "part": "ex-",
+        "type": "prefix",
+        "meaning": "向外"
+      },
+      {
+        "part": "tend-",
+        "type": "root",
+        "meaning": "伸展"
+      },
+      {
+        "part": "-t",
+        "type": "suffix",
+        "meaning": "名词后缀"
+      }
+    ],
+    "etymology": "源自拉丁语 extendere（向外伸展），经古法语 estendre 进入英语，引申为范围、程度。"
+  },
+  {
+    "word": "parliament",
+    "example": {
+      "en": "The new education bill was debated in parliament for weeks.",
+      "cn": "新的教育法案在议会辩论了数周。"
+    },
+    "roots": [
+      {
+        "part": "parl-",
+        "type": "root",
+        "meaning": "说，谈"
+      },
+      {
+        "part": "-ia-",
+        "type": "suffix",
+        "meaning": "名词后缀，表状态或集合"
+      },
+      {
+        "part": "-ment",
+        "type": "suffix",
+        "meaning": "名词后缀，表结果或手段"
+      }
+    ],
+    "etymology": "源自拉丁语 parliamentum，由 parliare（说）和 -mentum（名词后缀）组成，指商议的场所。"
+  },
+  {
+    "word": "effective",
+    "example": {
+      "en": "Regular exercise is an effective way to reduce stress.",
+      "cn": "定期锻炼是减轻压力的有效方法。"
+    },
+    "roots": [
+      {
+        "part": "ef-",
+        "type": "prefix",
+        "meaning": "出，向外（ex- 在 f 前的变体）"
+      },
+      {
+        "part": "fect",
+        "type": "root",
+        "meaning": "做，制作（来自拉丁语 facere）"
+      },
+      {
+        "part": "-ive",
+        "type": "suffix",
+        "meaning": "形容词后缀，表示“有…性质的”"
+      }
+    ],
+    "etymology": "源自拉丁语 effectivus，来自 efficere（做出、完成），由 ex-（出）和 facere（做）构成。"
+  },
+  {
+    "word": "payment",
+    "example": {
+      "en": "The university requires full payment of tuition fees before registration.",
+      "cn": "大学要求在注册前全额支付学费。"
+    },
+    "roots": [
+      {
+        "part": "pay",
+        "type": "root",
+        "meaning": "支付"
+      },
+      {
+        "part": "-ment",
+        "type": "suffix",
+        "meaning": "名词后缀，表示行为或结果"
+      }
+    ],
+    "etymology": "来自古法语 paiement，源于拉丁语 pacare（使满意、平息），与 peace 同源，原指偿还债务使债主满意。"
+  },
+  {
+    "word": "york",
+    "example": {
+      "en": "The House of York ruled England during the Wars of the Roses.",
+      "cn": "约克王朝在玫瑰战争期间统治了英格兰。"
+    },
+    "roots": [],
+    "etymology": "源自古英语 Eoforwic，可能意为“野猪聚居的村庄”，后演变为约克郡和约克王朝的名称。"
+  },
+  {
+    "word": "facility",
+    "example": {
+      "en": "The university offers excellent sports facilities for all students.",
+      "cn": "这所大学为所有学生提供了优良的体育设施。"
+    },
+    "roots": [
+      {
+        "part": "fac-",
+        "type": "root",
+        "meaning": "做，制作"
+      },
+      {
+        "part": "-ility",
+        "type": "suffix",
+        "meaning": "名词后缀，表示性质、状态"
+      }
+    ],
+    "etymology": "源自拉丁语facilis（容易的），由facere（做）演变而来，原指“容易做到”，后引申为“设备、设施”。"
+  },
+  {
+    "word": "survey",
+    "example": {
+      "en": "The survey revealed that most students prefer online learning.",
+      "cn": "这项调查显示大多数学生更喜欢在线学习。"
+    },
+    "roots": [
+      {
+        "part": "sur-",
+        "type": "prefix",
+        "meaning": "在上，超过"
+      },
+      {
+        "part": "vey",
+        "type": "root",
+        "meaning": "看（来自拉丁语videre）"
+      }
+    ],
+    "etymology": "源自拉丁语supervidere，意为“从上往下看”，经古法语sourveoir进入英语，引申为“调查、审视”。"
+  },
+  {
+    "word": "context",
+    "example": {
+      "en": "You must understand the context of the study to interpret its findings.",
+      "cn": "你必须了解这项研究的背景才能解读其发现。"
+    },
+    "roots": [
+      {
+        "part": "con-",
+        "type": "prefix",
+        "meaning": "共同，一起"
+      },
+      {
+        "part": "text",
+        "type": "root",
+        "meaning": "编织，文本"
+      }
+    ],
+    "etymology": "源自拉丁语 con-（一起）+ texere（编织），原指编织在一起，后引申为上下文、背景。"
+  },
+  {
+    "word": "extend",
+    "example": {
+      "en": "The university plans to extend its library to accommodate more students.",
+      "cn": "大学计划扩建图书馆以容纳更多学生。"
+    },
+    "roots": [
+      {
+        "part": "ex-",
+        "type": "prefix",
+        "meaning": "向外"
+      },
+      {
+        "part": "tend",
+        "type": "root",
+        "meaning": "伸展"
+      }
+    ],
+    "etymology": "源自拉丁语 extendere，由 ex-（向外）和 tendere（伸展）组成，意为向外伸展。"
+  },
+  {
+    "word": "considerable",
+    "example": {
+      "en": "The new policy has brought considerable benefits to local communities.",
+      "cn": "新政策给当地社区带来了相当大的好处。"
+    },
+    "roots": [
+      {
+        "part": "con-",
+        "type": "prefix",
+        "meaning": "共同，一起"
+      },
+      {
+        "part": "sider-",
+        "type": "root",
+        "meaning": "星星"
+      },
+      {
+        "part": "-able",
+        "type": "suffix",
+        "meaning": "可…的"
+      }
+    ],
+    "etymology": "源自拉丁语 considerare，由 con-（一起）和 sidus（星星）构成，原指“观察星象”，后引申为“仔细考虑”，加 -able 表示“值得考虑的”，进而指“相当大的”。"
+  },
+  {
+    "word": "species",
+    "example": {
+      "en": "Many species in this region are threatened by habitat loss.",
+      "cn": "该地区的许多物种正受到栖息地丧失的威胁。"
+    },
+    "roots": [
+      {
+        "part": "spec-",
+        "type": "root",
+        "meaning": "看，外观"
+      },
+      {
+        "part": "-ies",
+        "type": "suffix",
+        "meaning": "名词复数后缀"
+      }
+    ],
+    "etymology": "源自拉丁语 species（外观、种类），源于 specere（看），最初指视觉上的外形，后引申为生物分类中的“物种”。"
+  },
+  {
+    "word": "career",
+    "example": {
+      "en": "She pursued a career in environmental science after graduating.",
+      "cn": "毕业后，她投身于环境科学事业。"
+    },
+    "roots": [
+      {
+        "part": "car-",
+        "type": "root",
+        "meaning": "车；道路"
+      },
+      {
+        "part": "-eer",
+        "type": "suffix",
+        "meaning": "表示从事某职业的人"
+      }
+    ],
+    "etymology": "源自法语carrière，原指“道路、跑道”，后引申为“人生道路、职业历程”。"
+  },
+  {
+    "word": "solution",
+    "example": {
+      "en": "The government is seeking a long-term solution to the housing crisis.",
+      "cn": "政府正在寻求住房危机的长期解决方案。"
+    },
+    "roots": [
+      {
+        "part": "solv-",
+        "type": "root",
+        "meaning": "松开，解开"
+      },
+      {
+        "part": "-tion",
+        "type": "suffix",
+        "meaning": "名词后缀，表示行为或结果"
+      }
+    ],
+    "etymology": "源自拉丁语 solutio，由 solvere（松开、解开）演变而来，引申为解决问题或溶解物质。"
+  },
+  {
+    "word": "existing",
+    "example": {
+      "en": "The existing policy fails to address the needs of rural students.",
+      "cn": "现行政策未能满足农村学生的需求。"
+    },
+    "roots": [
+      {
+        "part": "ex-",
+        "type": "prefix",
+        "meaning": "出，向外"
+      },
+      {
+        "part": "sist",
+        "type": "root",
+        "meaning": "站立"
+      },
+      {
+        "part": "-ing",
+        "type": "suffix",
+        "meaning": "形容词后缀，表示持续状态"
+      }
+    ],
+    "etymology": "源自拉丁语 exsistere，由 ex-（出）和 sistere（站立）构成，意为“站出来、出现”，后引申为“存在”。"
+  },
+  {
+    "word": "stock",
+    "example": {
+      "en": "The company's stock of raw materials is sufficient for the next quarter.",
+      "cn": "公司的原材料库存足以满足下一季度的需求。"
+    },
+    "roots": [],
+    "etymology": "源自古英语 stocc，意为“树干、木桩”，后引申为“库存、股票”等含义。"
+  },
+  {
+    "word": "option",
+    "example": {
+      "en": "Students have the option to choose between two elective courses.",
+      "cn": "学生可以选择两门选修课中的一门。"
+    },
+    "roots": [
+      {
+        "part": "opt-",
+        "type": "root",
+        "meaning": "选择"
+      },
+      {
+        "part": "-ion",
+        "type": "suffix",
+        "meaning": "名词后缀，表示行为或状态"
+      }
+    ],
+    "etymology": "源自拉丁语 optio（选择），来自动词 optare（选择、希望），经古法语 option 进入英语。"
+  },
+  {
+    "word": "occasion",
+    "example": {
+      "en": "The graduation ceremony was a joyous occasion for all the students.",
+      "cn": "毕业典礼对所有学生来说都是一个欢乐的场合。"
+    },
+    "roots": [
+      {
+        "part": "ob-",
+        "type": "prefix",
+        "meaning": "toward, against"
+      },
+      {
+        "part": "cas",
+        "type": "root",
+        "meaning": "fall"
+      },
+      {
+        "part": "-ion",
+        "type": "suffix",
+        "meaning": "noun suffix"
+      }
+    ],
+    "etymology": "源自拉丁语 occasionem，由 ob-（朝向）和 cadere（落下）构成，原指‘落到眼前的事物’，引申为时机、场合。"
+  },
+  {
+    "word": "executive",
+    "example": {
+      "en": "The executive committee approved the new budget for the research project.",
+      "cn": "执行委员会批准了该研究项目的新预算。"
+    },
+    "roots": [
+      {
+        "part": "ex-",
+        "type": "prefix",
+        "meaning": "出，向外"
+      },
+      {
+        "part": "secut",
+        "type": "root",
+        "meaning": "跟随"
+      },
+      {
+        "part": "-ive",
+        "type": "suffix",
+        "meaning": "形容词或名词后缀，表人或物"
+      }
+    ],
+    "etymology": "源自拉丁语 exsequi（跟随到底、执行），由 ex-（出）和 sequi（跟随）构成，后引申为执行者或执行的。"
+  },
+  {
+    "word": "scale",
+    "example": {
+      "en": "The scale of the survey ranged from local to global.",
+      "cn": "调查的规模从地方到全球不等。"
+    },
+    "roots": [
+      {
+        "part": "scal",
+        "type": "root",
+        "meaning": "爬，登；刻度"
+      },
+      {
+        "part": "-e",
+        "type": "suffix",
+        "meaning": "名词或动词后缀"
+      }
+    ],
+    "etymology": "源自拉丁语 scala（梯子、台阶），来自 scandere（爬），引申为刻度、规模、天平秤盘等含义。"
+  },
+  {
+    "word": "strategy",
+    "example": {
+      "en": "The company adopted a new marketing strategy to increase sales.",
+      "cn": "公司采用了新的营销策略来增加销售额。"
+    },
+    "roots": [
+      {
+        "part": "strateg-",
+        "type": "root",
+        "meaning": "将军，指挥"
+      },
+      {
+        "part": "-y",
+        "type": "suffix",
+        "meaning": "名词后缀，表示行为或状态"
+      }
+    ],
+    "etymology": "源自希腊语 stratēgia，意为“将军的指挥艺术”，由 stratos（军队）和 agein（领导）组成，后引申为“策略”。"
+  },
+  {
+    "word": "employee",
+    "example": {
+      "en": "The company provides health insurance for every employee.",
+      "cn": "公司为每位员工提供健康保险。"
+    },
+    "roots": [
+      {
+        "part": "em-",
+        "type": "prefix",
+        "meaning": "使…进入（in）"
+      },
+      {
+        "part": "ploy-",
+        "type": "root",
+        "meaning": "折叠、卷入（fold, involve）"
+      },
+      {
+        "part": "-ee",
+        "type": "suffix",
+        "meaning": "表示动作的承受者（被…的人）"
+      }
+    ],
+    "etymology": "源自法语 employer（雇用），由拉丁语 implicare（卷入）演变而来，-ee 后缀表示被雇用的人。"
+  },
+  {
+    "word": "essential",
+    "example": {
+      "en": "Regular exercise is essential for maintaining good health.",
+      "cn": "定期锻炼对保持健康至关重要。"
+    },
+    "roots": [
+      {
+        "part": "ess-",
+        "type": "root",
+        "meaning": "存在，本质（来自拉丁语esse）"
+      },
+      {
+        "part": "-ent",
+        "type": "suffix",
+        "meaning": "形容词后缀，表示“具有…性质的”"
+      },
+      {
+        "part": "-ial",
+        "type": "suffix",
+        "meaning": "形容词后缀，表示“与…有关的”"
+      }
+    ],
+    "etymology": "源自拉丁语essentialis，来自essentia（本质），而essentia源于esse（存在）。"
+  },
+  {
+    "word": "environmental",
+    "example": {
+      "en": "Environmental protection is a key issue in IELTS writing.",
+      "cn": "环境保护是雅思写作中的一个关键问题。"
+    },
+    "roots": [
+      {
+        "part": "en-",
+        "type": "prefix",
+        "meaning": "使，进入"
+      },
+      {
+        "part": "viron",
+        "type": "root",
+        "meaning": "环绕，周围"
+      },
+      {
+        "part": "-ment",
+        "type": "suffix",
+        "meaning": "名词后缀"
+      },
+      {
+        "part": "-al",
+        "type": "suffix",
+        "meaning": "形容词后缀"
+      }
+    ],
+    "etymology": "源自古法语environ（周围），由en-（使）和viron（环绕）构成，后加-ment和-al形成形容词。"
+  },
+  {
+    "word": "contact",
+    "example": {
+      "en": "Please contact the admissions office if you have any questions about the program.",
+      "cn": "如果您对该项目有任何疑问，请联系招生办公室。"
+    },
+    "roots": [
+      {
+        "part": "con-",
+        "type": "prefix",
+        "meaning": "共同，一起"
+      },
+      {
+        "part": "tact",
+        "type": "root",
+        "meaning": "触摸，接触"
+      }
+    ],
+    "etymology": "源自拉丁语 contactus，con-（一起）+ tangere（触摸），意为“接触、联系”。"
+  },
+  {
+    "word": "positive",
+    "example": {
+      "en": "The study found a positive correlation between exercise and mental health.",
+      "cn": "研究发现锻炼与心理健康之间存在正相关。"
+    },
+    "roots": [
+      {
+        "part": "pos-",
+        "type": "root",
+        "meaning": "放置"
+      },
+      {
+        "part": "-ive",
+        "type": "suffix",
+        "meaning": "形容词后缀，表示具有某种性质或倾向"
+      }
+    ],
+    "etymology": "源自拉丁语 positivus，意为“被放置的、约定的”，由 ponere（放置）的过去分词词干 pos- 加 -ivus 构成，后引申为“确定的、积极的”。"
+  },
+  {
+    "word": "best",
+    "example": {
+      "en": "She is the best candidate for the scholarship this year.",
+      "cn": "她是今年奖学金的最佳人选。"
+    },
+    "roots": [],
+    "etymology": "源自古英语 betst，是 good 的最高级形式，与 better 同源，日耳曼语系中表示“最好”。"
+  },
+  {
+    "word": "presence",
+    "example": {
+      "en": "The presence of international students enriches campus culture.",
+      "cn": "国际学生的存在丰富了校园文化。"
+    },
+    "roots": [
+      {
+        "part": "pre-",
+        "type": "prefix",
+        "meaning": "在前，预先"
+      },
+      {
+        "part": "sens",
+        "type": "root",
+        "meaning": "存在，感觉（源自拉丁语esse）"
+      },
+      {
+        "part": "-ence",
+        "type": "suffix",
+        "meaning": "名词后缀，表示状态或性质"
+      }
+    ],
+    "etymology": "源自拉丁语praesentia，由prae-（在前）和esse（存在）构成，意为“在场、存在”。"
+  },
+  {
+    "word": "release",
+    "example": {
+      "en": "The government decided to release the report to the public.",
+      "cn": "政府决定向公众发布这份报告。"
+    },
+    "roots": [
+      {
+        "part": "re-",
+        "type": "prefix",
+        "meaning": "回，向后"
+      },
+      {
+        "part": "lax",
+        "type": "root",
+        "meaning": "松"
+      }
+    ],
+    "etymology": "源自拉丁语 relaxare，意为“放松”，由 re-（回）和 laxare（放松）组成，后引申为“释放、发布”。"
+  },
+  {
+    "word": "commercial",
+    "example": {
+      "en": "The commercial success of the product exceeded all expectations.",
+      "cn": "该产品的商业成功超出了所有人的预期。"
+    },
+    "roots": [
+      {
+        "part": "com-",
+        "type": "prefix",
+        "meaning": "共同，一起"
+      },
+      {
+        "part": "merc-",
+        "type": "root",
+        "meaning": "商品，贸易"
+      },
+      {
+        "part": "-ial",
+        "type": "suffix",
+        "meaning": "形容词后缀，表示“与…有关的”"
+      }
+    ],
+    "etymology": "源自拉丁语 commercium（贸易），由 com-（共同）和 merx（商品）组合而成，后经法语进入英语。"
+  },
+  {
+    "word": "route",
+    "example": {
+      "en": "The bus route through the city center was changed due to roadworks.",
+      "cn": "由于道路施工，穿过市中心的公交路线被改变了。"
+    },
+    "roots": [],
+    "etymology": "源自拉丁语 rupta (via)，意为“被开辟的道路”，经古法语 route 进入英语，指路线或路径。"
+  },
+  {
+    "word": "proportion",
+    "example": {
+      "en": "A large proportion of students prefer online learning.",
+      "cn": "很大比例的学生更喜欢在线学习。"
+    },
+    "roots": [
+      {
+        "part": "pro-",
+        "type": "prefix",
+        "meaning": "向前，为了"
+      },
+      {
+        "part": "portion",
+        "type": "root",
+        "meaning": "部分，份额"
+      }
+    ],
+    "etymology": "源自拉丁语 proportio，由 pro-（向前）和 portio（部分）组成，原指各部分之间的对应关系。"
+  },
+  {
+    "word": "emerge",
+    "example": {
+      "en": "New patterns of migration have emerged in recent decades.",
+      "cn": "近几十年来，新的移民模式已经出现。"
+    },
+    "roots": [
+      {
+        "part": "e-",
+        "type": "prefix",
+        "meaning": "出，向外"
+      },
+      {
+        "part": "merg",
+        "type": "root",
+        "meaning": "浸没，沉"
+      },
+      {
+        "part": "-e",
+        "type": "suffix",
+        "meaning": "动词后缀"
+      }
+    ],
+    "etymology": "源自拉丁语 emergere，由 e-（出）和 mergere（浸没）组成，本义为“从水中浮出”，后引申为“出现、显露”。"
+  },
+  {
+    "word": "regional",
+    "example": {
+      "en": "The regional dialect varies significantly from the standard language.",
+      "cn": "地方方言与标准语言差异很大。"
+    },
+    "roots": [
+      {
+        "part": "reg-",
+        "type": "root",
+        "meaning": "统治，管理"
+      },
+      {
+        "part": "-ion",
+        "type": "suffix",
+        "meaning": "名词后缀，表示行为或状态"
+      },
+      {
+        "part": "-al",
+        "type": "suffix",
+        "meaning": "形容词后缀，表示与…有关的"
+      }
+    ],
+    "etymology": "源自拉丁语 regionalis，来自 regio（地区、区域），regio 源于 regere（统治、管理），后引申为“被管理的区域”，加 -al 构成形容词。"
+  },
+  {
+    "word": "deny",
+    "example": {
+      "en": "The defendant continued to deny any involvement in the fraud.",
+      "cn": "被告继续否认与这起欺诈案有任何牵连。"
+    },
+    "roots": [
+      {
+        "part": "de-",
+        "type": "prefix",
+        "meaning": "完全地；加强语气"
+      },
+      {
+        "part": "ny",
+        "type": "root",
+        "meaning": "来自拉丁语 negare，表示“否认、拒绝”"
+      }
+    ],
+    "etymology": "源自拉丁语 denegare，由 de-（完全）加 negare（否认）构成，经古法语 denier 进入英语，核心义为“坚决说不”。"
+  },
+  {
+    "word": "impact",
+    "example": {
+      "en": "The new policy had a significant impact on reducing carbon emissions.",
+      "cn": "新政策对减少碳排放产生了显著影响。"
+    },
+    "roots": [
+      {
+        "part": "im-",
+        "type": "prefix",
+        "meaning": "向内，进入"
+      },
+      {
+        "part": "pact",
+        "type": "root",
+        "meaning": "紧压，固定"
+      }
+    ],
+    "etymology": "源自拉丁语 impactus，是 impingere（撞击）的过去分词，由 in-（向内）和 pangere（固定）组成，原指用力压入，后引申为冲击或影响。"
+  },
+  {
+    "word": "estate",
+    "example": {
+      "en": "He inherited a large estate from his grandfather.",
+      "cn": "他从祖父那里继承了一大笔不动产。"
+    },
+    "roots": [
+      {
+        "part": "e-",
+        "type": "prefix",
+        "meaning": "出，向外"
+      },
+      {
+        "part": "sta-",
+        "type": "root",
+        "meaning": "站立"
+      },
+      {
+        "part": "-te",
+        "type": "suffix",
+        "meaning": "构成名词或形容词"
+      }
+    ],
+    "etymology": "源自拉丁语 status（状态、地位），经古法语 estat 进入英语，原指社会地位，后引申为财产、地产。"
+  },
+  {
+    "word": "propose",
+    "example": {
+      "en": "The committee proposed a new policy to reduce carbon emissions.",
+      "cn": "委员会提议了一项减少碳排放的新政策。"
+    },
+    "roots": [
+      {
+        "part": "pro-",
+        "type": "prefix",
+        "meaning": "向前"
+      },
+      {
+        "part": "pos-",
+        "type": "root",
+        "meaning": "放置"
+      },
+      {
+        "part": "-e",
+        "type": "suffix",
+        "meaning": "动词后缀"
+      }
+    ],
+    "etymology": "源自拉丁语 proponere（向前放置），由 pro-（向前）和 ponere（放置）组成，后演变为提议、打算之意。"
+  },
+  {
+    "word": "additional",
+    "example": {
+      "en": "Students may request additional time for the exam.",
+      "cn": "学生可以申请额外的考试时间。"
+    },
+    "roots": [
+      {
+        "part": "ab-",
+        "type": "prefix",
+        "meaning": "离开，偏离"
+      },
+      {
+        "part": "add",
+        "type": "root",
+        "meaning": "添加，增加"
+      },
+      {
+        "part": "-ional",
+        "type": "suffix",
+        "meaning": "形容词后缀"
+      }
+    ],
+    "etymology": "源自拉丁语 additio（添加），由 addere（加上）演变而来，ab- 表“向”，后引申为“附加的”。"
+  },
+  {
+    "word": "writer",
+    "example": {
+      "en": "The writer published a compelling novel about climate change.",
+      "cn": "这位作家出版了一部关于气候变化的引人入胜的小说。"
+    },
+    "roots": [
+      {
+        "part": "write",
+        "type": "root",
+        "meaning": "写"
+      },
+      {
+        "part": "-er",
+        "type": "suffix",
+        "meaning": "表示人"
+      }
+    ],
+    "etymology": "源自古英语writere，意为“抄写员”，由writan（写）加表人后缀-er构成。"
+  },
+  {
+    "word": "employer",
+    "example": {
+      "en": "The employer requires all staff to attend the safety training.",
+      "cn": "雇主要求所有员工参加安全培训。"
+    },
+    "roots": [
+      {
+        "part": "em-",
+        "type": "prefix",
+        "meaning": "使，进入（in- 的变体）"
+      },
+      {
+        "part": "ploy",
+        "type": "root",
+        "meaning": "使用，雇佣（源自拉丁语 plicare，折叠、应用）"
+      },
+      {
+        "part": "-er",
+        "type": "suffix",
+        "meaning": "表示施动者，……的人"
+      }
+    ],
+    "etymology": "源自法语 employer（使用、雇佣），由拉丁语 implicare（卷入、牵涉）演变而来，后加 -er 表示施动者，即“雇佣他人的人”。"
+  },
+  {
+    "word": "objective",
+    "example": {
+      "en": "The main objective of the study is to assess climate change impacts.",
+      "cn": "这项研究的主要目的是评估气候变化的影响。"
+    },
+    "roots": [
+      {
+        "part": "ob-",
+        "type": "prefix",
+        "meaning": "朝向，对面"
+      },
+      {
+        "part": "ject",
+        "type": "root",
+        "meaning": "投掷，扔"
+      },
+      {
+        "part": "-ive",
+        "type": "suffix",
+        "meaning": "形容词或名词后缀"
+      }
+    ],
+    "etymology": "源自拉丁语 objectum，由 ob-（朝向）和 jacere（投掷）构成，原指“投放在眼前之物”，后引申为“目标”和“客观的”。"
+  },
+  {
+    "word": "nevertheless",
+    "example": {
+      "en": "The data was limited; nevertheless, the findings were significant.",
+      "cn": "数据有限；尽管如此，研究结果仍具有重要意义。"
+    },
+    "roots": [
+      {
+        "part": "never",
+        "type": "root",
+        "meaning": "从不"
+      },
+      {
+        "part": "the",
+        "type": "root",
+        "meaning": "那个"
+      },
+      {
+        "part": "less",
+        "type": "suffix",
+        "meaning": "较少"
+      }
+    ],
+    "etymology": "由 never（从不）和 the less（更少）组合而成，原意“一点也不少”，后演变为“尽管如此”。"
+  },
+  {
+    "word": "confidence",
+    "example": {
+      "en": "Her confidence in public speaking grew after extensive practice.",
+      "cn": "经过大量练习后，她公开演讲的信心增强了。"
+    },
+    "roots": [
+      {
+        "part": "con-",
+        "type": "prefix",
+        "meaning": "完全，共同"
+      },
+      {
+        "part": "fid-",
+        "type": "root",
+        "meaning": "信任，相信"
+      },
+      {
+        "part": "-ence",
+        "type": "suffix",
+        "meaning": "名词后缀，表示状态或性质"
+      }
+    ],
+    "etymology": "源自拉丁语 confidentia，由 con-（完全）和 fidere（信任）构成，意为完全信任自己。"
+  },
+  {
+    "word": "sample",
+    "example": {
+      "en": "Researchers analysed a sample of 500 students to assess the new teaching method.",
+      "cn": "研究人员分析了500名学生的样本，以评估这种新教学方法。"
+    },
+    "roots": [
+      {
+        "part": "ex-",
+        "type": "prefix",
+        "meaning": "出，向外"
+      },
+      {
+        "part": "ample",
+        "type": "root",
+        "meaning": "拿，取（源自拉丁语 emere）"
+      }
+    ],
+    "etymology": "源自拉丁语 exemplum（取出之物、样本），由 ex-（出）和 emere（拿取）构成，后经古法语 essample 进入英语，词首 e 脱落形成 sample。"
+  },
+  {
+    "word": "volume",
+    "example": {
+      "en": "The volume of online courses has grown rapidly in recent years.",
+      "cn": "近年来，在线课程的数量迅速增长。"
+    },
+    "roots": [
+      {
+        "part": "volv-",
+        "type": "root",
+        "meaning": "卷，转"
+      },
+      {
+        "part": "-ume",
+        "type": "suffix",
+        "meaning": "名词后缀，表示结果或状态"
+      }
+    ],
+    "etymology": "源自拉丁语 volumen，指书卷，来自 volvere（卷）。因古书是卷起来的，后引申为体积、容量、音量等。"
+  },
+  {
+    "word": "legislation",
+    "example": {
+      "en": "New legislation on data protection will affect all tech companies.",
+      "cn": "关于数据保护的新立法将影响所有科技公司。"
+    },
+    "roots": [
+      {
+        "part": "leg-",
+        "type": "root",
+        "meaning": "法律"
+      },
+      {
+        "part": "-lat-",
+        "type": "root",
+        "meaning": "带来，提出"
+      },
+      {
+        "part": "-ion",
+        "type": "suffix",
+        "meaning": "名词后缀，表示行为或结果"
+      }
+    ],
+    "etymology": "源自拉丁语 legis（法律）和 latio（提出），意为提出法律，后演变为制定法律的过程。"
+  },
+  {
+    "word": "stuff",
+    "example": {
+      "en": "The room was stuffed with old furniture and boxes.",
+      "cn": "房间里塞满了旧家具和箱子。"
+    },
+    "roots": [],
+    "etymology": "源自古法语 estoffer（装备、填充），再往前可追溯至拉丁语 stuppa（填塞用的麻絮），本义为用材料填塞，后引申为材料、东西等含义。"
+  },
+  {
+    "word": "cabinet",
+    "example": {
+      "en": "The prime minister reshuffled the cabinet after the election.",
+      "cn": "选举后，首相重组了内阁。"
+    },
+    "roots": [
+      {
+        "part": "cabin",
+        "type": "root",
+        "meaning": "小屋、小室"
+      },
+      {
+        "part": "-et",
+        "type": "suffix",
+        "meaning": "表示小型的名词后缀"
+      }
+    ],
+    "etymology": "源自法语 cabine（小房间），由 cabin（小屋）加指小后缀 -et 构成，原指小陈列室，后引申为橱柜和内阁。"
+  },
+  {
+    "word": "domestic",
+    "example": {
+      "en": "The government aims to boost domestic consumption to drive economic growth.",
+      "cn": "政府旨在刺激国内消费以推动经济增长。"
+    },
+    "roots": [
+      {
+        "part": "dom-",
+        "type": "root",
+        "meaning": "家，房屋"
+      },
+      {
+        "part": "-estic",
+        "type": "suffix",
+        "meaning": "形容词后缀，表示“…的”"
+      }
+    ],
+    "etymology": "源自拉丁语 domesticus，来自 domus（家），经法语 domestique 进入英语，指与家或本国相关的。"
+  },
+  {
+    "word": "demonstrate",
+    "example": {
+      "en": "The professor demonstrated the experiment to the students.",
+      "cn": "教授向学生们演示了这个实验。"
+    },
+    "roots": [
+      {
+        "part": "de-",
+        "type": "prefix",
+        "meaning": "完全，彻底"
+      },
+      {
+        "part": "monstr-",
+        "type": "root",
+        "meaning": "显示，展示"
+      },
+      {
+        "part": "-ate",
+        "type": "suffix",
+        "meaning": "动词后缀，表示使…"
+      }
+    ],
+    "etymology": "源自拉丁语demonstrare，de-（完全）+ monstrare（展示），意为完全展示出来，引申为示范、证明。"
+  },
+  {
+    "word": "grant",
+    "example": {
+      "en": "The university granted her a scholarship for academic excellence.",
+      "cn": "大学因她学业优异而授予她奖学金。"
+    },
+    "roots": [],
+    "etymology": "源自古法语 granter，意为“允许、同意”，最终来自拉丁语 credentem，与“相信”相关，后引申为“授予、承认”。"
+  },
+  {
+    "word": "investigation",
+    "example": {
+      "en": "The police launched an investigation into the fraud case.",
+      "cn": "警方对这起诈骗案展开了调查。"
+    },
+    "roots": [
+      {
+        "part": "in-",
+        "type": "prefix",
+        "meaning": "向内，进入"
+      },
+      {
+        "part": "vestig-",
+        "type": "root",
+        "meaning": "足迹，追踪"
+      },
+      {
+        "part": "-ation",
+        "type": "suffix",
+        "meaning": "名词后缀，表示行为或结果"
+      }
+    ],
+    "etymology": "源自拉丁语 investigare，in-（进入）+ vestigium（足迹），意为追踪足迹，引申为调查。"
+  },
+  {
+    "word": "internal",
+    "example": {
+      "en": "The company's internal communication system needs urgent improvement.",
+      "cn": "公司的内部沟通系统需要紧急改进。"
+    },
+    "roots": [
+      {
+        "part": "inter-",
+        "type": "prefix",
+        "meaning": "在……之间，内部"
+      },
+      {
+        "part": "-al",
+        "type": "suffix",
+        "meaning": "形容词后缀，表示“……的”"
+      }
+    ],
+    "etymology": "源自拉丁语 internus，意为“内部的”，由 inter-（在……之间）加形容词后缀 -al 演变而来。"
+  },
+  {
+    "word": "launch",
+    "example": {
+      "en": "The company plans to launch a new product next month.",
+      "cn": "公司计划下个月推出一款新产品。"
+    },
+    "roots": [],
+    "etymology": "源自古法语 lancher，意为投掷，可能来自拉丁语 lanceare，与 lance（长矛）有关。"
+  },
+  {
+    "word": "consumer",
+    "example": {
+      "en": "Consumer demand for eco-friendly products has risen sharply in recent years.",
+      "cn": "近年来，消费者对环保产品的需求急剧上升。"
+    },
+    "roots": [
+      {
+        "part": "con-",
+        "type": "prefix",
+        "meaning": "共同、一起（此处表加强）"
+      },
+      {
+        "part": "sum-",
+        "type": "root",
+        "meaning": "拿、取（来自拉丁语 sumere）"
+      },
+      {
+        "part": "-er",
+        "type": "suffix",
+        "meaning": "表示人或物"
+      }
+    ],
+    "etymology": "源自拉丁语 consumere（用尽、消耗），由 con-（加强）与 sumere（拿取）构成，后经法语进入英语，指消耗商品的人。"
+  },
+  {
+    "word": "improvement",
+    "example": {
+      "en": "The new policy led to a significant improvement in air quality.",
+      "cn": "新政策使空气质量有了显著改善。"
+    },
+    "roots": [
+      {
+        "part": "im-",
+        "type": "prefix",
+        "meaning": "进入，使"
+      },
+      {
+        "part": "prov",
+        "type": "root",
+        "meaning": "证明，检验（来自拉丁语 probare）"
+      },
+      {
+        "part": "-ment",
+        "type": "suffix",
+        "meaning": "名词后缀，表示行为或结果"
+      }
+    ],
+    "etymology": "源自拉丁语 improbare（使更好），由 in-（使）和 probare（证明、检验）构成，后经古法语进入英语，指使事物变得更好。"
+  },
+  {
+    "word": "housing",
+    "example": {
+      "en": "The government must invest more in affordable housing for low-income families.",
+      "cn": "政府必须为低收入家庭增加经济适用房的投资。"
+    },
+    "roots": [
+      {
+        "part": "hous-",
+        "type": "root",
+        "meaning": "房屋，住所"
+      },
+      {
+        "part": "-ing",
+        "type": "suffix",
+        "meaning": "名词后缀，表示行为、状态或集合"
+      }
+    ],
+    "etymology": "源自古英语 hūs（房屋），加 -ing 后缀构成集合名词，指房屋的总称或供给。"
+  }
+]
