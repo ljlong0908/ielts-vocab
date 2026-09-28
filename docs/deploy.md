@@ -28,7 +28,7 @@
 | **全部 15 个云函数** | 逐个重新「上传并部署：云端安装依赖」。`audio_cache` 与 `seed_audio` 有实质改动（例句分支 + 正则放宽），其余为依赖版本与超时声明统一 |
 | **词表**（3056 → 3041 → 3036 → **2987** 词） | 云端若已导过旧词表，**必须**先 `reset_words`（`mode:'purge'` + `confirm:'PURGE'`）再重导。⚠️ 直接跑 `seed_words` 无效——它按 `word` 去重跳过，`wheels` / `jobs` 这类已删除的词会留在库里 |
 | **云存储音频** | **无需重传**。`audio_cache` 与云存储 `audio/` 不参与 `reset_words`，同名文件重跑 `seed_audio` 会自动覆盖 |
-| **小程序前端** | 重新编译上传（`app.js` / `config.js` / `utils/*` / `pages/learn/*` 均有改动；包体已从 970KB 降到约 176KB） |
+| **小程序前端** | 重新编译上传（`app.js` / `config.js` / `utils/*` / `pages/learn/*` 均有改动；包体已从 970KB 降到约 164KB） |
 | **环境变量** | 若曾轮换过 DeepSeek Key（旧 Key 暴露在历史代码中），需到 `enrich_word` → 配置 → 环境变量更新 `DEEPSEEK_API_KEY`；改动代码不会覆盖环境变量，**漏改则单词卡退化为只显示词表基础字段** |
 | **数据表** | 已建过则不必重跑 `init_db`，跑一次 `mode:'preview'` 体检即可 |
 
@@ -214,7 +214,7 @@ python scripts/fill_token.py --dir build/seed_words
 **③ 依次执行**
 
 控制台 → 云函数 `seed_words` → 云端测试，把 `build/seed_words/batch-01.json` …
-`batch-16.json` 的**整段内容**粘进入参框，每批执行一次。
+`batch-15.json` 的**整段内容**粘进入参框，每批执行一次（**共 15 批**）。
 
 返回 `{ inserted, skipped, total, offset, limit, nextOffset, hasMore, lastSeq }`。
 
