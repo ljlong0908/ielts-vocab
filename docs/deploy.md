@@ -19,14 +19,27 @@
 
 ---
 
+## 0.1 老环境升级到本版本（增量清单）
+
+如果你已经部署过旧版本，按这张表做即可；**全新环境请直接从第 1 节开始**。
+
+| 位置 | 必做 |
+|---|---|
+| **全部 15 个云函数** | 逐个重新「上传并部署：云端安装依赖」。`audio_cache` 与 `seed_audio` 有实质改动（例句分支 + 正则放宽），其余为依赖版本与超时声明统一 |
+| **词表**（3056 → **3041** 词） | 云端若已导过旧词表，**必须**先 `reset_words`（`mode:'purge'` + `confirm:'PURGE'`）再重导。⚠️ 直接跑 `seed_words` 无效——它按 `word` 去重跳过，`contracts` 这类已删除的词会留在库里 |
+| **云存储音频** | **无需重传**。`audio_cache` 与云存储 `audio/` 不参与 `reset_words`，同名文件重跑 `seed_audio` 会自动覆盖 |
+| **小程序前端** | 重新编译上传（`app.js` / `config.js` / `utils/*` / `pages/learn/*` 均有改动；包体已从 970KB 降到约 176KB） |
+| **数据表** | 已建过则不必重跑 `init_db`，跑一次 `mode:'preview'` 体检即可 |
+
+> 换词表的完整流程见第 10 节。
+
+---
+
 ## 1. 导入项目到开发者工具
 
 1. 开发者工具 → **导入项目**
 2. **目录选仓库根**（含 `project.config.json` 的那一层），**不要**选 `miniprogram/`
-3. AppID 填你自己的：
-   - `project.config.json` 的 `appid`
-   - `miniprogram/project.config.json` 的 `appid`
-   - 两处都要改（后者是「工具里再导入小程序目录」时用的）
+3. AppID 填你自己的：改 `project.config.json` 的 `appid`
 4. 工具应能识别出 `miniprogramRoot: miniprogram/` 与 `cloudfunctionRoot: cloudfunctions/`
 
 ---
@@ -164,28 +177,46 @@ openssl rand -hex 24
 
 ## 6. 导入词表（`seed_words`）
 
-词表已是仓库资产：`assets/word_lists/ielts-5000.json`（实际 3056 词）。
+词表已是仓库资产：`assets/word_lists/ielts-full.json`（**3041 词**，已做单复数同源去重）。
 
 也可自己重新抽词（需要 ECDICT 的 `ecdict.csv`，约 63MB）：
 
 ```bash
 cd <项目根>
 python scripts/build_wordlist.py --src /tmp/ecdict.csv \
-  --out assets/word_lists/ielts-5000.json --limit 5000
+  --out assets/word_lists/ielts-full.json
 ```
 
-导入（控制台 → `seed_words` → 云端测试），**分批**传：
+> 脚本会输出筛选漏斗（扫描行数 → 排除基础词 → 去重冗余复数 → 实收词数），并对
+> `apes / contracts / opportunities` 这类「单数已在词表中」的规则复数做丢弃。
+> 想保留某个复数（如 `economics` / `odds` / `pants` 这类独立词条），加进脚本的 `KEEP_PLURAL` 集合。
 
-```json
-{
-  "_token": "你的 ADMIN_TOKEN",
-  "words": [ /* 从 JSON 里取一段，建议每次 100~200 条 */ ],
-  "offset": 0,
-  "limit": 200
-}
+导入分三步：
+
+**① 打包入参**（本地，一次生成全部批次）
+
+```bash
+python scripts/pack_words.py                     # 默认 200 词/批 → 约 16 批，每批约 38KB
+python scripts/pack_words.py --batch-size 100    # 控制台入参框卡顿时改小
+python scripts/pack_words.py --wordlist assets/word_lists/pilot-100.json   # 100 词试点
 ```
 
-返回 `{ inserted, skipped, total, nextOffset, hasMore, lastSeq }` —— 按 `hasMore` 决定是否继续。
+**② 填密钥**
+
+```bash
+# 先在项目根 .env 写一行 ADMIN_TOKEN=xxx（.env 已 gitignore）
+python scripts/fill_token.py --dir build/seed_words
+```
+
+**③ 依次执行**
+
+控制台 → 云函数 `seed_words` → 云端测试，把 `build/seed_words/batch-01.json` …
+`batch-16.json` 的**整段内容**粘进入参框，每批执行一次。
+
+返回 `{ inserted, skipped, total, offset, limit, nextOffset, hasMore, lastSeq }`。
+
+> 也可以不用打包脚本，手动传全量数组 + `offset` / `limit` 切片
+> （`{"_token":"...","words":[...],"offset":0,"limit":200}`）——但那样每次都要粘整份词表，不推荐。
 
 **关键语义**：
 

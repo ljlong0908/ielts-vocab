@@ -29570,16 +29570,6 @@
     "seq": 2957
   },
   {
-    "word": "apes",
-    "phoneticUK": "/eips/",
-    "phoneticUS": "/eips/",
-    "pos": "",
-    "meaning": "n. 猿( ape的名词复数 )；v. 模仿( ape的第三人称单数 )",
-    "level": 1,
-    "source": "ecdict-ielts",
-    "seq": 2958
-  },
-  {
     "word": "archives",
     "phoneticUK": "/'ɑ:kaivz/",
     "phoneticUS": "/'ɑ:kaivz/",
@@ -29587,7 +29577,7 @@
     "meaning": "n. 档案, 档案室；[法] 公文档案, 案卷, 档案保管处",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2959
+    "seq": 2958
   },
   {
     "word": "bands",
@@ -29597,7 +29587,7 @@
     "meaning": "n. 法官；乐队",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2960
+    "seq": 2959
   },
   {
     "word": "beats",
@@ -29607,7 +29597,7 @@
     "meaning": "n. 音乐节拍；差拍振动；心脏跳动（beat的复数）",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2961
+    "seq": 2960
   },
   {
     "word": "blocks",
@@ -29617,7 +29607,7 @@
     "meaning": "n. 积木；黑金石；街区；[音]双头木鱼；楼群（block的复数）",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2962
+    "seq": 2961
   },
   {
     "word": "bones",
@@ -29627,7 +29617,7 @@
     "meaning": "n. 骨骼, 尸体",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2963
+    "seq": 2962
   },
   {
     "word": "brochures",
@@ -29637,7 +29627,7 @@
     "meaning": "n. 小册子( brochure的名词复数 ); （某地、某旅馆等的）情况介绍手册; （印成小册子的）论文",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2964
+    "seq": 2963
   },
   {
     "word": "cages",
@@ -29647,7 +29637,7 @@
     "meaning": "n. 笼子( cage的名词复数 )",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2965
+    "seq": 2964
   },
   {
     "word": "caves",
@@ -29657,7 +29647,7 @@
     "meaning": "n. 咖啡馆, 小餐厅( cafe的名词复数 ); 洞穴( cave的名词复数 )",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2966
+    "seq": 2965
   },
   {
     "word": "certificates",
@@ -29667,7 +29657,7 @@
     "meaning": "n. 证明书, 执照( certificate的名词复数 )",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2967
+    "seq": 2966
   },
   {
     "word": "chicks",
@@ -29677,7 +29667,7 @@
     "meaning": "n. 雏鸡；小鸡（chick的复数形式）",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2968
+    "seq": 2967
   },
   {
     "word": "classmates",
@@ -29687,7 +29677,7 @@
     "meaning": "n. （同班）同学( classmate的名词复数 ); 砚兄砚弟",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2969
+    "seq": 2968
   },
   {
     "word": "close-up",
@@ -29697,7 +29687,7 @@
     "meaning": "n. 特写镜头, 仔细的观察, 小传；[化] 闭合; 接通",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2970
+    "seq": 2969
   },
   {
     "word": "co-operative",
@@ -29707,27 +29697,7 @@
     "meaning": "a. 合作的；有协作精神的；愿意配合的; 齐心协力的；合作进行的；n. 合作社；合作机构",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2971
-  },
-  {
-    "word": "commercials",
-    "phoneticUK": "/kə'mɜ:ʃlz/",
-    "phoneticUS": "/kə'mɜ:ʃlz/",
-    "pos": "",
-    "meaning": "n. （电台或电视播放的）广告 ( commercial的名词复数 ); 以大众欣赏为目的谱写的乐曲",
-    "level": 1,
-    "source": "ecdict-ielts",
-    "seq": 2972
-  },
-  {
-    "word": "concessions",
-    "phoneticUK": "/kən'seʃənz/",
-    "phoneticUS": "/kən'seʃənz/",
-    "pos": "",
-    "meaning": "n. （尤指由政府或雇主给予的）特许权( concession的名词复数 ); 承认; 减价; （在某地的）特许经营权",
-    "level": 1,
-    "source": "ecdict-ielts",
-    "seq": 2973
+    "seq": 2970
   },
   {
     "word": "contaminants",
@@ -29737,7 +29707,7 @@
     "meaning": "n. 污染物, 致污物( contaminant的名词复数 )",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2974
+    "seq": 2971
   },
   {
     "word": "contents",
@@ -29747,17 +29717,7 @@
     "meaning": "n. 目录；[计] 目录",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2975
-  },
-  {
-    "word": "contracts",
-    "phoneticUK": "/kənˈtrækts/",
-    "phoneticUS": "/kənˈtrækts/",
-    "pos": "",
-    "meaning": "n. 契约( contract的名词复数 ); 婚约; [法律]契约法; 行贿",
-    "level": 1,
-    "source": "ecdict-ielts",
-    "seq": 2976
+    "seq": 2972
   },
   {
     "word": "curtains",
@@ -29767,7 +29727,7 @@
     "meaning": "n. [俚]灾难；窗帘（curtain的复数）",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2977
+    "seq": 2973
   },
   {
     "word": "difficulties",
@@ -29777,17 +29737,7 @@
     "meaning": "n. 困难( difficulty的名词复数 ); 难度; 难事; 麻烦",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2978
-  },
-  {
-    "word": "disputes",
-    "phoneticUK": "/disˈpju:ts/",
-    "phoneticUS": "/disˈpju:ts/",
-    "pos": "",
-    "meaning": "n. 辩论( dispute的名词复数 ); 争端; （劳资）纠纷; 罢工；v. 辩论, 争论( dispute的第三人称单数 ); 争夺; 阻止; 就…进行辩论",
-    "level": 1,
-    "source": "ecdict-ielts",
-    "seq": 2979
+    "seq": 2974
   },
   {
     "word": "drop-off",
@@ -29797,7 +29747,7 @@
     "meaning": "n. 下降, 减少",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2980
+    "seq": 2975
   },
   {
     "word": "drop-out",
@@ -29807,7 +29757,7 @@
     "meaning": "[计] 漏失信息; 丢\"1\"",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2981
+    "seq": 2976
   },
   {
     "word": "elements",
@@ -29817,7 +29767,7 @@
     "meaning": "n. 原理, 基础",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2982
+    "seq": 2977
   },
   {
     "word": "energies",
@@ -29827,7 +29777,7 @@
     "meaning": "n. 活力( energy的名词复数 ); [物理学]（原子、电、辐射的）能; [常用复数]精力; （有效地发挥的）力量",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2983
+    "seq": 2978
   },
   {
     "word": "exhilarate",
@@ -29837,7 +29787,7 @@
     "meaning": "vt. 使高兴, 使愉快, 鼓励",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2984
+    "seq": 2979
   },
   {
     "word": "experiments",
@@ -29847,7 +29797,7 @@
     "meaning": "n. 实验( experiment的名词复数 ); 试验; 尝试; 实践",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2985
+    "seq": 2980
   },
   {
     "word": "feet",
@@ -29857,7 +29807,7 @@
     "meaning": "pl. 脚；n. 尺",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2986
+    "seq": 2981
   },
   {
     "word": "ferries",
@@ -29867,7 +29817,7 @@
     "meaning": "n. 渡船( ferry的名词复数 ); 渡口; 摆渡; 飞机渡运；v. 运送( ferry的第三人称单数 ); （乘渡船）渡过（河等）; 渡运飞机; 摆渡, 用（渡）船渡, （船）来往行驶",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2987
+    "seq": 2982
   },
   {
     "word": "first-aid",
@@ -29877,7 +29827,7 @@
     "meaning": "a. 急救的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2988
+    "seq": 2983
   },
   {
     "word": "flats",
@@ -29887,7 +29837,7 @@
     "meaning": "n. 平原, 扁钢；低沼泽（flat的复数形式）",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2989
+    "seq": 2984
   },
   {
     "word": "floors",
@@ -29897,7 +29847,7 @@
     "meaning": "n. 楼地面；地板；楼层；层数（floor的复数）",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2990
+    "seq": 2985
   },
   {
     "word": "flourishment",
@@ -29907,17 +29857,7 @@
     "meaning": "n. 繁荣",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2991
-  },
-  {
-    "word": "fossils",
-    "phoneticUK": "/'fɒslz/",
-    "phoneticUS": "/'fɒslz/",
-    "pos": "",
-    "meaning": "n. 化石( fossil的名词复数 ); 老顽固; 食古不化的人; 老古董（老人）",
-    "level": 1,
-    "source": "ecdict-ielts",
-    "seq": 2992
+    "seq": 2986
   },
   {
     "word": "graduates",
@@ -29927,7 +29867,7 @@
     "meaning": "n. <美>毕业生( graduate的名词复数 ); <英>大学毕业生; （已经取得学士学位正在攻读高级学位的）研究生; 量筒；v. 渐变( graduate的第三人称单数 ); 渐渐变为（与into连用）; 渐渐消逝（与away连用）; 取得资格（与as连用）",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2993
+    "seq": 2987
   },
   {
     "word": "hens",
@@ -29937,7 +29877,7 @@
     "meaning": "n. 母鸡( hen的名词复数 ); 雌禽",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2994
+    "seq": 2988
   },
   {
     "word": "households",
@@ -29947,7 +29887,7 @@
     "meaning": "n. 同住在一所房子里的人, 一家人, 户( household的名词复数 )",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2995
+    "seq": 2989
   },
   {
     "word": "identities",
@@ -29957,7 +29897,7 @@
     "meaning": "n. 身份( identity的名词复数 ); 同一性; 个性; 同一人",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2996
+    "seq": 2990
   },
   {
     "word": "inquiries",
@@ -29967,7 +29907,7 @@
     "meaning": "n. 调查( inquiry的名词复数 ); 疑问; 探究; 打听",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2997
+    "seq": 2991
   },
   {
     "word": "instructors",
@@ -29977,7 +29917,7 @@
     "meaning": "n. 指导者, 教师( instructor的名词复数 )",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2998
+    "seq": 2992
   },
   {
     "word": "interviews",
@@ -29987,7 +29927,7 @@
     "meaning": "n. 接见( interview的名词复数 ); 采访; 面谈; 会谈；v. 面试( interview的第三人称单数 ); 访问; 会见; （私下）提问",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 2999
+    "seq": 2993
   },
   {
     "word": "investigators",
@@ -29997,7 +29937,7 @@
     "meaning": "n. 调查者, 审查者( investigator的名词复数 )",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3000
+    "seq": 2994
   },
   {
     "word": "invigilate",
@@ -30007,7 +29947,7 @@
     "meaning": "vi. 看守, 监考",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3001
+    "seq": 2995
   },
   {
     "word": "jobs",
@@ -30017,7 +29957,7 @@
     "meaning": "n. 工作（job的复数形式）",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3002
+    "seq": 2996
   },
   {
     "word": "keywords",
@@ -30027,7 +29967,7 @@
     "meaning": "n. 关键字；[计] 关键字",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3003
+    "seq": 2997
   },
   {
     "word": "kilograms",
@@ -30037,7 +29977,7 @@
     "meaning": "n. 千克( kilogram的名词复数 )",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3004
+    "seq": 2998
   },
   {
     "word": "lessons",
@@ -30047,7 +29987,7 @@
     "meaning": "n. 功课( lesson的名词复数 ); 课程; 教训; 一堂课",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3005
+    "seq": 2999
   },
   {
     "word": "lights",
@@ -30057,7 +29997,7 @@
     "meaning": "n. （供食用的）家畜的肺脏；灯光（light的复数）",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3006
+    "seq": 3000
   },
   {
     "word": "low-risk",
@@ -30067,7 +30007,7 @@
     "meaning": "[医]低危的, 低风险的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3007
+    "seq": 3001
   },
   {
     "word": "midmorning",
@@ -30077,7 +30017,7 @@
     "meaning": "n. 上午十时左右",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3008
+    "seq": 3002
   },
   {
     "word": "movies",
@@ -30087,7 +30027,7 @@
     "meaning": "n. 电影",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3009
+    "seq": 3003
   },
   {
     "word": "non-drinker",
@@ -30097,27 +30037,7 @@
     "meaning": "n. 不喝酒的人, 戒酒的人",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3010
-  },
-  {
-    "word": "objectives",
-    "phoneticUK": "/əbd'ʒektɪvz/",
-    "phoneticUS": "/əbd'ʒektɪvz/",
-    "pos": "",
-    "meaning": "n. 目标( objective的名词复数 ); [光学]（望远镜、显微镜、照相机及其他光学仪器上的）物镜; [语法学]1)。 宾语 2)。 宾格; [军事]出击目标",
-    "level": 1,
-    "source": "ecdict-ielts",
-    "seq": 3011
-  },
-  {
-    "word": "opportunities",
-    "phoneticUK": "/ˌɒpə'tju:nɪtɪs/",
-    "phoneticUS": "/ˌɒpə'tju:nɪtɪs/",
-    "pos": "",
-    "meaning": "n. 机会( opportunity的名词复数 ); 适当的时机; 条件; 就业（或晋升、进步等）的良机",
-    "level": 1,
-    "source": "ecdict-ielts",
-    "seq": 3012
+    "seq": 3004
   },
   {
     "word": "participants",
@@ -30127,7 +30047,7 @@
     "meaning": "n. 参加者, 参与者; 参加者, 参与者( participant的名词复数 )；a. 有份的, 参与的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3013
+    "seq": 3005
   },
   {
     "word": "passengers",
@@ -30137,7 +30057,7 @@
     "meaning": "n. 乘客( passenger的名词复数 ); 旅客; 白吃饭的人; 闲散人员",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3014
+    "seq": 3006
   },
   {
     "word": "peasants",
@@ -30147,27 +30067,7 @@
     "meaning": "n. 农民( peasant的名词复数 ); 农夫; 佃农; 粗俗的人",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3015
-  },
-  {
-    "word": "photocopies",
-    "phoneticUK": "/ˈfəʊtəˌkɔpi:z/",
-    "phoneticUS": "/ˈfəʊtəˌkɔpi:z/",
-    "pos": "",
-    "meaning": "n. 影印本( photocopy的名词复数 ); 复印件",
-    "level": 1,
-    "source": "ecdict-ielts",
-    "seq": 3016
-  },
-  {
-    "word": "planners",
-    "phoneticUK": "/p'lænəz/",
-    "phoneticUS": "/p'lænəz/",
-    "pos": "",
-    "meaning": "n. 规划者, 策划人( planner的名词复数 )",
-    "level": 1,
-    "source": "ecdict-ielts",
-    "seq": 3017
+    "seq": 3007
   },
   {
     "word": "pounds",
@@ -30177,27 +30077,7 @@
     "meaning": "n. 磅, 英镑；重击（pound复数形式）",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3018
-  },
-  {
-    "word": "precautions",
-    "phoneticUK": "/priˈkɔ:ʃənz/",
-    "phoneticUS": "/priˈkɔ:ʃənz/",
-    "pos": "",
-    "meaning": "n. 预防措施( precaution的名词复数 ); 防备; 避孕措施",
-    "level": 1,
-    "source": "ecdict-ielts",
-    "seq": 3019
-  },
-  {
-    "word": "priorities",
-    "phoneticUK": "/praiˈɔritiz/",
-    "phoneticUS": "/praiˈɔritiz/",
-    "pos": "",
-    "meaning": "n. 先( priority的名词复数 ); 优先; 优先权; 优先考虑的事",
-    "level": 1,
-    "source": "ecdict-ielts",
-    "seq": 3020
+    "seq": 3008
   },
   {
     "word": "prizes",
@@ -30207,7 +30087,7 @@
     "meaning": "n. 奖赏( prize的名词复数 ); 值得竞争的东西; 难能可贵的事物; 难以争取的重要事物；v. 珍视, 珍惜( prize的第三人称单数 )",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3021
+    "seq": 3009
   },
   {
     "word": "psycholinguistics",
@@ -30217,7 +30097,7 @@
     "meaning": "n. 语言心理学",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3022
+    "seq": 3010
   },
   {
     "word": "purest",
@@ -30227,7 +30107,7 @@
     "meaning": "a. 纯的( pure的最高级 ); 单纯的; 纯真的; 干净的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3023
+    "seq": 3011
   },
   {
     "word": "referees",
@@ -30237,7 +30117,7 @@
     "meaning": "n. 裁判员( referee的名词复数 ); 证明人; 公断人; （专业性强的文章的）审阅人",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3024
+    "seq": 3012
   },
   {
     "word": "respondents",
@@ -30247,7 +30127,7 @@
     "meaning": "n. <律>（尤指离婚案的）被告( respondent的名词复数 ); 回答问题的人, （尤指）调查对象",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3025
+    "seq": 3013
   },
   {
     "word": "restaurants",
@@ -30257,7 +30137,7 @@
     "meaning": "n. 饭店( restaurant的名词复数 ); 餐馆; 饭馆; 菜馆",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3026
+    "seq": 3014
   },
   {
     "word": "riders",
@@ -30267,7 +30147,7 @@
     "meaning": "n. 骑（马、自行车等）的人( rider的名词复数 ); 乘客; 附文; 附加条款",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3027
+    "seq": 3015
   },
   {
     "word": "savings",
@@ -30277,7 +30157,7 @@
     "meaning": "n. 储蓄, 存款；[经] 储金, 储蓄",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3028
+    "seq": 3016
   },
   {
     "word": "scientists",
@@ -30287,7 +30167,7 @@
     "meaning": "n. 科学家( scientist的名词复数 )",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3029
+    "seq": 3017
   },
   {
     "word": "second-hand",
@@ -30297,7 +30177,7 @@
     "meaning": "a. 用过的, 旧货的, 旧的, 间接的, 传来的, 第二手的；[机] 半新的, 旧货",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3030
+    "seq": 3018
   },
   {
     "word": "self-defense",
@@ -30307,7 +30187,7 @@
     "meaning": "n. 自卫, 自卫术, 自卫权；[法] 自卫, 正当防卫",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3031
+    "seq": 3019
   },
   {
     "word": "self-discipline",
@@ -30317,7 +30197,7 @@
     "meaning": "n. 自我训练, 自我修养, 自律；[法] 自律, 自我约束, 自我修养",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3032
+    "seq": 3020
   },
   {
     "word": "self-sufficient",
@@ -30327,7 +30207,7 @@
     "meaning": "a. 自给自足的, 极为自负的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3033
+    "seq": 3021
   },
   {
     "word": "sentences",
@@ -30337,7 +30217,7 @@
     "meaning": "n. [律]判决, 宣判; 句子（ sentence的名词复数 ）；v. 宣判, 判决（ sentence的第三人称单数 ）",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3034
+    "seq": 3022
   },
   {
     "word": "smokers",
@@ -30347,7 +30227,7 @@
     "meaning": "n. 吸烟者( smoker的名词复数 )",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3035
+    "seq": 3023
   },
   {
     "word": "spoons",
@@ -30357,7 +30237,7 @@
     "meaning": "n. 匙, 调羹( spoon的名词复数 ); 一匙的量",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3036
+    "seq": 3024
   },
   {
     "word": "sports",
@@ -30367,17 +30247,7 @@
     "meaning": "n. (英)运动会, 运动的, 适用于运动的, 运动会的, 与运动会有关的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3037
-  },
-  {
-    "word": "tablets",
-    "phoneticUK": "/'tæblɪts/",
-    "phoneticUS": "/'tæblɪts/",
-    "pos": "",
-    "meaning": "n. 药片( tablet的名词复数 ); （木、竹）简; 碑; 一块肥皂",
-    "level": 1,
-    "source": "ecdict-ielts",
-    "seq": 3038
+    "seq": 3025
   },
   {
     "word": "teeth",
@@ -30387,7 +30257,7 @@
     "meaning": "pl. 牙齿；[医] 牙",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3039
+    "seq": 3026
   },
   {
     "word": "threats",
@@ -30397,7 +30267,7 @@
     "meaning": "n. 威胁, 恐吓( threat的名词复数 ); 可能造成威胁的人[事, 想法]; 恶兆, 兆头",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3040
+    "seq": 3027
   },
   {
     "word": "tools",
@@ -30407,7 +30277,7 @@
     "meaning": "n. 工具, 工具菜单；工具箱（tool的复数形式）",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3041
+    "seq": 3028
   },
   {
     "word": "tourists",
@@ -30417,7 +30287,7 @@
     "meaning": "n. 旅行者, 观光客( tourist的名词复数 )",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3042
+    "seq": 3029
   },
   {
     "word": "tributes",
@@ -30427,17 +30297,7 @@
     "meaning": "n. （尤指旧时一国向他国交纳的）贡品( tribute的名词复数 ); （良好效果或影响的）体现; （尤指对死者的）致敬; 称赞",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3043
-  },
-  {
-    "word": "tunnels",
-    "phoneticUK": "/ˈtʌnəlz/",
-    "phoneticUS": "/ˈtʌnəlz/",
-    "pos": "",
-    "meaning": "n. 隧道, 地道( tunnel的名词复数 ); （动物栖息的）穴",
-    "level": 1,
-    "source": "ecdict-ielts",
-    "seq": 3044
+    "seq": 3030
   },
   {
     "word": "universities",
@@ -30447,7 +30307,7 @@
     "meaning": "n. 大学( university的名词复数 )",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3045
+    "seq": 3031
   },
   {
     "word": "up-to-date",
@@ -30457,7 +30317,7 @@
     "meaning": "a. 直到现在的, 最近的, 现代化的；[化] 最新的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3046
+    "seq": 3032
   },
   {
     "word": "utensils",
@@ -30467,7 +30327,7 @@
     "meaning": "n. 器具, 用具, 器皿( utensil的名词复数 ); 器物",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3047
+    "seq": 3033
   },
   {
     "word": "versed",
@@ -30477,7 +30337,7 @@
     "meaning": "a. 熟练的, 精通的",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3048
+    "seq": 3034
   },
   {
     "word": "visas",
@@ -30487,7 +30347,7 @@
     "meaning": "n. 签证( visa的名词复数 )",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3049
+    "seq": 3035
   },
   {
     "word": "volunteers",
@@ -30497,7 +30357,7 @@
     "meaning": "n. 义务工作者( volunteer的名词复数 ); 志愿者; 自告奋勇者; 主动做某事的人；v. 自动提供, 自愿效劳( volunteer的第三人称单数 ); 主动建议（或告诉）; （未经当事人同意）举荐; 自愿参军, 当志愿兵",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3050
+    "seq": 3036
   },
   {
     "word": "water-clock",
@@ -30507,7 +30367,7 @@
     "meaning": "n. 水钟, 滴漏",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3051
+    "seq": 3037
   },
   {
     "word": "weeds",
@@ -30517,7 +30377,7 @@
     "meaning": "n. 丧服",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3052
+    "seq": 3038
   },
   {
     "word": "whales",
@@ -30527,7 +30387,7 @@
     "meaning": "n. 鲸, 鲸鱼( whale的名词复数 )",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3053
+    "seq": 3039
   },
   {
     "word": "wheels",
@@ -30537,7 +30397,7 @@
     "meaning": "n. 旋转；车轮（wheel的复数）",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3054
+    "seq": 3040
   },
   {
     "word": "wollongong",
@@ -30547,16 +30407,6 @@
     "meaning": "伍伦贡[澳大利亚东南部港市]",
     "level": 1,
     "source": "ecdict-ielts",
-    "seq": 3055
-  },
-  {
-    "word": "workshops",
-    "phoneticUK": "/ˈwə:kʃɔps/",
-    "phoneticUS": "/ˈwə:kʃɔps/",
-    "pos": "",
-    "meaning": "n. 专题讨论会( workshop的名词复数 ); 车间; 工作坊; 研究会",
-    "level": 1,
-    "source": "ecdict-ielts",
-    "seq": 3056
+    "seq": 3041
   }
 ]

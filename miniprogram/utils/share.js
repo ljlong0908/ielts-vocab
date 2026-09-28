@@ -18,7 +18,8 @@ const HOME_PATH = '/pages/index/index'
 
 // 分享卡片配图（建议 5:4，500x400）。
 // 留空则使用系统默认：页面截图 + 小程序 Logo，效果可接受。
-// 需要自定义时：把图片放到 miniprogram/images/share.png，再把下面这行改成 '/images/share.png'
+// 需要自定义时：新建 miniprogram/images/ 放图，再把下面这行改成 '/images/share.png'
+// （图片必须放在 miniprogramRoot 内才会被打包；assets/ 在包外，放那里不生效）
 const SHARE_IMAGE = ''
 
 /**

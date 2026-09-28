@@ -1,8 +1,8 @@
 # 雅词本 — 项目结构与业务逻辑说明
 
 > **文档用途**：供 AI 或其他协作者快速理解本项目的**目录结构**与**业务逻辑**，作为上下文注入。
-> **权威性**：本文档以**源码为准**（`miniprogram/` + `cloudfunctions/`）。`README.md`、`specs/` 为设计阶段产出，部分内容（发音方案、出词策略、字段命名）已与代码不一致，**以本文档为准**。
-> **最后核对**：2026-09-28（本轮完成死代码清理、数据表初始化函数、部署文档，详见 §11）。
+> **权威性**：本文档以**源码为准**（`miniprogram/` + `cloudfunctions/`）。设计阶段的历史稿（曾提到 Vant / 微信同声传译插件，均未采用）已于 2026-09-28 清理，**以本文档为准**。
+> **最后核对**：2026-09-28（完成死代码清理、数据表初始化函数、部署文档，以及项目瘦身与词表清洗，详见 §11）。
 
 ---
 
@@ -69,10 +69,7 @@ ielts-vocab/
 ├── project.private.config.json   # 开发者工具私有配置（不入库）
 ├── .gitignore                    # 忽略 node_modules / 私有配置 / .env / build 等
 ├── LICENSE                       # MIT
-├── README.md                     # 上手文档
-├── specs/ielts-vocab-miniprogram/
-│   ├── requirements.md           # PRD（EARS 验收标准 R1–R10）——范围基准，仍然有效
-│   └── design.md                 # ⚠️ 历史稿 v0.2（提到 Vant / 同声传译插件，均已不用），以本文档为准
+├── README.md                     # 上手概览（细节指向 docs/）
 ├── docs/
 │   ├── deploy.md                 # ★ 部署与上线步骤（从零到可用）
 │   ├── intro.md                  # 小程序简介（含 ≤120 字后台版本）
@@ -90,6 +87,7 @@ ielts-vocab/
 │   ├── install_spacy_model.py    # 装 en_core_web_sm（不在 PyPI，走 HF 镜像）
 │   ├── make_audition_page.py     # 本地预检 + 生成音频试听页（单词/例句通用）→ build/audition*.html
 │   ├── pack_audio.py             # 打包成 seed_audio 的入参（分批 base64，单词/例句通用）
+│   ├── pack_words.py             # 打包成 seed_words 的入参（按词表分批，每批一份完整入参）
 │   ├── fill_token.py             # 批量把 batch-*.json 的 __ADMIN_TOKEN__ 换成真实密钥
 │   └── requirements.txt
 ├── miniprogram/                  # 小程序前端根（miniprogramRoot）
@@ -98,7 +96,6 @@ ielts-vocab/
 │   ├── app.wxss                  # 全局样式
 │   ├── config.js                 # ENV_ID / DAILY_GOAL_OPTIONS / TTS_LANG / 云函数名常量 FN
 │   ├── sitemap.json
-│   ├── images/                   # 小程序内用图（暂无；自定义分享配图 share.png 放这里）
 │   ├── utils/
 │   │   ├── api.js                # 云函数调用统一封装（约定 {code,data,message}）+ 各接口快捷方法
 │   │   ├── audio.js              # 发音：三层缓存 + 整句播放（单词/例句共用 playSrc）
@@ -432,7 +429,7 @@ playWord(word)
 - 部分页面用**上下文文案**增强信息量：`learn` 带当前单词、`checkin` 带连续天数、`stats` 带累计词数、`wrongbook` 带错题数；数据缺失时回落到默认文案。
 - **不启用朋友圈（`onShareTimeline`）**：朋友圈进入的是「单页模式」——无登录态、不允许跳转，云开发必须开启「未登录访问」才能读到数据；本项目数据全部依赖 openid，单页模式必然空白，而放开未登录访问会带来越权读写风险。**除非将来专门做一个不依赖登录的内容页，否则不要开。**
 - 打卡成功页（`checkin.wxml`）内置 `<button open-type="share">分享给朋友</button>`，是唯一的前端显式分享入口。
-- 分享卡片配图：`share.js` 中 `SHARE_IMAGE` 常量，默认留空（用系统页面截图 + 小程序 Logo）；如需自定义，放图到 `miniprogram/images/share.png`（建议 5:4，500x400）并改常量。
+- 分享卡片配图：`share.js` 中 `SHARE_IMAGE` 常量，默认留空（用系统页面截图 + 小程序 Logo）。如需自定义，新建 `miniprogram/images/` 并放图（建议 5:4 / 500x400），再把常量改成 `/images/share.png`——**图片必须在 `miniprogramRoot` 内才会被打包**（`assets/` 在包外，放那里不会生效）。
 - 文案红线：不得出现「分享得奖励」「帮我点一下」等诱导性表述（《微信小程序平台运营规范》诱导分享条款）。
 
 ---
@@ -468,10 +465,10 @@ playWord(word)
 | 中（安全） | ~~`audio_cache` 入参无限制，可被用来写满云存储~~ | ✅ **已修复**（2026-09-28）：`text` 限定为字母开头的英文单词/短语（≤40 字符），`type` 收敛为 1/2。后续新增的例句路径（`kind:'sentence'`，≤200 字符）**只查库、不下载也不写存储**，故放宽长度不会重新打开写存储的口子。 |
 | 中 | 发音版权 | 有道 dictvoice 非官方开放商用接口，商用属灰色地带（每日约 1000 次上限）。**现状已大幅缓解**：单词与例句音频均由本地 **Kokoro-82M（Apache-2.0）** 预生成后上传云存储，运行时零外呼；dictvoice 仅作词表外单词兜底，可随时移除。 |
 | 中 | AI 内容展示合规 | 展示 AI 生成内容需符合平台对生成式内容的相关要求。实现上是「**有则展示、无则留空**」：`enrich_word` 未成功生成的词，`word_card` 只返回词表基础字段（单词/音标/释义），扩展区块自动留空——因此展示范围可通过控制生成范围来调节。 |
-| 中 | 词库版权 | 需使用明确开源许可（CC-BY / 公有领域）的雅思词表。 |
+| 中 | ~~词库版权~~ | ✅ **已解决**：词表取自 **ECDICT（MIT License, Copyright (c) 2025 Linwei）**，可商用、可闭源衍生；许可证副本见 `assets/word_lists/ECDICT-LICENSE.txt`。⚠️ 不要改用 ECDICT 自带的 `audio` 字段（那是第三方词典的音频 URL，会把版权风险搬回来）。 |
 | 低 | 配置项 | `project.config.json` 的 `appid` 与 `miniprogram/config.js` 的 `ENV_ID` 已填为作者本人的真实值（二者均非密钥）。**fork 或二次开发后必须替换为你自己的**，否则无法调用你自己的云环境。 |
 | 低 | 合规 | 小程序发布前需完成 ICP 备案。 |
-| 低 | 文档漂移 | `README.md`、`design.md` 的发音方案（写的是同声传译插件）、出词策略、字段名（`questionQueue` vs `reviewQueue`）与代码不一致，**以本文档为准**。 |
+| 低 | ~~文档漂移~~ | ✅ **已解决**（2026-09-28）：设计阶段历史稿（`specs/`，提到 Vant 与同声传译插件）已删除；`README.md` 已重写为精简概览并指向本文件与 `docs/deploy.md`。 |
 
 ---
 
@@ -489,14 +486,16 @@ playWord(word)
 | **部署步骤 / 报错排查** | `docs/deploy.md` |
 | 例句文本来源 | 运行时：`cloudfunctions/enrich_word`（`buildPrompt`）；离线批量：`scripts/gen_examples.py` |
 | 发音音源（例句） | `scripts/gen_examples.py` → `scripts/gen_sentence_audio.py`（本地生成，`s_{hash}`）→ `seed_audio`（`kind:'sentence'` 上传）→ `audio.js` 的 `playSentence` / `audio_cache`（**只读不写**） |
-| 词表来源/筛选 | `scripts/build_wordlist.py`（ECDICT → `assets/word_lists/*.json`） |
+| 词表来源 / 筛选 / 去重 | `scripts/build_wordlist.py`（ECDICT → `assets/word_lists/ielts-full.json`；含单复数同源去重与 `KEEP_PLURAL` 例外表） |
+| 词表导入入参打包 | `scripts/pack_words.py` → `build/seed_words/batch-*.json` |
+| 音频入参打包 | `scripts/pack_audio.py` → `build/seed_audio/` 或 `build/seed_sentence/` |
 | 分享标题/路径/配图 | `miniprogram/utils/share.js`（`toFriend`），各页 `onShareAppMessage()` |
 | 状态机流转 | `cloudfunctions/today_flow` + `submit_answer` + `finish_checkin` |
 | 页面跳转 | 各 `pages/*/index.js`（`wx.navigateTo`） |
 
 ---
 
-## 11. 本轮整理记录（2026-09-28）
+## 11. 整理记录（2026-09-28）
 
 ### 11.1 删除的死代码（均先核验零引用）
 
@@ -532,4 +531,31 @@ playWord(word)
 - 各云函数独立的 `ADMIN_TOKEN` 读取块：环境变量是**函数级隔离**的，代码虽重复但无法共享
 - 跨运行时的 `hashText` / `TEXT_RE*` / `slug` / `sentence_slug`：JS 与 Python 无法共享代码，**只能靠同步**。改动其中一处后务必跑 `scripts/make_audition_page.py` 预检（它会校验正则与文件头）
 - 各函数内注释掉的 `nickname` / `avatarUrl`：合规说明（证明「未接入授权、不收集」）
-- `specs/design.md`：已标注为历史稿（提到 Vant、同声传译插件，均未使用）。不需要可直接删除整个 `specs/` 目录
+
+### 11.5 第二轮：项目瘦身与词表清洗（2026-09-28）
+
+#### 删除的过时内容
+
+| 位置 | 内容 | 原因 |
+|---|---|---|
+| `specs/` | 整个目录（`design.md` + `requirements.md`） | 设计阶段历史稿；方案已全部落地为代码，PRD 的验收标准已转为 `docs/deploy.md` 的验收清单 |
+| `miniprogram/project.config.json`、`miniprogram/project.private.config.json` | 两份配置 | 仓库根的 `project.config.json` 已声明 `miniprogramRoot: miniprogram/`，包内这两份不会被读取，属重复 |
+| `miniprogram/images/` | 空目录 | 品牌素材已移至 `assets/brand/`，全仓零引用 |
+| `cloudfunctions/{enrich_word,seed_words}/package-lock.json` | 2 份 lock | 15 个函数里只有这 2 个有，反而不一致；依赖已由 `package.json` 的 `~` 约束。云函数走「云端安装依赖」，不需要 lock |
+| `build/` 下 25 个文件 | 一次性校验脚本（`hash_check.*` / `check_re_sentence.*` / `fix_spacy.py` …）与临时日志 | 逻辑已固化进 `scripts/` 正式脚本，或核验已完成。产物目录，不入库 |
+| `README.md` | 34KB → 约 8KB | 与 `docs/` 大量重复（部署步骤、流水线细节）。重写为概览：定位 / 目录树 / 快速开始 / 云函数清单 / 核心机制 / 注意事项 / 许可 |
+
+#### 词表清洗（3056 → 3041 词）
+
+- 文件名 `ielts-5000.json` 名不副实（实际只有 3056 词），已改名 **`ielts-full.json`**——**刻意不带词数**，词表规模会随 ECDICT 版本与筛选规则变化，具名反而要反复改名
+- `scripts/build_wordlist.py` 新增**单复数同源去重**：以 `s` 结尾、且「规则还原出的单数也在候选词表中」的条目直接丢弃（`-ies` / `-es` / `-s` 三条规则，靠「单数确实存在」兜底，不会误伤 `business` / `access` 这类本身以 s 收尾的词）。共剔除 **15 个**冗余复数：`apes` / `commercials` / `concessions` / `contracts` / `disputes` / `fossils` / `objectives` / `opportunities` / `photocopies` / `planners` / `precautions` / `priorities` / `tablets` / `tunnels` / `workshops`
+- 例外表 `KEEP_PLURAL` 保留**语义已分化**的复数独立词条：`economics` / `statistics` / `ethics` / `politics` / `physics` / `mathematics` / `odds` / `amends` / `pants` / `savings` / `sales` / `means` / `premises` / `contents` / `customs` / `goods` / `manners` / `quarters` / `works` / `regards` / `terms` / `ways` / `news` / `series` / `species`
+- `--limit` 默认由 `5000` 改为 `0`（不限），避免"明明还有词却被截断"的困惑
+- ✅ **前 100 词 seq 完全未变** → 已生成的 `pilot-100` 音频（`build/audio/us/`、`build/seed_audio/`）**全部仍然有效**，无需重跑；被剔除项的 index 最小为 730，也不影响「按 seq 顺序生成音频」的约束
+
+> ⚠️ **破坏性语义**：若云端已导入过旧词表（3056 词），必须用 `reset_words`（`purge`）清空后重导，**不能**直接 `seed_words` —— 它按 `word` 去重跳过，`contracts` 这类已删词会留在库里。
+
+#### 新增
+
+- `scripts/pack_words.py` —— 把词表打包成 `seed_words` 入参：按 `--batch-size`（默认 200 词）切分，每批是一份**完整可用**的入参（约 38KB，控制台入参框吃得下），并产出 `index.json` 清单（含每批词数与首末词）。此前导词表只能手搓 JSON，或用 `offset/limit` 反复粘贴整份词表
+- `docs/deploy.md` 新增 **§0.1 老环境升级增量清单**（哪些云函数要重部署、词表为什么要先 purge）

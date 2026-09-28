@@ -16,7 +16,7 @@ gen_audio.py —— 用 Kokoro-82M 本地批量生成单词发音
   python scripts/gen_audio.py --wordlist assets/word_lists/pilot-100.json --limit 100
 
   # 增量：续着上次往后生成下一批（已存在的文件自动跳过）
-  python scripts/gen_audio.py --wordlist assets/word_lists/ielts-5000.json --offset 100 --limit 100
+  python scripts/gen_audio.py --wordlist assets/word_lists/ielts-full.json --offset 100 --limit 100
 
   # 需要时再补英音
   python scripts/gen_audio.py --wordlist ... --types uk
