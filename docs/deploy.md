@@ -1,7 +1,9 @@
 # 部署与上线步骤（从零到可用）
 
 > 本文是**唯一权威的部署清单**，按顺序执行即可跑通。`README.md` 是上手概览，细节以本文为准。
-> 整条链路分两段：**云端（微信开发者工具操作）** 与 **本地（生成词表与音频）**，两者通过「控制台粘贴 JSON」衔接。
+> 整条链路分两段：**云端（微信开发者工具里部署 15 个云函数）** 与 **本地（生成词表与音频、初始化数据）**。
+> 数据初始化已完全本地化（`init_cloud.py` / `seed_cloud.py` 走云开发 HTTP API），
+> 只剩**集合权限**要手工点一次。
 
 ---
 
@@ -26,11 +28,11 @@
 | 位置 | 必做 |
 |---|---|
 | **全部 15 个云函数** | 逐个重新「上传并部署：云端安装依赖」。`audio_cache` 与 `seed_audio` 有实质改动（例句分支 + 正则放宽），其余为依赖版本与超时声明统一 |
-| **词表**（3056 → 3041 → 3036 → **2987** 词） | 云端若已导过旧词表，**必须**先 `reset_words`（`mode:'purge'` + `confirm:'PURGE'`）再重导。⚠️ 直接跑 `seed_words` 无效——它按 `word` 去重跳过，`wheels` / `jobs` 这类已删除的词会留在库里 |
-| **云存储音频** | **无需重传**。`audio_cache` 与云存储 `audio/` 不参与 `reset_words`，同名文件重跑 `seed_audio` 会自动覆盖 |
+| **词表 + 数据** | 旧词表按**字母序**、新词表按**词频序**，两套 `seq` 语义不同，必须清空重导：`python scripts/seed_cloud.py --apply --reset`（脚本会先自动备份到 `build/backup/`）。⚠️ 不带 `--reset` 跑只会把新词**追加**在旧词后面，出词顺序全乱 |
+| **云存储音频** | **无需重传**。`audio_cache` 与云存储 `audio/` 不参与重置，重跑 `seed_cloud.py` 会按 `(text, type)` 自动跳过已缓存的音频 |
 | **小程序前端** | 重新编译上传（`app.js` / `config.js` / `utils/*` / `pages/learn/*` 均有改动；包体已从 970KB 降到约 164KB） |
 | **环境变量** | 若曾轮换过 DeepSeek Key（旧 Key 暴露在历史代码中），需到 `enrich_word` → 配置 → 环境变量更新 `DEEPSEEK_API_KEY`；改动代码不会覆盖环境变量，**漏改则单词卡退化为只显示词表基础字段** |
-| **数据表** | 已建过则不必重跑。用 `python scripts/init_cloud.py`（只读体检）核对集合与索引是否齐全，缺了再 `--apply`；或走控制台 `init_db` 的 `mode:'preview'` |
+| **数据表** | 已建过则不必重跑。用 `python scripts/init_cloud.py`（只读体检）核对集合与索引是否齐全，缺了再 `--apply` |
 
 > 换词表的完整流程见第 10 节。
 
@@ -58,6 +60,11 @@
 ## 3. 配置云函数环境变量（关键，最容易漏）
 
 ⚠️ **环境变量是「函数级隔离」的**——同一个名字要在**每个用到它的函数上分别配一遍**，值保持一致。
+
+> 💡 走本仓库推荐的**本地脚本路径**（`init_cloud.py` / `seed_cloud.py`）时，管理类函数
+> （`seed_words` / `seed_audio` / `reset_words` / `init_db`）**不需要**配 `ADMIN_TOKEN`——
+> 脚本直接用云开发 HTTP API 读写，绕开了云函数。只有 `enrich_word` 建议配上
+> （强制富化 `force: true` 要用），以及你打算走控制台路径时。
 
 | 云函数 | 需要的环境变量 | 作用 |
 |---|---|---|
@@ -122,10 +129,10 @@ openssl rand -hex 24
 | 9 | `stats` | 统计 + 错题 | 前端 | 30s |
 | 10 | `audio_cache` | 音频读缓存 | 前端 | 20s |
 | 11 | `enrich_word` | AI 内容补全（含定时触发器） | `word_card` 服务端调用 + 定时 | 30s |
-| 12 | `seed_words` | 词表导入 | 控制台 | 60s |
-| 13 | `seed_audio` | 音频入库 + 点亮 `audioReady` | 控制台 | 60s |
-| 14 | `reset_words` | 词库重置（破坏性） | 控制台 | 60s |
-| 15 | `init_db` | **数据表初始化（幂等）** | 控制台 | 60s |
+| 12 | `seed_words` | 词表导入 | 本地脚本（备选：控制台） | 60s |
+| 13 | `seed_audio` | 音频入库 + 点亮 `audioReady` | 本地脚本（备选：控制台） | 60s |
+| 14 | `reset_words` | 词库重置（破坏性） | 本地脚本（备选：控制台） | 60s |
+| 15 | `init_db` | 数据表初始化（建集合） | 本地脚本（备选：控制台） | 60s |
 
 **部署后核对两件事**（控制台 → 云函数 → 配置）：
 
@@ -163,7 +170,7 @@ python scripts/init_cloud.py --apply    # ② 执行：建缺失集合 + 补缺�
 1. 打印自动发现的 AppID / 环境 ID，以及期望的 7 个集合、10 条索引
 2. **清单漂移告警**——比对 `assets/db-indexes.json` 与 `cloudfunctions/init_db/index.js` 的索引数，有一边改漏了就提示
 3. 建缺失集合（已存在的跳过；建完复查）
-4. 建缺失索引（幂等：已存在的报 exists 视为通过；建完按 `index_count − 1` 复查自定义索引条数，`−1` 是减去内置的 `_id_`）
+4. 建缺失索引（幂等：同名索引重复创建**不会**重复添加；建完按「索引数 / 应有数」复查，应有数 = `_id_` + 云开发自动建的 `_openid_1` + 清单条数）
 
 集合与索引的权威清单在 **`assets/db-indexes.json`**，改索引请改这里。
 
@@ -225,11 +232,47 @@ python scripts/init_cloud.py --apply    # ② 执行：建缺失集合 + 补缺�
 
 ---
 
-## 6. 导入词表（`seed_words`）
+## 6. 导入数据（词表 + 例句 + 音频，本地一键）
+
+**数据全部由一条本地命令导入**——走云开发 HTTP API（`databaseadd` / `uploadfile` / `databaseupdate`），
+不用在控制台反复点「云端测试」：
+
+```bash
+python scripts/seed_cloud.py                  # 体检（只读，不动云端）
+python scripts/seed_cloud.py --apply          # 幂等导入，可反复跑
+python scripts/seed_cloud.py --apply --reset  # ⚠️ 先清空词库再全量导入（换词表版本时用）
+python scripts/seed_cloud.py --apply --skip-audio    # 只导词表与富化
+python scripts/seed_cloud.py --apply --force-audio   # 音频全部重传（云存储被误删时）
+```
+
+一次跑完五件事：
+
+| 步骤 | 内容 | 幂等方式 |
+|---|---|---|
+| 词表 | `assets/word_lists/ielts-full.json`（**2987 词**）→ `words` | 按 `word` 去重，已存在的**跳过、不覆盖** |
+| 富化 | `assets/examples/pilot-100-examples.json` → `words` 的 `example` / `roots` / `etymology` | 只补 `enriched != true` 的 |
+| 单词音频 | `build/audio/manifest.json` → 云存储 `audio/2/*.mp3` + `audio_cache` | 按 `(text, type)` 去重 |
+| 例句音频 | `build/sentence_audio/manifest.json` → 同上 | 同上 |
+| 点亮 | 有音频的词 `words.audioReady = true` | 只更新 `audioReady != true` 的 |
+
+> 前置：`build/` 里要已有音频产物（第 7 节生成）。只想先把词表灌进去就加 `--skip-audio`。
+> 全程约 3 分钟（2987 词 ≈ 60 次批量写；200 个音频 ≈ 400 次请求）。
+
+**`--reset` 清什么**
+
+- 清空 `words` / `user_words` / `records` / `daily_plans`，并把 `users.wordCursor` **归零**
+- 保留 `checkins`（打卡）、`audio_cache`（音频索引）、`users`（账号与统计）
+- 清空前自动备份到 `build/backup/{集合}-{时间戳}.json`（`build/` 已 gitignore）
+
+> 💡 **为什么换词表必须 `--reset`**：导入语义是「按 `word` 去重、永不覆盖」，
+> 直接重导只会把新词**追加**在旧词后面，`seq` 顺序全乱（出词顺序就错了），
+> 而且从新词表里删掉的词（`wheels` / `jobs`）会赖在库里不走。
+
+### 6.1 词表是怎么来的（可复现）
 
 词表已是仓库资产：`assets/word_lists/ielts-full.json`（**2987 词**，已做名词复数归一 + 专名剔除）。
 
-也可自己重新抽词（需要 ECDICT 的 `ecdict.csv`，约 63MB）：
+也可自己重抽（需要 ECDICT 的 `ecdict.csv`，约 63MB）：
 
 ```bash
 cd <项目根>
@@ -243,40 +286,21 @@ python scripts/build_wordlist.py --src /tmp/ecdict.csv \
 > 2. `PROPER_NOUNS` —— 地名/机构/姓氏剔除（`york` / `sydney` / `forbes` / `tours` / `wollongong`），判据为「中文释义括号里的地名·姓氏标记」或「英文释义里的地名·王室指式」，实测 0 误报
 > 3. **名词复数归一** —— 纯复数条目一律不作为词条：原形已在表内或是基础词的丢弃（`wheels` / `jobs` / `universities`），原形查得到的提升为原形（`utensils` → `utensil`）；`KEEP_PLURAL` 保留语义已分化的独立词条（`economics` / `odds` / `pants` / `bacteria` …）
 
-导入分三步：
+### 6.2 控制台路径（等价备选）
 
-**① 打包入参**（本地，一次生成全部批次）
-
-```bash
-python scripts/pack_words.py                     # 默认 200 词/批 → 15 批，每批约 38KB
-python scripts/pack_words.py --batch-size 100    # 控制台入参框卡顿时改小
-python scripts/pack_words.py --wordlist assets/word_lists/pilot-100.json   # 100 词试点
-```
-
-**② 填密钥**
+不想用本地脚本时，仍可走云函数 `seed_words`：
 
 ```bash
-# 先在项目根 .env 写一行 ADMIN_TOKEN=xxx（.env 已 gitignore）
-python scripts/fill_token.py --dir build/seed_words
+python scripts/pack_words.py                          # → build/seed_words/，默认 200 词/批共 15 批
+python scripts/fill_token.py --dir build/seed_words   # 把 __ADMIN_TOKEN__ 换成 .env 里的 ADMIN_TOKEN
 ```
 
-**③ 依次执行**
+再在控制台 → 云函数 `seed_words` → 云端测试里，把 `build/seed_words/batch-01.json` …
+`batch-15.json` 的**整段内容**依次粘进入参框执行。
 
-控制台 → 云函数 `seed_words` → 云端测试，把 `build/seed_words/batch-01.json` …
-`batch-15.json` 的**整段内容**粘进入参框，每批执行一次（**共 15 批**）。
-
-返回 `{ inserted, skipped, total, offset, limit, nextOffset, hasMore, lastSeq }`。
-
-> 也可以不用打包脚本，手动传全量数组 + `offset` / `limit` 切片
-> （`{"_token":"...","words":[...],"offset":0,"limit":200}`）——但那样每次都要粘整份词表，不推荐。
-
-**关键语义**：
-
-- 按 `word` 去重，命中即**跳过**（`skipped++`），**永不覆盖**已存在词条
-- **忽略词表自带的 `seq`**，取库中最大 `seq` 续号 → 想从 1 开始必须先在空库导入
-- 新导入的词一律 `audioReady: false` → **不会进入学习流程**，等 `seed_audio` 点亮
-
-> 换成小规模试点：用 `assets/word_lists/pilot-100.json`（100 词）。
+> 云函数路径的关键语义：按 `word` 去重命中即跳过（**永不覆盖**）；**忽略词表自带的 `seq`**，
+> 取库中最大 `seq` 续号（想从 1 开始必须在空库导入）；新词一律 `audioReady: false`。
+> ⚠️ 走这条路需要先在云函数环境变量里配 `ADMIN_TOKEN`（见第 3 节）。
 
 ---
 
@@ -322,15 +346,20 @@ python scripts/fill_token.py --dir build/seed_audio
 
 ### 7.3 上传到云端
 
-控制台 → `seed_audio` → 云端测试，**依次**执行 `build/seed_audio/batch-01.json`、`batch-02.json`…（文件内容整段粘进入参框）。
+音频连同 `audio_cache`、`audioReady` 由第 6 节的脚本一并处理，**不用再进控制台**：
 
-一次调用完成三件事（幂等，失败直接重跑）：
+```bash
+python scripts/seed_cloud.py --apply
+```
 
-1. `uploadFile` → 云存储 `audio/{type}/{slug}.mp3`
+它做三件事（幂等，失败直接重跑）：
+
+1. 直传云存储 `audio/{type}/{slug}.mp3`（例句是 `s_{hash}.mp3`）
 2. upsert `audio_cache`（`text` + `type` → `fileID`，`source: 'preseed'`）
 3. **仅单词**：把 `words` 里同名词的 `audioReady` 置 `true` → 从此进入学习队列
 
-> 控制台入参框吃不消大 JSON 时缩批：`python scripts/pack_audio.py --max-bytes 120000`。
+> 已入 `audio_cache` 的默认跳过；要强制重传加 `--force-audio`。
+> 若坚持走控制台，等价路径是 `seed_audio` 云函数 + `build/seed_audio/batch-*.json`。
 
 ### 7.4 例句音频（可选，进阶）
 
@@ -346,18 +375,12 @@ python scripts/gen_sentence_audio.py --examples assets/examples/pilot-100-exampl
 # ③ 预检 + 试听页
 python scripts/make_audition_page.py --examples assets/examples/pilot-100-examples.json
 
-# ④ 打包（注意 manifest / audiodir / outdir 三处都换成 sentence 的）
-python scripts/pack_audio.py --manifest build/sentence_audio/manifest.json \
-    --audiodir build/sentence_audio --outdir build/seed_sentence --max-bytes 600000
-
-# ⑤ 填密钥
-python scripts/fill_token.py --dir build/seed_sentence
-
-# ⑥ 控制台 → seed_audio → 依次执行 build/seed_sentence/batch-*.json
+# ④ 上传（例句音频与 audio_cache 由 seed_cloud.py 一并处理）
+python scripts/seed_cloud.py --apply
 ```
 
 > 例句音频**不点亮 `audioReady`**（不参与出词）；`audio_cache` 对例句**只查库不兜底**。
-> ⚠️ 用 `force: true` 重新生成 AI 内容会让例句文本变化、旧音频失效，需重跑 ②~⑥。
+> ⚠️ 用 `force: true` 重新生成 AI 内容会让例句文本变化、旧音频失效，需重跑 ②~④。
 
 ---
 
@@ -375,15 +398,16 @@ python scripts/fill_token.py --dir build/seed_sentence
 - [ ] 次日再进：先出现「复习昨天」阶段
 - [ ] 统计页日历有打卡标记；错题本能查到答错的词
 
-### 云端三处对账（`seed_audio` 是否成功）
+### 云端三处对账（音频是否就绪）
 
 | 位置 | 期望 |
 |---|---|
 | 云开发 → 存储 | `audio/2/` 下有对应 mp3（例句为 `s_*.mp3`） |
-| 云开发 → 数据库 → `audio_cache` | 条数与上传数一致，`source = preseed` |
-| 云开发 → 数据库 → `words` | 上传的词 `audioReady = true` |
+| 云开发 → 数据库 → `audio_cache` | 200 条（100 单词 + 100 例句），`source = preseed` |
+| 云开发 → 数据库 → `words` | `audioReady = true` 的词 = 100，`seq` 从 1 起连续 |
 
-云函数返回体 `uploaded / cached / marked` 应≈本批条数，`failed` 为空。
+`python scripts/seed_cloud.py` 体检输出的「复查」段会把这些数直接打出来；
+`words` 总数与本地词表（2987）对不上时会告警——那说明漏了 `--reset`。
 
 ---
 
@@ -406,29 +430,30 @@ python scripts/fill_token.py --dir build/seed_sentence
 | `init_cloud.py` 报 `40001` / `40125` | `WX_APP_SECRET` 不对或已被重置 | 去小程序后台「开发管理 → 开发设置」重置 AppSecret，更新 `.env` |
 | `init_cloud.py` 报 `40164 invalid ip` | 本机公网 IP 不在小程序后台的 IP 白名单 | 小程序后台「开发管理 → 开发设置 → IP 白名单」加上本机出口 IP（`curl ifconfig.me` 查看），或清空白名单 |
 | `init_cloud.py` 报 `502003 无权限操作数据库` | 环境 ID 不属于该 AppID | 核对 `miniprogram/config.js` 的 `ENV_ID` 与当前账号 |
+| `seed_cloud.py` 报上传 `HTTP 403 SignatureDoesNotMatch` | COS 直传的签名放错位置 | 正常不会遇到：签名必须在 `Authorization` **请求头**、且表单里要带 `key` 字段（见 `wxcloud.py` 的 `upload()`） |
+| `seed_cloud.py` 复查告警「云端词数与本地词表不一致」 | 库里有上一版词表的残留 | 加 `--reset` 重导（见第 6 / 10 节） |
 
 ---
 
 ## 10. 换词表 / 推倒重来
 
-```json
-// ① 预检（只读）：看各集合条数、有学习进度的用户数
-{ "_token": "xxx", "mode": "preview" }
+```bash
+# 一条命令：自动备份 + 清空 + 重导（细节见第 6 节）
+python scripts/seed_cloud.py --apply --reset
 ```
 
-**② 先备份**：控制台 → 数据库 → 集合 → 导出。
+脚本先把 `words` / `user_words` / `records` / `daily_plans` 备份到 `build/backup/`，再清空重导，
+同时把 `users.wordCursor` **归零**。**保留**：`audio_cache`（按 `text` 建索引，重导可复用）、
+`checkins`、云存储 `audio/` 目录。
 
-```json
-// ③ 清空（破坏性，必须带 confirm）
-{ "_token": "xxx", "mode": "purge", "confirm": "PURGE" }
-```
+音频也换过的话，按第 7 节重新生成 mp3 后再跑一次（这次不带 `--reset`）。
 
-清理范围：`words` + `user_words` + `records` + `daily_plans`，并把 `users.wordCursor` **归零**。
-**保留**：`audio_cache`（按 `text` 建索引，重导可复用）、`checkins`、云存储 `audio/` 目录。
+> 走控制台时等价路径是云函数 `reset_words`：
+> `{ "_token": "xxx", "mode": "preview" }` 预检 → `{ "_token": "xxx", "mode": "purge", "confirm": "PURGE" }` 执行。
 
-然后重新走第 6 → 7 节（导入新词表 → 上传音频）。
-
-> ⚠️ 「只删 `words` 再重导」是错的：`user_words.wordId`、`records.wordId`、`daily_plans.newWordIds/reviewWordIds/practiceQueue[].wordId` 都引用 `words._id`，只删词会留一地孤儿数据，`wordCursor` 也会错位。
+> ⚠️ 「只删 `words` 再重导」是错的：`user_words.wordId`、`records.wordId`、
+> `daily_plans.newWordIds/reviewWordIds/practiceQueue[].wordId` 都引用 `words._id`，
+> 只删词会留一地孤儿数据，`wordCursor` 也会错位。
 
 ---
 

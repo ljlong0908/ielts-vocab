@@ -639,6 +639,51 @@ playWord(word)
 
 **另外发现**：开发者工具自带 CLI（`/Applications/wechatwebdevtools.app/Contents/MacOS/cli`）支持 `cloud functions deploy`，可**一条命令批量部署全部 15 个云函数**（`--remote-npm-install` 等价于「云端安装依赖」），省掉手点 15 次。不提供「调用云函数」，故初始化仍走 `init_cloud.py`。
 
-⚠️ **HTTP API 触发云函数的超时只有 5s**（官方文档明确）→ 所以 `seed_words` / `seed_audio` 这类大入参的**不能**改走 HTTP API，仍须用控制台「云端测试」逐批执行。
+⚠️ ~~**HTTP API 触发云函数的超时只有 5s**（官方文档明确）→ 所以 `seed_words` / `seed_audio` 这类大入参的不能改走 HTTP API，仍须用控制台「云端测试」逐批执行。~~
+→ **这条结论在第五轮被推翻了**：数据根本不必绕道云函数，直接用 `/tcb/databaseadd` 写库即可，见 11.8。
 
 **安全**：AppSecret 是最高权限凭证，只放本地 `.env`——**不要写进小程序代码，也不要配到云函数环境变量**。
+
+### 11.8 第五轮：数据导入也本地化，初始化全流程一条命令（2026-09-29）
+
+**动机**：11.7 之后「建表」能本地做了，但**数据**还卡在控制台——`seed_words` 15 批 +
+`seed_audio` 2 批 + `seed_sentence` 5 批，共 22 次「云端测试」粘贴。
+
+**关键发现**：云开发 HTTP API 的**数据库写接口全都能用**，于是完全不必绕道云函数：
+
+| 能力 | 接口 | 实测 |
+|---|---|---|
+| 读数据 | `POST /tcb/databasequery` | ✅ 支持 `db.command.*`、`limit` 1000、`skip` 翻页 |
+| 批量写 | `POST /tcb/databaseadd` | ✅ `add({data:[...]})` **数组一次多条** |
+| 批量改 | `POST /tcb/databaseupdate` | ✅ `where({...}).update({data:{...}})` |
+| 批量删 | `POST /tcb/databasedelete` | ✅ `where({...}).remove()` |
+| 传文件 | `POST /tcb/uploadfile` + COS 直传 | ✅ 见下 |
+| 删文件 | `POST /tcb/batchdeletefile` | ✅ 文件不存在返回 `STORAGE_FILE_NONEXIST`，不算错 |
+
+**云存储上传的坑**（试错三次才通）：
+
+- `uploadfile` 返回 `url` / `authorization` / `token` / `file_id`，第二步要 **POST multipart** 打到 `url`
+- **签名必须放 `Authorization` 请求头**，**且表单里要带 `key` 字段**：
+  用 `PUT` → `403 SignatureDoesNotMatch`（微信给的是 POST Object 的签名）；少 `key` → `400 MalformedPOSTRequest`
+
+**索引口径的坑**：11.7 那套「`index_count − 1` 估算自定义索引」偏大 1。
+实测发现云开发会**给每个集合自动建 `_openid_1` 索引**（默认权限「仅创建者可读写」要靠它），
+正确口径是 `_id_` + （清单是否已含 `_openid_1` ? 0 : 1）+ 清单条数。
+另外 **`updateindex` 是幂等的**：同名索引重复创建不会重复添加（`index_count` 稳定不变）。
+
+**新增 `scripts/wxcloud.py`**：HTTP 客户端抽成公共层（token 缓存、`Cloud` 句柄、
+`query / add / update / remove / purge / upload / remove_files`），`init_cloud.py` 与 `seed_cloud.py` 共用。
+
+**新增 `scripts/seed_cloud.py`**：一条命令做完五件事，全部幂等——词表（按 `word` 去重）→
+例句富化（只补未富化的）→ 单词音频 → 例句音频（按 `(text, type)` 去重）→ 点亮 `audioReady`。
+
+- `--reset`：清 `words` / `user_words` / `records` / `daily_plans` + 归零 `users.wordCursor`
+  （保留 `checkins` / `audio_cache` / `users`），清空前**自动备份**到 `build/backup/`
+- 依赖 `build/audio/manifest.json` 与 `build/sentence_audio/manifest.json`（含 `word` ↔ `text` ↔ 文件 的映射）
+
+**实测结果（清空重导）**：424 条旧词（字母序）+ 65 条派生数据清空并备份 → 导入 **2987 词**（seq 1..2987）→
+上传 **200 个音频**（100 单词 + 100 例句，0 失败）→ `audio_cache` 200 条 → `audioReady` 100 词。
+**第二遍重跑：新增 0 / 跳过 200 / 新点亮 0，数据零变化**（幂等成立）。
+
+**连带修正**：`docs/deploy.md` 第 6/7/8/9/10 节改为「本地一键（推荐）+ 控制台（等价备选）」；
+`ADMIN_TOKEN` 从「必配 5 个函数」降级为「只在走控制台路径时才需要」。

@@ -40,7 +40,9 @@ ielts-vocab/
 │   ├── make_audition_page.py    # 本地预检 + 生成音频试听页
 │   ├── pack_audio.py            # 打包成 seed_audio 入参（base64 分批）
 │   ├── pack_words.py            # 打包成 seed_words 入参（分词表分批）
-│   ├── init_cloud.py            # 本地初始化数据库：建集合 + 建索引（云开发 HTTP API）
+│   ├── wxcloud.py               # 云开发 HTTP API 本地客户端（下面两个脚本共用）
+│   ├── init_cloud.py            # 本地初始化数据库：建集合 + 建索引
+│   ├── seed_cloud.py            # 本地导入全部数据：词表 + 例句富化 + 音频 + audioReady
 │   ├── fill_token.py            # 批量把 batch-*.json 的占位符换成真实密钥
 │   └── install_spacy_model.py   # 装 en_core_web_sm（不在 PyPI，走 HF 镜像）
 ├── miniprogram/             # 小程序前端
@@ -159,9 +161,10 @@ ielts-vocab/
 
 - [ ] **fork 后必须替换** `project.config.json` 的 `appid` 与 `miniprogram/config.js` 的 `ENV_ID`（二者非密钥，但用作者的会连到作者的云环境）
 - [ ] `enrich_word` 必须配 `DEEPSEEK_API_KEY`（且账户有余额），否则单词卡只显示词表基础字段
-- [ ] `ADMIN_TOKEN` 要在 **5 个函数**（`enrich_word`/`seed_words`/`seed_audio`/`reset_words`/`init_db`）上**分别配置**同一个值
+- [ ] 数据初始化走本地脚本，都幂等可重复跑：`python scripts/init_cloud.py --apply`（集合 + 索引）→ `python scripts/seed_cloud.py --apply --reset`（词表 + 音频 + audioReady）
+- [ ] **集合权限只能手工配一次**（HTTP API 没有权限接口）：`words` = 所有用户可读 / 仅管理端可写，其余 = 仅创建者可读写
+- [ ] `ADMIN_TOKEN` 只在你想走**控制台路径**时才需要配（本地脚本路径不需要）；要在对应云函数上**分别配置**同一个值
 - [ ] 云开发控制台 → 设置 → **「未登录访问」保持关闭**（开启后任何持有环境 ID 的人都能访问你的云资源）
-- [ ] 数据表用 `init_db` 一键创建（幂等）；**索引与安全规则必须手工配**（SDK 建不了）
 - [ ] `scripts/fill_token.py` 填过密钥的 `batch-*.json` 含明文密钥，位于 `build/`（已 gitignore），**勿提交、勿外移**
 - [ ] 小程序发布前需完成 **ICP 备案**
 - [ ] 音频许可：用 **Kokoro-82M（Apache-2.0）**；不要换成系统 `say` / `edge-tts` 等受限或灰色音源
