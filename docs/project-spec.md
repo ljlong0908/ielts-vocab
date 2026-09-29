@@ -88,6 +88,7 @@ ielts-vocab/
 │   ├── make_audition_page.py     # 本地预检 + 生成音频试听页（单词/例句通用）→ build/audition*.html
 │   ├── pack_audio.py             # 打包成 seed_audio 的入参（分批 base64，单词/例句通用）
 │   ├── pack_words.py             # 打包成 seed_words 的入参（按词表分批，每批一份完整入参）
+│   ├── init_cloud.py             # 本地初始化数据库：建集合 + 建索引（走云开发 HTTP API）
 │   ├── fill_token.py             # 批量把 batch-*.json 的 __ADMIN_TOKEN__ 换成真实密钥
 │   └── requirements.txt
 ├── miniprogram/                  # 小程序前端根（miniprogramRoot）
@@ -132,7 +133,8 @@ ielts-vocab/
 ## 4. 数据模型（云数据库集合，共 7 个）
 
 > 云开发文档型数据库（类 MongoDB）。所有集合字段如下为**代码实际写入**的字段。
-> 建表 / 建索引 / 安全规则的完整清单见 `docs/deploy.md` 第 5 节（也可直接调 `init_db` 云函数一键建表并取回索引清单）。
+> 集合与索引的**权威清单**在 `assets/db-indexes.json`（`scripts/init_cloud.py` 读它做本地一键初始化）。
+> 建表 / 建索引 / 安全规则的完整说明见 `docs/deploy.md` 第 5 节（也可走控制台 `init_db` 云函数建集合并取回索引清单）。
 
 ### 4.1 `users` — 用户
 | 字段 | 类型 | 说明 |
@@ -443,7 +445,7 @@ playWord(word)
 | 用户身份 | 只用 `OPENID`，云函数侧取上下文，前端不传 |
 | 密钥 | DeepSeek Key 只配在 `enrich_word` 环境变量；**前端包体不得出现 `sk-`**；`ADMIN_TOKEN` 需在 `enrich_word` / `seed_words` / `seed_audio` / `reset_words` / `init_db` **五个函数**上分别配置（同一值），用于锁住管理类能力。⚠️ 环境变量是**函数级隔离**的，逐个配、别漏 |
 | 云函数鉴权 | 云函数 = 公开接口，入参可伪造。管理/花钱/写库类能力必须自带校验：`enrich_word.force` 需 `_token`；`seed_words` / `seed_audio` / `reset_words` / `init_db` 强制 `_token`（`reset_words` 执行删除还需 `confirm:'PURGE'`）；`audio_cache` 限制 `text` 正则 |
-| 数据表初始化 | 集合必须先存在才能读写。用 `init_db` 云函数建表（幂等），索引与安全规则只能手工设（见 `docs/deploy.md` 第 5 节） |
+| 数据表初始化 | 集合必须先存在才能读写。建集合两条路：`python scripts/init_cloud.py --apply`（本地，顺带建索引）或控制台 `init_db` 云函数。⚠️ **安全规则只能手工设**（微信云开发 HTTP API 没有该接口） |
 | 词表导入语义 | `seed_words` = 按 `word` 去重**跳过**，**永不覆盖**已存在词条（只 `skipped++`）。要替换词库必须先 `reset_words` 清空。⚠️ 不可只删 `words`：`user_words` / `records` / `daily_plans` 均按 `wordId` 引用 `words._id`，只删词会留下孤儿数据；`users.wordCursor` 也必须归零 |
 | 词库重置范围 | `reset_words` 默认清 `words` + `user_words` + `records` + `daily_plans` + 归零 `wordCursor`；**保留** `audio_cache`（按 `text` 建索引，重导可复用）与 `checkins`（不含词引用，`resetStats:true` 时才清）。云存储 `audio/` 目录不删，同名文件重跑 `seed_audio` 覆盖即可 |
 | 数据库写操作 | 全部在云函数（管理端）；前端只读 `words`（可选直连） |
@@ -482,7 +484,7 @@ playWord(word)
 | 题型比例/干扰项 | `cloudfunctions/build_questions/index.js`（`i % 2`、`sample(pool,3)`） |
 | AI Prompt / 模型 | `cloudfunctions/enrich_word/index.js`（`buildPrompt` / `callModel`） |
 | 发音音源（单词） | `scripts/gen_audio.py`（本地生成）→ `cloudfunctions/seed_audio`（上传+点亮）→ `miniprogram/utils/audio.js`（`resolveSrc` / `fallbackUrl`）/ `cloudfunctions/audio_cache`（读缓存） |
-| **数据表初始化 / 建索引** | `cloudfunctions/init_db`（建集合 + 返回索引清单）→ `docs/deploy.md` 第 5 节 |
+| **数据表初始化 / 建索引** | `scripts/init_cloud.py`（本地走 HTTP API，建集合 + 建索引，清单在 `assets/db-indexes.json`）；控制台备选 `cloudfunctions/init_db`（建集合 + 返回索引清单） |
 | **部署步骤 / 报错排查** | `docs/deploy.md` |
 | 例句文本来源 | 运行时：`cloudfunctions/enrich_word`（`buildPrompt`）；离线批量：`scripts/gen_examples.py` |
 | 发音音源（例句） | `scripts/gen_examples.py` → `scripts/gen_sentence_audio.py`（本地生成，`s_{hash}`）→ `seed_audio`（`kind:'sentence'` 上传）→ `audio.js` 的 `playSentence` / `audio_cache`（**只读不写**） |
@@ -611,3 +613,32 @@ playWord(word)
 **连带影响**：`pilot-100` 由 `discipline` / `housing` 换成 `element` / `threat`，其余 **98 词不变**；`assets/examples/` 与 `build/` 下的单词·例句音频、入参批次已重跑同步（音频以单词为 key、例句以整句文本为 key，seq 重排不会使已有文件失效）。
 
 词表 **3036 → 2987 词**；`seed_words` 入参由 16 批变为 **15 批**（`pack_words.py` 重跑生成）。
+
+### 11.7 第四轮：数据库初始化本地化（2026-09-29）
+
+**动机**：原先初始化数据表只能在控制台手点——7 个集合 + 10 条索引共 17 次点击，漏一个就要等运行时才炸。
+
+**关键发现**：微信云开发的 HTTP API 除了建集合，还提供 **`/tcb/updateindex`**——这是**控制台之外唯一的建索引途径**。配合 `/tcb/databasecollectionget`（返回里带 `index_count`）就能做幂等体检。
+
+| 能力 | 接口 | 本地可做？ |
+|---|---|---|
+| 取凭证 | `GET /cgi-bin/token` | ✅ |
+| 查集合（含 `index_count`、`count`） | `POST /tcb/databasecollectionget` | ✅ |
+| 建集合 | `POST /tcb/databasecollectionadd` | ✅ |
+| **建索引** | `POST /tcb/updateindex` | ✅ |
+| **安全规则（权限）** | —— | ❌ 无接口，仍须控制台 |
+
+**新增 `scripts/init_cloud.py`**：默认体检（只读），`--apply` 执行。要点：
+
+- 配置自动发现：AppID 读 `project.config.json`，环境 ID 读 `miniprogram/config.js`；只有 AppSecret 需写进 `.env` 的 `WX_APP_SECRET`
+- access_token 缓存到 `build/.wx-token.json`（微信有频率限制，反复取会互相顶掉），`--refresh-token` 强制换新
+- 建索引**幂等**：已存在的报 exists 视为通过；复查用 `index_count − 1` 估算自定义索引数（`−1` 是减去内置 `_id_`）
+- **清单漂移告警**：比对 `assets/db-indexes.json` 与 `cloudfunctions/init_db/index.js` 的索引条数，有一边改漏就提示
+
+**新增 `assets/db-indexes.json`** —— 集合与索引的**权威清单**（含每个索引的字段与升降序、唯一性）。`init_db/index.js` 里那份是控制台路径的等价副本。
+
+**另外发现**：开发者工具自带 CLI（`/Applications/wechatwebdevtools.app/Contents/MacOS/cli`）支持 `cloud functions deploy`，可**一条命令批量部署全部 15 个云函数**（`--remote-npm-install` 等价于「云端安装依赖」），省掉手点 15 次。不提供「调用云函数」，故初始化仍走 `init_cloud.py`。
+
+⚠️ **HTTP API 触发云函数的超时只有 5s**（官方文档明确）→ 所以 `seed_words` / `seed_audio` 这类大入参的**不能**改走 HTTP API，仍须用控制台「云端测试」逐批执行。
+
+**安全**：AppSecret 是最高权限凭证，只放本地 `.env`——**不要写进小程序代码，也不要配到云函数环境变量**。

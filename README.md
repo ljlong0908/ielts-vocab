@@ -40,6 +40,7 @@ ielts-vocab/
 │   ├── make_audition_page.py    # 本地预检 + 生成音频试听页
 │   ├── pack_audio.py            # 打包成 seed_audio 入参（base64 分批）
 │   ├── pack_words.py            # 打包成 seed_words 入参（分词表分批）
+│   ├── init_cloud.py            # 本地初始化数据库：建集合 + 建索引（云开发 HTTP API）
 │   ├── fill_token.py            # 批量把 batch-*.json 的占位符换成真实密钥
 │   └── install_spacy_model.py   # 装 en_core_web_sm（不在 PyPI，走 HF 镜像）
 ├── miniprogram/             # 小程序前端

@@ -30,7 +30,7 @@
 | **云存储音频** | **无需重传**。`audio_cache` 与云存储 `audio/` 不参与 `reset_words`，同名文件重跑 `seed_audio` 会自动覆盖 |
 | **小程序前端** | 重新编译上传（`app.js` / `config.js` / `utils/*` / `pages/learn/*` 均有改动；包体已从 970KB 降到约 164KB） |
 | **环境变量** | 若曾轮换过 DeepSeek Key（旧 Key 暴露在历史代码中），需到 `enrich_word` → 配置 → 环境变量更新 `DEEPSEEK_API_KEY`；改动代码不会覆盖环境变量，**漏改则单词卡退化为只显示词表基础字段** |
-| **数据表** | 已建过则不必重跑 `init_db`，跑一次 `mode:'preview'` 体检即可 |
+| **数据表** | 已建过则不必重跑。用 `python scripts/init_cloud.py`（只读体检）核对集合与索引是否齐全，缺了再 `--apply`；或走控制台 `init_db` 的 `mode:'preview'` |
 
 > 换词表的完整流程见第 10 节。
 
@@ -95,6 +95,20 @@ openssl rand -hex 24
 
 对 `cloudfunctions/` 下**每一个**目录：右键 → **上传并部署：云端安装依赖**（不要选「上传所有文件」，否则依赖不装）。
 
+> **批量替代**（省掉手点 15 次）：开发者工具自带 CLI，装在该路径下
+> `/Applications/wechatwebdevtools.app/Contents/MacOS/cli`。`--remote-npm-install` 等价于「云端安装依赖」：
+>
+> ```bash
+> CLI=/Applications/wechatwebdevtools.app/Contents/MacOS/cli
+> "$CLI" cloud functions deploy --project /Users/lijinlong/Projects/ielts-vocab \
+>   --env cloud1-d3g7gz4uo668f8faa --remote-npm-install \
+>   --names user_profile home_summary today_flow start_new_words word_card \
+>           build_questions submit_answer finish_checkin stats audio_cache \
+>           enrich_word seed_words seed_audio reset_words init_db
+> ```
+>
+> 首次运行会自动拉起开发者工具，需先登录。`"$CLI" cloud functions list` 可核对结果。
+
 | # | 云函数 | 作用 | 调用方 | 超时 |
 |---|---|---|---|---|
 | 1 | `user_profile` | 登录 + 每日目标 | 前端 | 20s |
@@ -122,9 +136,44 @@ openssl rand -hex 24
 
 ---
 
-## 5. 初始化数据表（`init_db`）
+## 5. 初始化数据表
 
-### 5.1 体检
+两条路选一条，结果完全等价。**5.1 本地一键**更省事（不用点控制台 17 次）；5.2 是原来的控制台流程。
+
+### 5.1 本地一键（推荐）
+
+微信云开发的 HTTP API 提供了建集合与**建索引**的接口（`/tcb/updateindex` 是控制台之外唯一的建索引途径），所以能整段在本地做完。
+
+先在项目根 `.env` 补一行（`.env` 已 gitignore）：
+
+```
+WX_APP_SECRET=<小程序后台「开发管理 → 开发设置」里的 AppSecret>
+```
+
+> AppID 自动读 `project.config.json`，环境 ID 自动读 `miniprogram/config.js`——都不用填。
+> ⚠️ AppSecret 是小程序**最高权限凭证**，只放本地 `.env`：不要写进小程序代码，也不要配到云函数环境变量里。
+
+```bash
+python scripts/init_cloud.py            # ① 体检（只读，不动云端）
+python scripts/init_cloud.py --apply    # ② 执行：建缺失集合 + 补缺失索引（幂等）
+```
+
+脚本做四件事：
+
+1. 打印自动发现的 AppID / 环境 ID，以及期望的 7 个集合、10 条索引
+2. **清单漂移告警**——比对 `assets/db-indexes.json` 与 `cloudfunctions/init_db/index.js` 的索引数，有一边改漏了就提示
+3. 建缺失集合（已存在的跳过；建完复查）
+4. 建缺失索引（幂等：已存在的报 exists 视为通过；建完按 `index_count − 1` 复查自定义索引条数，`−1` 是减去内置的 `_id_`）
+
+集合与索引的权威清单在 **`assets/db-indexes.json`**，改索引请改这里。
+
+> 💡 幂等：集合已存在跳过、索引已存在跳过，反复跑没有副作用。
+> ⚠️ 但**唯一索引**建在有重复数据的集合上会失败——全新环境是空集合，不会遇到；若是老环境加索引，先清掉重复数据。
+> ⚠️ **安全规则仍只能手工**（HTTP API 没有对应接口）→ 见 5.3。
+
+### 5.2 控制台路径（等价备选）
+
+#### 5.2.1 体检
 
 控制台 → 云函数 `init_db` → 云端测试 → 入参：
 
@@ -134,7 +183,7 @@ openssl rand -hex 24
 
 返回 `data.collections` 会逐个列出集合的 `exists` 与当前文档数，`data.missing` 是缺的集合。
 
-### 5.2 建表
+#### 5.2.2 建表
 
 ```json
 { "_token": "你的 ADMIN_TOKEN", "mode": "create" }
@@ -143,7 +192,7 @@ openssl rand -hex 24
 - 返回 `data.created` = 本次新建的集合，`data.missing` 应为空、`data.ready` 为 `true`
 - 幂等：已存在的自动跳过，重复执行不会报错
 
-### 5.3 手工建索引（SDK 做不到，必须控制台操作）
+#### 5.2.3 手工建索引（仅当 5.1 没走通时才需要）
 
 控制台 → 数据库 → 选中集合 → 索引管理 → 添加。返回体的 `data.indexes` 就是这份清单：
 
@@ -162,7 +211,7 @@ openssl rand -hex 24
 
 > 「唯一」索引同时是**幂等保障**：`checkins`、`daily_plans`、`audio_cache` 靠它杜绝重复写入。
 
-### 5.4 安全规则（控制台 → 数据库 → 集合 → 权限设置）
+### 5.3 安全规则（控制台 → 数据库 → 集合 → 权限设置）
 
 | 集合 | 权限 |
 |---|---|
@@ -344,7 +393,7 @@ python scripts/fill_token.py --dir build/seed_sentence
 |---|---|---|
 | `FUNCTION_NOT_FOUND` | 云函数没部署 | 逐个「上传并部署：云端安装依赖」 |
 | `FunctionName取值与规范不符` | 函数名以下划线开头 | 改成字母开头 |
-| `Db not exist` / `collection not exists` | 集合没建 | 跑 `init_db`（见第 5 节） |
+| `Db not exist` / `collection not exists` | 集合没建 | 跑 `python scripts/init_cloud.py --apply`（见 5.1）或 `init_db`（见 5.2） |
 | `ADMIN_TOKEN_NOT_CONFIGURED` | 该函数没配环境变量 | 见第 3 节，注意**函数级隔离** |
 | `INVALID_ADMIN_TOKEN` | 入参 `_token` 不对 | 与 `env.ADMIN_TOKEN` 对齐 |
 | `INVALID_WORD` | 词名不过 `TEXT_RE` | 字母开头、≤40 字符、仅字母/撇号/连字符/空格 |
@@ -353,7 +402,10 @@ python scripts/fill_token.py --dir build/seed_sentence
 | `Cannot create field 'x' in element {y:null}` | 对 `null` 字段做点操作 | 已用 `_.set()` 规避；新代码照抄 `enrich_word` |
 | 云函数返回 500 + 网络异常 | 见上，或超时太短 | 核对第 4 节超时表 |
 | 发音不响且无报错 | 音频未点亮 / 域名未配 | 查 `audioReady`；若仍走 dictvoice 需配 `downloadFile` 合法域名 `https://dict.youdao.com` |
-| 页面空白、数据读不到 | 云开发开了「未登录访问」被关，或权限设错 | 查第 5.4 节安全规则 |
+| 页面空白、数据读不到 | 云开发开了「未登录访问」被关，或权限设错 | 查第 5.3 节安全规则 |
+| `init_cloud.py` 报 `40001` / `40125` | `WX_APP_SECRET` 不对或已被重置 | 去小程序后台「开发管理 → 开发设置」重置 AppSecret，更新 `.env` |
+| `init_cloud.py` 报 `40164 invalid ip` | 本机公网 IP 不在小程序后台的 IP 白名单 | 小程序后台「开发管理 → 开发设置 → IP 白名单」加上本机出口 IP（`curl ifconfig.me` 查看），或清空白名单 |
+| `init_cloud.py` 报 `502003 无权限操作数据库` | 环境 ID 不属于该 AppID | 核对 `miniprogram/config.js` 的 `ENV_ID` 与当前账号 |
 
 ---
 
