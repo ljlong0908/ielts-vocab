@@ -96,6 +96,12 @@ openssl rand -hex 24
 
 `init_db` 入参：`{"_token":"wrong"}`。逐个函数打一遍即可确认。
 
+> **本地也能自查（不用翻控制台）**：`.env` 里已写 `ADMIN_TOKEN` 时，用 HTTP API 调 `init_db` 即可 ——
+> `POST /tcb/invokecloudfunction?access_token=<token>&env=<ENV_ID>&name=init_db`，
+> body 传 `{"_token":"<本地同一个值>","mode":"preview"}`。
+> 返回 `{"code":0,"data":{"ready":true,"collections":{...}}}` = **云端 token 与本地一致 + 7 个集合齐备**，一次验两件事。
+> 反之若回 `INVALID_ADMIN_TOKEN`，说明两边值不一样。
+
 ---
 
 ## 4. 部署云函数（共 15 个）
@@ -114,7 +120,11 @@ openssl rand -hex 24
 >           enrich_word seed_words seed_audio reset_words init_db
 > ```
 >
-> 首次运行会自动拉起开发者工具，需先登录。`"$CLI" cloud functions list` 可核对结果。
+> ⚠️ **前置：开发者工具 → 设置 → 安全设置 → 打开「服务端口」**。CLI 靠它与 IDE 通信，**不打开会静默卡死**（实测跑 3 分钟无任何输出，最终被系统杀掉），既不报错也不提示，很容易误判成「CLI 不能用」。
+>
+> 首次运行会自动拉起开发者工具，需先登录。核对结果：`"$CLI" cloud functions list --env <ENV_ID>`（`--env` 是**必填**参数，漏了只会打印帮助不报错）。
+>
+> 云函数**没有 HTTP API**（试 `/tcb/getfunctionlist` 报 `40066 invalid url`），所以列表与部署只能走 IDE 界面或这个 CLI，无法脚本化 —— 这也是本项目唯一没被「本地一键」覆盖的环节。
 
 | # | 云函数 | 作用 | 调用方 | 超时 |
 |---|---|---|---|---|

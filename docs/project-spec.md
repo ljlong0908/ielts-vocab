@@ -639,6 +639,8 @@ playWord(word)
 
 **另外发现**：开发者工具自带 CLI（`/Applications/wechatwebdevtools.app/Contents/MacOS/cli`）支持 `cloud functions deploy`，可**一条命令批量部署全部 15 个云函数**（`--remote-npm-install` 等价于「云端安装依赖」），省掉手点 15 次。不提供「调用云函数」，故初始化仍走 `init_cloud.py`。
 
+⚠️ 补充实测（2026-09-29）：用 CLI 前**必须先在 IDE「设置 → 安全设置」打开「服务端口」**，否则命令**静默卡死**（跑满 3 分钟无任何输出后被系统杀掉，不报错、不提示）。另：**云函数管理没有 HTTP API**——`/tcb/getfunctionlist` 返回 `40066 invalid url`，所以云函数的列表与部署只能走 IDE 界面或该 CLI，是本项目唯一无法「本地一键」的环节。
+
 ⚠️ ~~**HTTP API 触发云函数的超时只有 5s**（官方文档明确）→ 所以 `seed_words` / `seed_audio` 这类大入参的不能改走 HTTP API，仍须用控制台「云端测试」逐批执行。~~
 → **这条结论在第五轮被推翻了**：数据根本不必绕道云函数，直接用 `/tcb/databaseadd` 写库即可，见 11.8。
 
