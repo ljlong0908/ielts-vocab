@@ -141,14 +141,14 @@
         选项区只被"建议"引导，说明区只讲"选完怎样"，两条信息不再同级打架
      ⚠️ 落 wxml 时：.page.ob 加 min-height:100vh + flex column + justify-content:center + padding-bottom(等于底栏高)；
         .ob-btn 改 position:fixed; left/right/bottom:0 + env(safe-area-inset-bottom)；
-        .ob-hero 的内联 svg 换 iconfont / image（见 docs/tasks-ux-miniprogram.md §3.4 与 M1） */
+        .ob-hero 的内联 svg 换 iconfont / image（落地方式见 docs/project-spec.md §11.2 的 M1） */
   .ob {
     display: flex; flex-direction: column; justify-content: center;
     padding-top: 24px;
     background: linear-gradient(180deg, #dcebfb 0%, #eef5fd 34%, var(--bg) 62%);
   }
   /* 品牌区：居中，让蓝色 banner 有视觉主体（全页其余内容仍左对齐，此处居中是刻意的"横幅"处理）
-     ⚠️ .ob-mark 是占位图形，最终应换成小程序头像资产（见 docs/tasks-ux-miniprogram.md §3.4） */
+     ⚠️ .ob-mark 是占位图形，最终应换成小程序头像资产（见 docs/project-spec.md §11.2 的 M14） */
   .ob-hero { display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 28px; }
   .ob-mark {
     width: 56px; height: 56px; border-radius: 16px; background: #fff; color: var(--primary);
@@ -346,7 +346,7 @@
      审核项 NO_PRESS_STATE：原先所有可点类都没有 :active 态，手指按下没有任何视觉变化，
      在移动端会被读成"没反应 / 卡住了"。
      ⚠️ 落 wxml 用 hover-class（小程序没有 :active），只有 <button> 支持原生 hover-class，
-        其余要自己加 .hover 类 + 在 js 里 touchstart/touchend 切换（详见 docs/tasks-ux-miniprogram.md） */
+        其余要自己加 .hover 类 + 在 js 里 touchstart/touchend 切换（详见 docs/project-spec.md §11.2 的 M19） */
   .btn, .option, .ob-option, .pf-goal, .wb-item, .tab, .cal-day, .card.pf-link, .nav-back {
     transition: transform .12s ease, opacity .12s ease, background-color .12s ease;
   }
@@ -891,7 +891,7 @@ function startLearn(extra) {
   learnIdx = 0
   go('s-learn')
   renderLearn()
-  if (extra) toast('加练一组：' + state.dailyGoal + ' 个词\n（后端 start_extra_round 待实现 · 任务单 T1）')
+  if (extra) toast('加练一组：' + state.dailyGoal + ' 个词')
 }
 
 /* ================================================================== */

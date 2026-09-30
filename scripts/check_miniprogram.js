@@ -141,7 +141,7 @@ fnDirs.forEach((d) => {
 // 已知「config.FN 里有名字、但刻意不建云函数」的项。新增条目必须写清原因，
 // 否则这条检查会常亮红 → 被无视（这正是 audit_mobile.js 失真后失去价值的原因）。
 const KNOWN_NOT_IMPLEMENTED = {
-  daily_line: 'M12 每日一句走前端静态 utils/quotes.js，未实施云函数（后端单 T2 未做，仅 mock 层占位）'
+  daily_line: '每日一句走前端静态 utils/quotes.js，刻意不建云函数（决策 D4=A；见 docs/project-spec.md §11.1 / §11.4 的 T2）'
 }
 
 const cfgSrc = fs.readFileSync(path.join(MP, 'config.js'), 'utf8')

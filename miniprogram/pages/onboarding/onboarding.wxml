@@ -1,6 +1,6 @@
 <view class="page ob">
   <!-- 品牌区（M14-9）：填掉顶部空档，并回答首次用户的两个问题——「这是什么」「值不值得用」。
-       ⚠️ .ob-mark 是占位图形，最终应换成小程序头像资产（见 docs/tasks-ux-miniprogram.md M14） -->
+       ⚠️ .ob-mark 是占位图形，最终应换成小程序头像资产（见 docs/project-spec.md §11.2 的 M14） -->
   <view class="ob-hero">
     <view class="ob-mark"></view>
     <view class="ob-brand">雅词本</view>

@@ -1,6 +1,6 @@
-# 雅词本 · 雅思词汇微信小程序
+# 雅词本 · 核心词汇微信小程序
 
-帮助雅思考生用每天的碎片时间积累核心词汇。核心闭环：
+帮助备考的同学用每天的碎片时间积累核心词汇。核心闭环：
 
 **微信登录 → 设置每日目标 → 复习昨日单词 → 学今日新词 → 做题检验 → 全对打卡 → 次日循环**
 
@@ -33,7 +33,7 @@ ielts-vocab/
 │   ├── word_lists/          # 词表（ECDICT 抽取结果 + 其 MIT 许可证副本）
 │   └── examples/            # 离线生成的例句 JSON（词表级资产，随仓库保留）
 ├── scripts/                 # 离线工具链（不进小程序包、不进云函数）
-│   ├── build_wordlist.py        # 从 ECDICT 抽雅思词表（专名剔除 + 名词复数归一）
+│   ├── build_wordlist.py        # 从 ECDICT 抽核心词表（`ielts` 标签；专名剔除 + 名词复数归一）
 │   ├── gen_audio.py             # Kokoro 本地合成「单词」发音（默认只做美音）
 │   ├── gen_examples.py          # DeepSeek 离线生成例句（含 roots / etymology）
 │   ├── gen_sentence_audio.py    # Kokoro 本地合成「例句」发音
@@ -75,9 +75,12 @@ ielts-vocab/
 2. **开通云开发** —— 复制环境 ID，填进 `miniprogram/config.js` 的 `ENV_ID`
 3. **配环境变量** —— `ADMIN_TOKEN`（5 个函数各配一遍）+ `DEEPSEEK_API_KEY`（只配 `enrich_word`）。**环境变量是函数级隔离的，最容易漏**
 4. **部署云函数** —— 一条命令 `python3 scripts/deploy_functions.py --all`（需先在「设置 → 安全设置」打开**服务端口**）；或 18 个目录逐个「上传并部署：云端安装依赖」
-5. **初始化数据表** —— 控制台跑 `init_db`：`preview` → `create`，再按返回的清单手工建 10 条索引
-6. **导入词表与音频** —— 控制台跑 `seed_words` / `seed_audio`（音频先在本地生成、打包）
-7. **编译预览**
+5. **初始化数据表** —— 本地一键 `python3 scripts/init_cloud.py --apply`（建 7 个集合 + 10 条索引，幂等）。控制台跑 `init_db` 是等价备选，但它**只能建集合、不能建索引**，索引仍需自己补
+6. **导入词表与音频** —— 本地一键 `python3 scripts/seed_cloud.py --apply`（词表 + 例句富化 + 音频 + 点亮 `audioReady`，幂等；`--reset` 会先备份再清空重导）。音频是**本地预生成后直传**，不走云函数
+7. **配集合权限（手工一次）** —— 云开发控制台 → 数据库 → 集合 → 权限设置，口径见 `docs/deploy.md` §5.3（HTTP API 没有权限接口，只能手点）
+8. **编译预览**
+
+> **命名红线**：「雅思」是他人注册商标，产品内外统一用「雅词本 / 核心词」。`grep -rn "雅思" miniprogram/` 必须 0 命中，提审文案 `docs/intro.md` 同样清零。
 
 ---
 

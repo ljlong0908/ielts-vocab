@@ -2,7 +2,7 @@
 
 > **文档用途**：供 AI 或其他协作者快速理解本项目的**目录结构**与**业务逻辑**，作为上下文注入。
 > **权威性**：本文档以**源码为准**（`miniprogram/` + `cloudfunctions/`）。设计阶段的历史稿（曾提到 Vant / 微信同声传译插件，均未采用）已于 2026-09-28 清理，**以本文档为准**。
-> **最后核对**：2026-09-28（完成死代码清理、数据表初始化函数、部署文档，以及项目瘦身与词表清洗，详见 §11）。
+> **最后核对**：2026-09-30（第一版封版 `v1.0`）。阅读顺序：**§1–§10 = 现状**（改需求看 §10 索引）；**§11 = UX 优化轮的施工与决策留档**（M/T 清单的最终结论，原始施工单已合并至此）；**§12 = 历代整理记录**（考古用，日常不必读）。
 
 ---
 
@@ -12,7 +12,7 @@
 |---|---|
 | 产品名 | 雅词本（工程代号 `ielts-vocab`） |
 | 形态 | 微信小程序（原生，非 uni-app/Taro） |
-| 定位 | 雅思词汇**每日学习闭环**工具 |
+| 定位 | 核心词汇**每日学习闭环**工具（词表取自 ECDICT 的 `ielts` 标签；产品文案一律「雅词本 / 核心词」，见 §8 命名红线） |
 | 核心闭环 | 微信静默登录 → 设每日目标(5/10) → **先复习旧词** → 学今日新词 → 做题 → **全对才打卡** → 次日循环 |
 | 后端 | 微信云开发 CloudBase（**18 个云函数** + 7 个文档型集合 + 云存储），无自建服务器 |
 | AI 能力 | DeepSeek（`deepseek-chat`）生成例句 / 词根拆解 / 词源演变 |
@@ -80,7 +80,7 @@ ielts-vocab/
 │   ├── word_lists/               # 词表源文件（ECDICT 抽取结果 + 其 MIT 许可证副本）
 │   └── examples/                 # 离线生成的例句 JSON（词表级资产，随仓库保留）
 ├── scripts/                      # ★ 离线工具链（不进小程序包、不进云函数）
-│   ├── build_wordlist.py         # 从 ECDICT 抽雅思词表 → assets/word_lists/*.json
+│   ├── build_wordlist.py         # 从 ECDICT 抽核心词表（`ielts` 标签）→ assets/word_lists/*.json
 │   ├── gen_audio.py              # Kokoro 合成**单词**发音（默认只做美音）→ build/audio/us/*.mp3
 │   ├── gen_examples.py           # DeepSeek 离线生成例句 → assets/examples/*-examples.json
 │   ├── gen_sentence_audio.py     # Kokoro 合成**例句**发音 → build/sentence_audio/us/s_{hash}.mp3
@@ -271,7 +271,7 @@ ielts-vocab/
 
 | 页面 | 路径 | 数据来源（云函数） | 关键行为 |
 |---|---|---|---|
-| 首页 | `pages/index` | `home_summary` + `today_flow` | 计算进度百分比；按 `stage` 生成 CTA 文案与跳转目标；未 `onboarded` 则 redirect 到 onboarding；底栏另挂「再学一组」按钮（**仅当日已打卡后显示**，读 `today_flow.extra`）。显隐优先级：**有未完成组（`pendingRound`）→ 必显示且文案「继续学一组」（优先于上限判断）** ＞ `exhausted`/`limitReached` → 显示但置灰 + 底栏说明原因 ＞ 正常 → 可点。⚠️ **不得静默隐藏**（见 §11.13） |
+| 首页 | `pages/index` | `home_summary` + `today_flow` | 计算进度百分比；按 `stage` 生成 CTA 文案与跳转目标；未 `onboarded` 则 redirect 到 onboarding；底栏另挂「再学一组」按钮（**仅当日已打卡后显示**，读 `today_flow.extra`）。显隐优先级：**有未完成组（`pendingRound`）→ 必显示且文案「继续学一组」（优先于上限判断）** ＞ `exhausted`/`limitReached` → 显示但置灰 + 底栏说明原因 ＞ 正常 → 可点。⚠️ **不得静默隐藏**（见 §12.13） |
 | 引导 | `pages/onboarding` | `user_profile(setGoal)` | 选 5/10 → 写目标 + `wx.setStorageSync('onboarded',true)` → reLaunch 首页 |
 | 单词卡 | `pages/learn` | `today_flow` / `start_new_words` / `word_card` / `today_flow(markLearned)` | 逐张卡片；**进词自动播单词发音**；**预取下一张**触发 AI 生成；`next()` 时 `markLearned`（带连点锁）；最后一张跳 `practice?phase=practice`；单词/例句发音。**`?round=N` 为加练模式**：词源取 `plan.extraRounds[N].wordIds` 并**跳过该组已学过的词**（按 `learnedIds`，剩余为空则直接跳小测）、「加练单词」标签、`markLearned` 带 round。**`?review=<wordId>` 为错题复习（W2）**：词源**只来自参数**，单卡、「错题复习」标签、按钮「复习完成」→ `navigateBack` 回错题本；**不读 `today_flow`、不调 `start_new_words`、不写 `markLearned`**（否则点一下错题本就会推进当日游标、污染今日进度） |
 | 练习 | `pages/practice` | `build_questions` / `submit_answer` / `finish_extra_round` | `phase` 由 URL 参数决定；答对自动进下一题（900ms），答错标错并**禁用该选项要求重选**；答对播放发音；review 全对跳 learn，practice 全对跳 checkin。**`?round=N` 为加练**：出题/判题带 round，全对后 `finish_extra_round` 再 `switchTab` 回首页 |
@@ -307,7 +307,7 @@ review ──(reviewQueue 全对)──▶ learning ──(学完 newWordIds)─
 
 > **加练是主流程之外的一条旁路**：它有自己的 `plan.extraRounds[].stage`（`learning → practice_done → done`），
 > 与主流程 `stage` **完全隔离**。隔离靠 `build_questions` / `submit_answer` / `today_flow(markLearned)` 的 `round` 参数路由——
-> 少了它，加练会写进主队列与主讲度（后端任务单里的 C2/C3/C4 三个静默破坏点）。
+> 少了它，加练会写进主队列与主讲度（§11.5 的 C2/C3/C4 三个静默破坏点）。
 > 加练完成**不产生 checkins、不改 streak**，只推进 `wordCursor`、把词放进复习池，并**计入 `totalLearned`**
 > （D3 于 2026-09-29 由「不计入」改为「计入」；只在结算时按整组入账，口径与 `finish_checkin` 对称）。
 > 计数的回归测试见 `scripts/test_finish_extra_round.js`。
@@ -470,12 +470,17 @@ playWord(word)
 - 前端 `stats` 页日历用**本地时间** `new Date()` 生成——理论上两端时区应都为 GMT+8，无差异。
 
 ### 7.11 分享转发（`utils/share.js`）
-- 8 个页面**全部**实现 `onShareAppMessage()`，内容由 `share.toFriend(opts)` 统一生成，缺省标题 `雅词本｜每天记住几个雅思词`。
+- 8 个页面**全部**实现 `onShareAppMessage()`，内容由 `share.toFriend(opts)` 统一生成，缺省标题 `雅词本｜每天记住几个核心词`。
 - **分享路径统一回首页** `pages/index/index`（含 learn / practice / checkin 等强流程页）。原因：新用户从卡片直接进入流程页会立刻创建当日学习计划，体验突兀；回首页最干净，未设置目标的新用户由 index 自动引导到 onboarding。
 - 部分页面用**上下文文案**增强信息量：`learn` 带当前单词、`checkin` 带连续天数、`stats` 带累计词数、`wrongbook` 带错题数；数据缺失时回落到默认文案。
-- **不启用朋友圈（`onShareTimeline`）**：朋友圈进入的是「单页模式」——无登录态、不允许跳转，云开发必须开启「未登录访问」才能读到数据；本项目数据全部依赖 openid，单页模式必然空白，而放开未登录访问会带来越权读写风险。**除非将来专门做一个不依赖登录的内容页，否则不要开。**
+- **朋友圈（`onShareTimeline`）：仅首页开启** —— 2026-09-30 用户拍板，**反转**了此前「不开朋友圈」的决策。这是本轮最容易踩错的一处，四个要点：
+  1. **两个必要条件**：页面实现 `onShareTimeline()` + 微信后台开启「分享到朋友圈」能力。缺一即静默无效。
+  2. **朋友圈打开走「单页模式」（scene 1154）**：**无登录态、存储隔离、不允许跳转**。本项目云数据全部以 openid 为键、云开发「未登录访问」又保持关闭 → 直接照常渲染**必然空白**。
+  3. **因此首页做单页模式降级**：`onLoad` 检测 scene 1154 → 置 `singlePage`，**跳过 reLaunch onboarding**（单页模式不允许跳转；且 `getStorageSync` 被隔离必为空，会误判成新用户而触发跳转）；`load()` 早退**不打任何云端接口**；落地视图 = 品牌 + **本地静态**每日一句（`utils/quotes.js`）+「点右上角前往小程序」引导，并隐藏打卡/进度/底栏/喇叭。**单页模式能撑住内容，全靠每日一句是纯前端静态数据**。
+  4. **learn / practice 等强流程页绝不加 `onShareTimeline`** —— 它们没有静态内容可撑，单页模式进来必然死亡。
+  - 文案与好友转发区分：朋友圈走 `share.toTimeline()`（`雅词本｜一天一句好英文，顺手记住几个核心词`，不催打卡、无诱导词）。回归：`scripts/test_index.js`（含 scene 1154 不跳转/不打接口的负向断言）。
 - 打卡成功页（`checkin.wxml`）内置 `<button open-type="share">分享给朋友</button>`，是唯一的前端显式分享入口。
-- 分享卡片配图：`share.js` 中 `SHARE_IMAGE` 常量，默认留空（用系统页面截图 + 小程序 Logo）。如需自定义，新建 `miniprogram/images/` 并放图（建议 5:4 / 500x400），再把常量改成 `/images/share.png`——**图片必须在 `miniprogramRoot` 内才会被打包**（`assets/` 在包外，放那里不会生效）。
+- 分享卡片配图：`share.js` 的 `SHARE_IMAGE` 常量，**当前留空**（用系统页面截图 + 小程序 Logo）。要自定义就把图放进 `miniprogram/images/`（该目录已存在，放的是 tabBar 图标），再把常量改成 `/images/share.png`——**图片必须在 `miniprogramRoot` 内才会被打包**（`assets/` 在包外，放那里不生效）。⚠️ **两种分享的配图比例不同**：好友转发卡建议 **5:4（500×400）**，朋友圈是 **1:1**，同一张图会被裁切；若要两者都好看需分别给图（`toFriend` / `toTimeline` 均接受 `imageUrl`）。
 - 文案红线：不得出现「分享得奖励」「帮我点一下」等诱导性表述（《微信小程序平台运营规范》诱导分享条款）。
 
 ---
@@ -497,7 +502,8 @@ playWord(word)
 | 防重复 | `start_new_words` / `build_questions` / `finish_checkin` 均幂等 |
 | 集合权限 | `words` 建议「所有用户可读，仅管理端可写」，其余「仅创建者可读写」 |
 | 超时 | 20s：`user_profile`/`home_summary`/`today_flow`/`start_new_words`/`submit_answer`/`audio_cache`；30s：`word_card`/`enrich_word`/`build_questions`/`finish_checkin`/`stats`/`start_extra_round`/`finish_extra_round`；60s：`seed_words`/`seed_audio`/`reset_words`/`init_db`；**10s：`dismiss_wrong`**（一次数据库 update，无外部依赖）。均由各函数 `config.json` 声明，部署后可在控制台核对 |
-| 分享 | 只用 `onShareAppMessage`（转发给朋友/群），路径统一回首页；**不开朋友圈**（单页模式无登录态，云开发读不到数据） |
+| 分享 | **好友转发**：8 页全开 `onShareAppMessage`，路径统一回首页。**朋友圈**：**仅首页**开 `onShareTimeline`（单页模式 scene 1154 无登录态 → 首页降级为「品牌 + 本地每日一句」；强流程页不加）。详见 §7.11 |
+| 产品命名 | 对外文案一律「**雅词本 / 核心词**」。**「雅思」是他人注册商标，禁止出现在小程序内文案、分享卡片与提审材料中**（铁律：`grep -rn "雅思" miniprogram/` 必须 0 命中，`docs/intro.md` 同样清零）。ECDICT 的 `ielts` 标签是**数据侧内部标识**，只可出现在脚本与文档里，不得外露给用户 |
 | 错题本「已掌握」 | 语义是**打标过滤**，不是删除（见 §4.5）。因为「之后再答错会自动回来」，所以**不做撤销功能、不做回收站**——这两样都是多余的。前端必须二次确认（误点代价虽低，但会打乱复习节奏） |
 
 ---
@@ -516,6 +522,7 @@ playWord(word)
 | 低 | 配置项 | `project.config.json` 的 `appid` 与 `miniprogram/config.js` 的 `ENV_ID` 已填为作者本人的真实值（二者均非密钥）。**fork 或二次开发后必须替换为你自己的**，否则无法调用你自己的云环境。 |
 | 低 | 合规 | 小程序发布前需完成 ICP 备案。 |
 | 低 | ~~文档漂移~~ | ✅ **已解决**（2026-09-28）：设计阶段历史稿（`specs/`，提到 Vant 与同声传译插件）已删除；`README.md` 已重写为精简概览并指向本文件与 `docs/deploy.md`。 |
+| 低 | 文档漂移（第二轮） | ✅ **已解决**（2026-09-30，第一版封版后的梳理）：① 朋友圈决策已在代码里反转，但 §7.11 / §8 仍写着「不开朋友圈」的旧结论；② 缺省分享文案已改「核心词」但 §7.11 还写着「雅思」；③ §1 定位与 `README.md` 标题未跟合规改名；④ `README.md`「快速开始」还写控制台路径，与自身「注意事项」的本地脚本自相矛盾；⑤ 隐私指引的发音措辞仍写「服务端调第三方接口」。另：两份 UX 施工单与一次性施工提示词已合并/删除，见 §11 |
 
 ---
 
@@ -545,9 +552,116 @@ playWord(word)
 
 ---
 
-## 11. 整理记录（2026-09-28）
+## 11. UX 优化轮 · 施工与决策留档（2026-09-28 ~ 09-30）
 
-### 11.1 删除的死代码（均先核验零引用）
+> 本轮的两份原始施工单（`tasks-ux-miniprogram.md` 的 M0–M19 前端清单、`tasks-ux-backend.md` 的 T1–T6 后端清单）已**提炼成本节并删除原文件**；一次性开工提示词 `prompt-restore-ui.md` 也已删除（其「铁律」已固化为 `prototype-to-miniprogram` 技能）。
+> 本节只留 **结论 + 落点**：决策最后选了什么、每项落在哪个文件/函数。**过程细节、踩坑经过、负向验证**在 §12。
+> 视觉基准：`design/prototype.html`（8 页可点原型）+ `design/tokens.html`（token 对照）。换算口径：**rpx ÷ 2 = px**（原型按 375px 宽做的）。
+
+### 11.1 决策的最终结论（D1–D11）
+
+| 编号 | 问题 | **最终选择** | 影响 / 备注 |
+|---|---|---|---|
+| **D1** | 加练「再学一组」的显示条件 | **A：仅当日已打卡后显示** | 加练与主流程状态机彻底解耦，接口只需校验「今日已打卡」 |
+| **D2** | 每组词数 | **沿用 `user.dailyGoal`（5 / 10）** | 余量不足一组即 `exhausted` |
+| **D3** | 加练是否计入 `totalLearned` | **计入**（09-29 由「不计入」**反转**） | **结算时按整组入账**，口径与 `finish_checkin` 对称；幂等分支` stage==='done'` 不重复累加 |
+| **D4** | 每日一句的实现路径 | **A：纯前端静态 `utils/quotes.js`** | 后端方案 B（云函数 `daily_line`）**已废弃且从未实现**。⚠️ 若在 `config.FN` 里看到该名字，也没有对应云函数 |
+| **D5** | 底部 tab 栏路线 | **A：原生 tabBar** | 4 个 tab：首页 / 统计 / 错题本 / 我的。`switchTab` **不支持 URL 参数**（当前三页无带参需求，将来加筛选会被挡住） |
+| **D6** | 练习页推进方式 | **A：保持自动**（`setTimeout(next, 900)`） | 原型里的手动「下一题」按钮**不落地**，那是原型的超纲改动 |
+| **D7** | 加练按钮显隐（前端） | 同 D1 | 最终优先级见 §11.3 |
+| **D8** | 统计页日历是否可点 | **暂不做** | 要做需**新增**「按日查询」接口，未立项 |
+| **D9** | 错题本「错 N 次」badge | **暂不做** | 需 `user_words` 新增错误次数字段 |
+| **D10** | `app.json` 导航标题改不改 | **必须改**（合规，非可选项） | 已落地 |
+| **D11** | 引导页承诺行是否做成真入口 | **暂不做**，信息条整条保持不可点 | 要做需先确认「onboarding 未完成时允许进『我的』」这一状态合法 |
+
+### 11.2 M 清单（前端）落地结果
+
+| 编号 | 内容 | 状态 | 落点 / 备注 |
+|---|---|---|---|
+| **M0** | 合规：文案里的「雅思」（9 处用户可见） | ✅ | `app.json` + `pages/index/index.json` 的导航标题、7 页 `onShareAppMessage` 文案、`utils/share.js` 兜底文案。`grep -rn "雅思" miniprogram/` 现为 **0 命中** |
+| **M1** | 图标落地 | ✅ **实现方式与原计划不同** | ① **喇叭**：原型的内联 `<svg>` 在 wxml 里不能用 → 落地做成 CSS `background-image: url("data:image/svg+xml,…")`（`app.wxss` 的 `.speaker-icon`，<1KB、全站复用、色固定 `--primary`）。只一个图标，用 iconfont 属杀鸡用牛刀。② **tab 图标**：8 张 PNG 由 `scripts/gen_tab_icons.py` **纯 Python 光栅化**生成（⛔ **不要用无头 Chrome**——会抢占常驻实例导致卡死），落 `miniprogram/images/` |
+| **M2** | 触控热区：8 处小于 88rpx | ✅ | `.speaker` 统一 **88rpx** 热区，视觉圆尺寸由各页 `.speaker-icon` 覆盖——**视觉不变、只扩热区**，是所有小图标的通用解法（统计页日历同理：热区挂外层 88rpx 的 `.cal-cell`，视觉圆点仍 60rpx） |
+| **M3** | 底部固定区规范 | ✅ | `app.wxss` 的 `.bottombar`。**三条硬约束**：① 加了固定底部就**必须**给 `.page` 加对应 `padding-bottom`（**本项目最高频的落地错**，表现是「最后一块内容消失、滚到底也看不见」）② `env(safe-area-inset-bottom)` 不能省 ③ 原生 tabBar 下固定区要让出 tabBar 高度，**该高度不可写死** |
+| **M4** | 首页：CTA + 加练固定底部 | ✅ | `pages/index/*`。`buildCta()` 的四态状态机**未改动**，加练按钮是**并列**的第二个按钮，不参与 CTA 状态机 |
+| **M5** | 底部 tab 栏 | ✅ 走 D5=A | `app.json` 的 `tabBar` + `miniprogram/images/tab-*.png`。路由约定：指向 tab 页一律 `switchTab`、离开 tab 页 `reLaunch`；tab 页停播挂 `onHide`；**tab 页视口不含 tabBar** |
+| **M6** | 学习页：底部固定 + 分段进度 | ✅ | `pages/learn/*`。「下一个」移出文档流；分段进度（N 词 N 段）；`next()` 保留**逐词推进**语义（**别「简化」成直接跳练习**） |
+| **M7** | 练习页 | ✅（推进方式取 D6=A） | 喇叭图标替换；**答错可重选、答对才推进**的原逻辑保真；新增 `round` 参数路由到加练队列（缺 `round` 会覆盖主队列，见 §11.5 C4） |
+| **M8** | 打卡页：分享按钮降权 | ✅ | `checkin.wxss` 的 `.share-btn` 改次级规格。`open-type="share"` 本身无需改动 |
+| **M9** | 统计页日历可点 / 卡片下方留白 | ⛔ **未做**（D8 暂不做） | 日历网格算法在 `stats.js`（`cells` 由月份首日星期几算前导空格），**改动时不要重写**——原型是复刻它的 |
+| **M10-1** | 错题本卡片整块可点 | ✅ **且行为已改** | W2 后整卡 `bindtap` 从「发音」改为「**进学习页复习**」；喇叭改独立 `catchtap`（父热区换行为后，发音必须自己有热区）→ 本页热区 = 1 父 + 2 个 `catchtap` 子 |
+| **M10-2** | 错题本底部「再练一遍」出口 | ⛔ **未做，但前置已解除** | 当初卡在「等 T1」（怕照原型实现会覆盖主练习队列 = §11.5 C4）；**T1 已落地，`round` 通道就绪，现在可以直接接** |
+| **M11** | 错题本「错 N 次」badge | ⛔ **未做**（D9 暂不做） | 同上需新字段 |
+| **M12** | 每日一句（首页） | ✅ | `utils/quotes.js` 静态语料，按日取模轮换（`dayIndex = floor(Date.UTC(y,m,d)/86400000) % len`），**零后端**。⚠️ 原计划「落地时扩到 100 句」，**实际保留 12 句**（12/12 音频已入库）；扩句必须同步跑音频三步，见 §7.8 |
+| **M13** | 首页「再学一组」 | ✅ | 见 §11.3（显隐优先级是踩过坑之后的最终版） |
+| **M14** | 引导页（拇指区 + 版面填空） | ✅ | 主操作固定底部；新增品牌区（`.ob-mark` + 品牌名 + 「2987 个核心词 · 例句带发音」）、选项预计时长 + 「推荐」标、信息条。**品牌区与信息条不可点、不进热区审计**。⚠️ 文案**不得出现「雅思」**与 AI 相关展示（提审要求） |
+| **M15** | 可读性 token | ✅ | `app.wxss`：`--text-2` → `#616770`、`--text-3` → `#7f8691`、新增 `--success-deep` `#0f6b4f`。**用法约定比色值更重要**：`--text-3` 只做装饰（分隔符/占位图形），承载信息的文字一律 `--text-2`；绿字与绿底白字一律 `--success-deep`，`--success` 只留给描边与图标 |
+| **M16** | 引导页文案区拆解 | ✅ | 副标题只留「目标要小到不会放弃」；信息条拆**两行**（一行一件事），第 2 行补出落点「之后可以随时在「我的」里修改」——把空承诺变成指明去处 |
+| **M17** | 字号下限 | ✅ | tab 标签 / 星期字 / 指标名 / 词根标 11px → **12px**；胶囊标（tag / badge）保留 11px（审核里唯一剩下的 INFO，属有意保留） |
+| **M18** | 连点防护 | ✅ | 学习页 `next()` 加 `locked`；⚠️ **打卡不用改**——`finish_checkin` 已按 `_openid + date` 幂等，前端 `wx:if="{{loading}}"` 也挡了 |
+| **M19** | 反馈载体与安全区 | ✅ | ① **有固定底栏的页禁用 `wx.showToast`**（位置不可控，会被按钮压住）→ 错题本改用自绘顶部提示条 `errTip` ② 每个固定底部区都要避让 Home 条；**tab 栏形态的避让要写在外壳上**，只写在 `.tabbar` 里无效 ③ 可点元素要有按压反馈：小程序**没有 `:active`**，`<button>` 用原生 `hover-class`，`<view>` 自加 `.hover` 并在 `touchstart/touchend` 切换 |
+
+### 11.3 M13 加练按钮的显隐优先级（踩坑后的最终版）
+
+`miniprogram/pages/index/index.js` 的 `buildExtra()`：
+
+| 序 | 条件 | 表现 |
+|---|---|---|
+| 1 | 未打卡 | 隐藏（D1=A，本就不该有） |
+| 2 | 云端未返回 `extra`（旧版 `today_flow`） | **乐观显示**，绝不静默隐藏 |
+| 3 | **`pendingRound` 非空**（有未完成的组） | **显示 + 可点**，文案「继续学一组」 |
+| 4 | `exhausted` | 显示 + 置灰 + 底栏「预置发音的词已学完…」 |
+| 5 | `limitReached` | 显示 + 置灰 + 底栏「今日加练已达上限，明天可继续」 |
+| 6 | 正常 | 显示 + 可点「再学一组」 |
+
+- ⚠️ **第 3 条必须排在 `limitReached` 之前**。曾经写成「先判上限就隐藏」，导致用户建满 3 组后中途退出、首页按钮消失，**手里那组永远进不去**（云端 `canStart` 明明是 `true`）。症状是「刚才还能再学一组，现在不行了」，**极易误判成后端没部署**。回归：`scripts/test_index.js`
+- ⚠️ 第 4/5 条**从「整个隐藏」改成「置灰 + 说明原因」**，是对原 M13 设计的**有意偏离**：按钮凭空消失正是那次报障的观感，把原因写在底栏比静默消失好排查
+- `limitReached` 现已**恒为 `false`**（上限于 09-29 取消，不限次数），这一行是**防御性保留**——防止将来云函数加回上限时前端又「静默隐藏」
+
+### 11.4 T 清单（后端）落地结果
+
+| 编号 | 内容 | 状态 | 落点 / 备注 |
+|---|---|---|---|
+| **T1** | 再学一组（加练） | ✅ | 新增 `start_extra_round` / `finish_extra_round`；改造 `today_flow`（返回 `extra` + `markLearned(round)`）、`build_questions` / `submit_answer`（`round` 路由）、`home_summary`（`extraLearnedToday`）。契约见 §5，业务说明见 §7 |
+| **T2** | 每日一句（云函数 `daily_line`） | ⛔ **不做**（D4 选 A） | 方案 B 的规格已随施工单删除；**`daily_line` 从未实现** |
+| **T3** | 底部 tab 栏 | ✅ 纯前端 | 见 M5 |
+| **T4** | 配套改动（索引 / 部署 / 文档同步） | ✅ | `assets/db-indexes.json` **无需改**（加练组内嵌，未新增索引）；`docs/deploy.md` 云函数数 15 → 18；`miniprogram/config.js` 的 `FN` 加两个常量；`utils/api.js` 加 `startExtraRound()` / `finishExtraRound()` |
+| **T5-0** | 打卡幂等 | ✅ **核实无需改**（结论留档） | `finish_checkin` 按 `_openid + date` 查重，命中直接返 `{already:true}` 且不累加。⚠️ 当时**错的是原型**（没复刻 `already` 语义，演示出一个真机不存在的「重复打卡」缺陷），已修 |
+| **T5-1** | `submit_answer` 缺幂等 | ⛔ **仍未做** | 现状 `records.add(...)` 无条件插入 → 连点 / 网络重试会在 `records` 落**多条同题记录**，污染正确率统计与 `nextReviewDate`。建议幂等键 `_openid + planId + questionId`，或在 `records` 上建唯一索引 |
+| **T5-2** | 每日目标修改的生效时点（文案与行为不一致） | ⛔ **仍未做** | 文案写「从下一个自然日生效」，但当天**还没开始学习**就改 → 当天立刻按新目标出词，**文案不成立**。选项 A 改文案（便宜）/ **B 把 `dailyGoal` 快照进 `plan`**（更准，顺带让历史计划的词数不再随目标漂移） |
+| **T6** | 错题本「已掌握」（用户追加，非原型项） | ✅ | 新增 `dismiss_wrong`（给 `records` 打 `mastered`）+ `stats` 查询排除 `mastered`。语义是**打标过滤而非删除**（防流水污染正确率 + 让「再答错自动复活」零成本），故**不做撤销、不做回收站**。取舍见 §4.5、踩坑见 §12.10 |
+
+### 11.5 T1 的四个技术冲突（加练的核心难点，改这块前必读）
+
+| # | 冲突 | 现状证据 | 对策 |
+|---|---|---|---|
+| **C1** | `daily_plans` 唯一索引 `_openid + date` → **一天只能一条 plan** | `assets/db-indexes.json` | 加练组**内嵌**为 `plan.extraRounds[]`，不另建文档、不改索引 |
+| **C2** | `finish_checkin` 用 `plan.newWordIds` 算 `learnedCount` 并推进 `wordCursor` | `finish_checkin/index.js` | 加练词**绝不写入** `newWordIds`，独立字段存放 |
+| **C3** | `submit_answer` 在练习全对时**无条件**写 `plan.stage` | `submit_answer/index.js` | 加练答题必须带 `round`，**仅 `round === 0` 才改 `plan.stage`** |
+| **C4** | 队列存在 plan **顶层**字段，加练复用会覆盖当日主练习 | `build_questions` / `submit_answer` | 加练队列存 `extraRounds[i].practiceQueue`，靠 `round` 参数路由 |
+
+> **C4 是最容易踩的坑**：不加 `round` 隔离，加练的 `build_questions` 会**直接覆盖**当日主练习的 `practiceQueue`，用户重进练习页看到的是加练题——主流程被**静默**破坏，而且因为读写的是同一字段，排查时极难定位。
+> **总原则**：加练是主流程之外的旁路，**绝不触碰** `plan.stage` / `newWordIds` / `checkins` / `streak` 这四样主流程资产。
+
+### 11.6 本轮新增的回归脚本（改相关逻辑必跑）
+
+| 脚本 | 覆盖 |
+|---|---|
+| `scripts/audit_mobile.js` | 移动端体验审核，口径 13 项（热区 ≥44px / 热区压盖 / 相邻间距 / 字号 / 对比度 WCAG AA / 行高 / 截断 / 横向溢出 / 主操作拇指区 / toast 遮挡 / 安全区 / 可达性 / 连点） |
+| `scripts/check_miniprogram.js` | 结构自检：类名 / 底栏三件套 / 图标 / wxml 配对 / **云函数三件套** / `config.FN` ↔ 目录一致性 |
+| `scripts/test_learn.js` | 学习页三模式：错题复习 / 今日新词 / 加练 |
+| `scripts/test_index.js` | 首页加练按钮显隐 + 朋友圈单页模式降级 |
+| `scripts/test_audio.js` | 音频链路：`cloud://` → 临时链接转换 / 缓存 / 透传 / 降级 |
+| `scripts/test_wrongbook.js` | 错题本：点词进复习 / 已掌握 / 失败回滚 |
+| `scripts/test_finish_extra_round.js`、`test_start_extra_round.js` | 云函数逻辑无头测试（桩 `wx-server-sdk` + 内存假 DB，直跑真实 `index.js`） |
+| `scripts/test_mock.js` | mock 层（数据口径 + 每日一句体检） |
+| `scripts/test_prototype.js` | 原型业务流程回归 |
+
+> ⚠️ **原型 ≠ 真机**：`audit_mobile.js` 与 `test_prototype.js` **只审 `design/prototype.html`，对 `miniprogram/` 零验证力**。
+> 原型里有 4 处**演示性超纲改动**（练习页手动按钮 = D6、日历可点 = D8、错 N 次 badge = D9、打卡连点其实已幂等），照着还原会写出与真机不符的逻辑。**落地前必须回源码核一遍真实行为**——本项目已因此误判过一次（把原型的「重复打卡」当成真机缺陷报了出来）。
+
+## 12. 整理记录（考古用，日常不必读）
+
+### 12.1 删除的死代码（均先核验零引用）
 
 | 位置 | 内容 | 判据 |
 |---|---|---|
@@ -560,7 +674,7 @@ playWord(word)
 | `app.wxss` / `practice.wxss` | `.row` / `.btn.success` / `.option.dim` | wxml 中只有 `pf-row` / `word-row` / `q-stem-row` |
 | `pages/learn/learn.js` | 重复的「预取下一张」 | `loadCard()` 内部已含预取，`onLoad` 里那次是重复调用 |
 
-### 11.2 合并与优化
+### 12.2 合并与优化
 
 - `home_summary`：去掉 `totalCheckins` 的额外 `count()` 与无人读的 `stage` 字段 —— 每次进首页省一次 DB 往返
 - `utils/audio.js`：抽出 `playSrc()`，单词与例句共用「停 → 清监听 → 设源 → 播放 → 挂 onError」，消除两处重复（原单词版还漏了 `offEnded`，与例句版不一致）
@@ -569,12 +683,12 @@ playWord(word)
 - **统一依赖版本**：`audio_cache` 的 `wx-server-sdk` `latest` → `~2.6.3`、`axios` `^1.6.0` → `^1.6.8`（与其余 14 个函数一致）
 - **补齐 8 个缺失的 `config.json`**：`user_profile` / `home_summary` / `today_flow` / `start_new_words` / `build_questions` / `submit_answer` / `finish_checkin` / `stats`。此前超时值只能靠控制台默认，现在随代码声明
 
-### 11.3 新增
+### 12.3 新增
 
 - `cloudfunctions/init_db` —— 数据表体检 / 初始化（幂等），顺带返回手工索引清单
 - `docs/deploy.md` —— 从零到可用的部署清单（含验收表、报错排查表、提审检查表）
 
-### 11.4 有意保留（勿删，附理由）
+### 12.4 有意保留（勿删，附理由）
 
 - `audio_cache` 的 dictvoice 兜底分支与前端 `fallbackUrl`：词表外单词的能力。`audioReady` 机制保证学习流程不会触发它
 - `cloudfunctions/seed_words/words.json`：被 `seed_words/index.js` 实际 `require` 的内置 24 词示例
@@ -582,7 +696,7 @@ playWord(word)
 - 跨运行时的 `hashText` / `TEXT_RE*` / `slug` / `sentence_slug`：JS 与 Python 无法共享代码，**只能靠同步**。改动其中一处后务必跑 `scripts/make_audition_page.py` 预检（它会校验正则与文件头）
 - 各函数内注释掉的 `nickname` / `avatarUrl`：合规说明（证明「未接入授权、不收集」）
 
-### 11.5 第二轮：项目瘦身与词表清洗（2026-09-28）
+### 12.5 第二轮：项目瘦身与词表清洗（2026-09-28）
 
 #### 删除的过时内容
 
@@ -609,7 +723,7 @@ playWord(word)
 
 ##### 专名剔除（本轮新增）
 
-**问题**：ECDICT 的 `ielts` 标签里混入专名（雅思阅读听力里出现过，就被打上标签）。它们朗读没问题，但作为「词汇」毫无学习价值，还挤占学习队列——`york` 因 `New York` 语料频次极高，被按 BNC 排到了**第 48 位**，等于让用户很早就学一个人名/地名。
+**问题**：ECDICT 的 `ielts` 标签里混入专名（这些词在相关语料里出现过，就被打上标签）。它们朗读没问题，但作为「词汇」毫无学习价值，还挤占学习队列——`york` 因 `New York` 语料频次极高，被按 BNC 排到了**第 48 位**，等于让用户很早就学一个人名/地名。
 
 **判据**（取自 ECDICT 自身的两个字段，在合格候选池上命中 5 个、**0 误报**）：
 
@@ -624,7 +738,7 @@ playWord(word)
 
 **注意**：`guy`（seq 270）**不是专名**，已保留——柯林斯 4 星、牛津 3000 核心词、有完整词形变化（`guys` / `guyed` / `guying`），释义「家伙」是正经的常用义。
 
-**连带影响**：`york` 原本在 48 位，剔除后 pilot-100 由「`york`」换成「`discipline`」（原第 101 位），其余 99 词不变；`assets/examples/pilot-100-examples.json` 与 `build/` 下的音频、入参批次已同步重建。（`discipline` 在第三轮又因排序重排移出 pilot-100，见 §11.6。）
+**连带影响**：`york` 原本在 48 位，剔除后 pilot-100 由「`york`」换成「`discipline`」（原第 101 位），其余 99 词不变；`assets/examples/pilot-100-examples.json` 与 `build/` 下的音频、入参批次已同步重建。（`discipline` 在第三轮又因排序重排移出 pilot-100，见 §12.6。）
 
 > ⚠️ **破坏性语义**：若云端已导入过任何旧词表（3056 / 3041 / 3036 词），必须用 `reset_words`（`purge`）清空后重导，**不能**直接 `seed_words` —— 它按 `word` 去重跳过，`wheels` / `jobs` 这类已删词会留在库里。
 
@@ -633,7 +747,7 @@ playWord(word)
 - `scripts/pack_words.py` —— 把词表打包成 `seed_words` 入参：按 `--batch-size`（默认 200 词）切分，每批是一份**完整可用**的入参（约 38KB，控制台入参框吃得下），并产出 `index.json` 清单（含每批词数与首末词）。此前导词表只能手搓 JSON，或用 `offset/limit` 反复粘贴整份词表
 - `docs/deploy.md` 新增 **§0.1 老环境升级增量清单**（哪些云函数要重部署、词表为什么要先 purge）
 
-### 11.6 第三轮：名词复数归一（2026-09-28）
+### 12.6 第三轮：名词复数归一（2026-09-28）
 
 **问题**：ECDICT 的词形标记不完整——`ielts` 标签打在**复数**上、原形反而被当基础词排除。结果是词表尾部堆了一整簇「只有复数、没有单数」的条目（`wheels` / `utensils` / `universities` / `volunteers` …），学习价值为零：该先学 `wheel` / `utensil`，而不是把复数形式当成独立词汇去背。
 
@@ -662,7 +776,7 @@ playWord(word)
 
 词表 **3036 → 2987 词**；`seed_words` 入参由 16 批变为 **15 批**（`pack_words.py` 重跑生成）。
 
-### 11.7 第四轮：数据库初始化本地化（2026-09-29）
+### 12.7 第四轮：数据库初始化本地化（2026-09-29）
 
 **动机**：原先初始化数据表只能在控制台手点——7 个集合 + 10 条索引共 17 次点击，漏一个就要等运行时才炸。
 
@@ -694,7 +808,7 @@ playWord(word)
 
 **安全**：AppSecret 是最高权限凭证，只放本地 `.env`——**不要写进小程序代码，也不要配到云函数环境变量**。
 
-### 11.8 第五轮：数据导入也本地化，初始化全流程一条命令（2026-09-29）
+### 12.8 第五轮：数据导入也本地化，初始化全流程一条命令（2026-09-29）
 
 **动机**：11.7 之后「建表」能本地做了，但**数据**还卡在控制台——`seed_words` 15 批 +
 `seed_audio` 2 批 + `seed_sentence` 5 批，共 22 次「云端测试」粘贴。
@@ -738,7 +852,7 @@ playWord(word)
 **连带修正**：`docs/deploy.md` 第 6/7/8/9/10 节改为「本地一键（推荐）+ 控制台（等价备选）」；
 `ADMIN_TOKEN` 从「必配 5 个函数」降级为「只在走控制台路径时才需要」。
 
-### 11.9 第六轮：每日一句补音频（2026-09-29）
+### 12.9 第六轮：每日一句补音频（2026-09-29）
 
 **问题**：首页「每日一句」的喇叭点了没声音，也不报错。
 
@@ -779,7 +893,7 @@ playWord(word)
 写成 `{"env":…,"fileids":[…]}` / `{"fileid":…}` 一律回 `47001 data format error`（不是「文件不存在」，
 所以别被这个错误码带去查文件）。用它验证过一次：12 句里的今日句实下 **19728 B、首字节 `ff f3`**（合法 MP3 帧同步）。
 
-### 11.10 第七轮：错题本「已掌握」（2026-09-29）
+### 12.10 第七轮：错题本「已掌握」（2026-09-29）
 
 **需求**：用户提出「错题本加一个删除按钮或已掌握」。
 
@@ -824,7 +938,7 @@ playWord(word)
 换机器或换云环境后需重跑 ①②③。
 
 
-### 11.11 第八轮：错题本点词进复习（2026-09-29）
+### 12.11 第八轮：错题本点词进复习（2026-09-29）
 
 **需求**：用户提出「错题本点单词也可以跳到学习单词的页面复习，可以返回错题本」。
 
@@ -858,7 +972,7 @@ playWord(word)
 - **有效性已负向验证**：删掉 review 分支的 `return`（会去读 today_flow）、删掉 next 的 review 分支、
   把返回改成跳练习页、删掉错题本连点锁、把喇叭改回 `bindtap` —— 5 处故意改坏各自触发对应断言 FAIL
 
-### 11.12 第九轮：加练计入「累计学习」（2026-09-29）
+### 12.12 第九轮：加练计入「累计学习」（2026-09-29）
 
 **需求**：用户提出「再来一组也加入到累计学习」。
 
@@ -891,7 +1005,7 @@ playWord(word)
 - **两个脚本都做了负向验证**：mock 层 3 处（不累加 / 去掉幂等判断 / 首页写死）、
   云函数 3 处（不写 `totalLearned` / 幂等分支失效 / 顺手改 `streak`）—— 全部被抓到
 
-### 11.13 第十轮：加练按钮「中途退出被锁死」（2026-09-29）
+### 12.13 第十轮：加练按钮「中途退出被锁死」（2026-09-29）
 
 **用户报障**：「再学一组，可以重复执行 —— 刚才可以再学一组，现在又不行了。」
 

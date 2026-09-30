@@ -55,7 +55,8 @@
       </view>
     </view>
   </block>
-  <!-- M10-2「再练一遍」底部出口**暂不做**：原型 practiceWrong() 走的是 build_questions 的
-       round 参数（后端 T1），当前云函数只认 phase='review'|'practice'。
-       照原型实现会覆盖当日主练习队列（后端任务单 C4，静默破坏主流程）→ 等 T1 落地再接。 -->
+  <!-- M10-2「再练一遍」底部出口**暂不做**：错题本目前没有「重练」模式，要接得先定义一条
+       「不读写 plan 队列」的练习路径——build_questions / submit_answer 都按 phase/round
+       读写 plan，误用会覆盖当日主练习队列（§11.5 的 C4，静默破坏主流程，且极难定位）。
+       round 通道已就绪，属可随时开工的待办；决策见 docs/project-spec.md §11.2 的 M10-2。 -->
 </view>

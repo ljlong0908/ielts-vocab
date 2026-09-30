@@ -1,7 +1,7 @@
 /**
  * start_extra_round —— 发起「再学一组」（加练）
  *
- * 设计要点（详见 docs/tasks-ux-backend.md §3）：
+ * 设计要点（详见 docs/project-spec.md §11.5 的四个技术冲突）：
  *   C1 一天只有一条 plan（唯一索引 _openid+date）→ 加练组内嵌为 plan.extraRounds[]，不另建文档
  *   C2 加练词绝不写入 plan.newWordIds（打卡时按 newWordIds 推进游标与计数）
  *   ⛔ 不推进 wordCursor —— 游标只在该组「学完」时推进（见 finish_extra_round），
