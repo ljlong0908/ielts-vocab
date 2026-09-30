@@ -1,0 +1,9 @@
+{
+  "name": "start_extra_round",
+  "version": "1.0.0",
+  "description": "发起加练（再学一组），幂等复用未完成组",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

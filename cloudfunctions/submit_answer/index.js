@@ -18,7 +18,8 @@ function dateStr(offset = 0) {
 
 exports.main = async (event = {}) => {
   const { OPENID } = cloud.getWXContext()
-  const { phase = 'practice', questionIndex, choice } = event
+  const { phase = 'practice', questionIndex, choice, round = 0 } = event
+  const r = Number(round) || 0
   const today = dateStr(0)
 
   try {
@@ -26,8 +27,20 @@ exports.main = async (event = {}) => {
     const plan = planRes.data[0]
     if (!plan) return { code: -1, message: '请先初始化当日计划' }
 
-    const key = phase === 'review' ? 'reviewQueue' : 'practiceQueue'
-    const queue = Array.isArray(plan[key]) ? plan[key] : []
+    // 队列路由（C4）：round>0 → 加练组内队列；round===0 → 主流程队列（现有行为不变）
+    let queuePath
+    let queue
+    let groupIdx = -1
+    if (r > 0) {
+      const groups = Array.isArray(plan.extraRounds) ? plan.extraRounds : []
+      groupIdx = groups.findIndex((g) => g.roundId === r)
+      if (groupIdx < 0) return { code: -1, message: '加练组不存在' }
+      queuePath = `extraRounds.${groupIdx}.practiceQueue`
+      queue = Array.isArray(groups[groupIdx].practiceQueue) ? groups[groupIdx].practiceQueue : []
+    } else {
+      queuePath = phase === 'review' ? 'reviewQueue' : 'practiceQueue'
+      queue = Array.isArray(plan[queuePath]) ? plan[queuePath] : []
+    }
     const q = queue[questionIndex]
     if (!q) return { code: -1, message: '题目不存在' }
 
@@ -86,10 +99,22 @@ exports.main = async (event = {}) => {
     }
 
     const allPassed = queue.every((x) => x.passed)
-    const patch = { [key]: queue, updatedAt: new Date() }
-    if (allPassed && phase === 'review') patch.stage = 'learning'
-    if (allPassed && phase === 'practice') patch.stage = 'practice_done'
-    await plans.doc(plan._id).update({ data: patch })
+    if (r > 0) {
+      // 加练（C3）：只更新组内队列与组 stage，绝不写 plan.stage。
+      // 现状是无条件写 plan.stage，加练一旦复用这段逻辑就会把主流程状态机顶掉。
+      await plans.doc(plan._id).update({
+        data: {
+          [queuePath]: queue,
+          [`extraRounds.${groupIdx}.stage`]: allPassed ? 'practice_done' : 'learning',
+          updatedAt: new Date()
+        }
+      })
+    } else {
+      const patch = { [queuePath]: queue, updatedAt: new Date() }
+      if (allPassed && phase === 'review') patch.stage = 'learning'
+      if (allPassed && phase === 'practice') patch.stage = 'practice_done'
+      await plans.doc(plan._id).update({ data: patch })
+    }
 
     return {
       code: 0,

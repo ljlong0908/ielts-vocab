@@ -14,8 +14,13 @@
 
       <view class="ck-total hint">累计学习 {{totalLearned}} 个单词</view>
     </view>
-
-    <view class="btn primary" bindtap="goHome">回到首页</view>
-    <button class="btn share-btn" open-type="share">分享给朋友</button>
   </block>
+
+  <!-- M8：两个操作都移入固定底栏（主操作进拇指区）；分享按钮降权为文字链接式 -->
+  <view wx:if="{{!loading}}" class="bottombar">
+    <view class="btn primary" hover-class="hover-press" bindtap="goHome">回到首页</view>
+    <!-- M8 降权：只去掉填充与描边，**保留 88rpx 高** ——
+         视觉层级靠"没有底色/边框"降，而不是把热区做小（下层 44px 是硬线） -->
+    <button class="btn share-btn" open-type="share" hover-class="hover-press">分享给朋友</button>
+  </view>
 </view>

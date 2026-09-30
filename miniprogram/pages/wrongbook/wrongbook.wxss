@@ -4,6 +4,8 @@
 
 .wb-main {
   flex: 1;
+  /* 允许收缩：长释义 / 长单词不会把右侧操作区挤出卡片 */
+  min-width: 0;
 }
 
 .wb-word {
@@ -13,33 +15,64 @@
 
 .wb-phonetic {
   font-size: 24rpx;
-  color: #8f959e;
+  color: var(--text-2);
   margin-top: 4rpx;
 }
 
 .wb-meaning {
   font-size: 28rpx;
-  color: #646a73;
+  color: var(--text-2);
   margin-top: 8rpx;
 }
 
-.speaker {
-  width: 60rpx;
-  height: 60rpx;
-  border-radius: 50%;
-  background: #e6f1fb;
+/* 右侧操作区：「已掌握」+ 喇叭。flex-shrink:0 保证窄屏不被压扁 */
+.wb-acts {
   display: flex;
   align-items: center;
-  justify-content: center;
   flex-shrink: 0;
+}
+
+/* 「已掌握」：把词从错题本移除（之后再答错会自动回来）。
+   外层管热区（88rpx，与 .speaker 同一口径 ≥44px），内层管视觉 ——
+   避免一个 88rpx 高的大药丸抢走卡片视觉重心。
+   配色刻意用中性 --text-2 / --line：这是次要操作，不与喇叭的主色争注意力；
+   --text-2 (#616770) 在 #fff 上对比度 ≈5.9:1，达 AA（M15）。 */
+.wb-mastered-hit {
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  margin-left: 8rpx;
+}
+
+.wb-mastered {
+  padding: 10rpx 20rpx;
+  border: 1rpx solid var(--line);
+  border-radius: 999rpx;
+  color: var(--text-2);
+  font-size: 24rpx;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+/* 顶部错误提示条（替代 showToast，见 wxml 注释）。
+   --danger (#a32d2d) 在 --danger-soft (#fcebeb) 上对比度 ≈7.8:1，达 AA。 */
+.wb-tip {
+  margin-bottom: 24rpx;
+  padding: 20rpx 24rpx;
+  border-radius: var(--radius);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 26rpx;
+  line-height: 1.5;
+}
+
+/* 喇叭（M1+M2）：热区 88rpx 与喇叭图形由 app.wxss 的 .speaker / .speaker-icon 统一提供，
+   此处只覆盖视觉圆尺寸与左边距。原 CSS 三角形（移动端=播放视频语义）已废弃。 */
+.speaker {
   margin-left: 20rpx;
 }
 
 .speaker-icon {
-  width: 0;
-  height: 0;
-  border-top: 13rpx solid transparent;
-  border-bottom: 13rpx solid transparent;
-  border-left: 20rpx solid #185fa5;
-  margin-left: 5rpx;
+  width: 60rpx;
+  height: 60rpx;
 }

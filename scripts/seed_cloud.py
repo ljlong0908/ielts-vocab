@@ -40,7 +40,7 @@ from wxcloud import (  # noqa: E402
 
 WORDS_FILE = os.path.join(ROOT, "assets", "word_lists", "ielts-full.json")
 PILOT_FILE = os.path.join(ROOT, "assets", "word_lists", "pilot-100.json")
-EXAMPLES_FILE = os.path.join(ROOT, "assets", "examples", "pilot-100-examples.json")
+EXAMPLES_FILE = os.path.join(ROOT, "assets", "examples", "ielts-full-examples.json")
 AUDIO_MANIFEST = os.path.join(ROOT, "build", "audio", "manifest.json")
 SENTENCE_MANIFEST = os.path.join(ROOT, "build", "sentence_audio", "manifest.json")
 
@@ -208,19 +208,27 @@ def do_words(cloud, words, examples):
 
 
 def do_enrich(cloud, examples):
-    """把已存在但还没富化的 pilot 词补上 example / roots / etymology。"""
-    step("补齐例句与词根（pilot 词）")
-    names = list(examples.keys())
-    arr = ",".join(json.dumps(n) for n in names)
-    docs = cloud.query(f'db.collection("words").where({{word: db.command.in([{arr}]), '
-                       f'enriched: db.command.neq(true)}}).field({{_id:true,word:true}}).get()')
-    if not docs:
-        log(f"  ✓ {len(names)} 个 pilot 词均已富化，无需处理")
+    """把云端还没富化的词补上 example / roots / etymology（全量）。
+
+    原先是给 pilot-100 写的（一次 where(word in [...]) 就能拉完），
+    全量近 3000 词必须改成「分页拉取未富化词 → 逐个 doc().update() 写回」，
+    否则单次 in 数组过大且 query 默认只返回一页，会静默漏词。
+    """
+    step("补齐例句与词根（全量）")
+    existing = fetch_cloud_words(cloud)   # {word: {_id, seq, enriched}}
+    todo = [d for w, d in existing.items()
+            if d.get("enriched") is not True and w in examples]
+    skipped = len(existing) - len(todo)
+
+    if not todo:
+        log(f"  ✓ 云端 {len(existing)} 词均已富化，无需处理")
         return 0
 
-    log(f"  待补 {len(docs)} 词：{' '.join(d['word'] for d in docs[:8])}"
-        + (" …" if len(docs) > 8 else ""))
-    for d in docs:
+    log(f"  云端 {len(existing)} 词 | 本地富化内容 {len(examples)} 条 | 待补 {len(todo)} 词"
+        + (f" | 已富化跳过 {skipped}" if skipped else ""))
+    log(f"  开始写回 …")
+    done = 0
+    for d in todo:
         ex = examples[d["word"]]
         data = {
             "example": ex["example"],
@@ -234,8 +242,11 @@ def do_enrich(cloud, examples):
         q = ('db.collection("words").doc("' + d["_id"] + '").update({data:'
              + json.dumps(data, ensure_ascii=False) + '})')
         cloud.update(q.replace(f'"{SERVER_DATE}"', "new Date()"))
-    log(f"  ✓ 补齐 {len(docs)} 词")
-    return len(docs)
+        done += 1
+        if done % 200 == 0 or done == len(todo):
+            log(f"    {done}/{len(todo)}")
+    log(f"  ✓ 补齐 {len(todo)} 词")
+    return len(todo)
 
 
 def fetch_audio_cache(cloud):

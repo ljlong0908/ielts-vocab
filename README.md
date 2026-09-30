@@ -43,7 +43,18 @@ ielts-vocab/
 │   ├── wxcloud.py               # 云开发 HTTP API 本地客户端（下面两个脚本共用）
 │   ├── init_cloud.py            # 本地初始化数据库：建集合 + 建索引
 │   ├── seed_cloud.py            # 本地导入全部数据：词表 + 例句富化 + 音频 + audioReady
+│   ├── quotes_to_examples.py    # 「每日一句」quotes.js → 可合成的例句 JSON
+│   ├── seed_quote_audio.py      # 「每日一句」音频上传 + 写 audio_cache（幂等，走 HTTP API）
 │   ├── fill_token.py            # 批量把 batch-*.json 的占位符换成真实密钥
+│   ├── check_miniprogram.js     # 小程序结构自检（类名 / 底栏 / 图标 / wxml 配对 / 云函数三件套）
+│   ├── test_mock.js             # mock 层回归（数据口径 + 每日一句体检）
+│   ├── test_learn.js            # 学习页三模式回归（错题复习 / 今日新词 / 加练）
+│   ├── test_index.js            # 首页「再学一组」显隐回归（含「中途退出不能被上限锁死」）
+│   ├── test_audio.js           # 音频链路回归（cloud:// 真机截断坑 / 缓存 / 降级）
+│   ├── test_wrongbook.js        # 错题本回归（点词进复习 / 已掌握 / 失败回滚）
+│   ├── test_finish_extra_round.js # 云函数逻辑无头测试（桩 wx-server-sdk + 内存假 DB）
+│   ├── test_start_extra_round.js  # 同上，覆盖加练发起（上限已取消 / 幂等 / 选词去重）
+│   ├── deploy_functions.py      # 一键部署云函数（走开发者工具 CLI，支持只传改动过的）
 │   └── install_spacy_model.py   # 装 en_core_web_sm（不在 PyPI，走 HF 镜像）
 ├── miniprogram/             # 小程序前端
 │   ├── app.js / app.json / app.wxss
@@ -51,7 +62,7 @@ ielts-vocab/
 │   ├── utils/               # api.js（云函数封装）/ audio.js（发音）/ share.js
 │   └── pages/               # index / onboarding / learn / practice /
 │                            # checkin / stats / wrongbook / profile
-└── cloudfunctions/          # 15 个云函数
+└── cloudfunctions/          # 18 个云函数
 ```
 
 ---
@@ -63,31 +74,34 @@ ielts-vocab/
 1. **导入项目** —— 开发者工具选**仓库根**（含 `project.config.json`），填入自己的 AppID
 2. **开通云开发** —— 复制环境 ID，填进 `miniprogram/config.js` 的 `ENV_ID`
 3. **配环境变量** —— `ADMIN_TOKEN`（5 个函数各配一遍）+ `DEEPSEEK_API_KEY`（只配 `enrich_word`）。**环境变量是函数级隔离的，最容易漏**
-4. **部署云函数** —— 15 个目录逐个「上传并部署：云端安装依赖」
+4. **部署云函数** —— 一条命令 `python3 scripts/deploy_functions.py --all`（需先在「设置 → 安全设置」打开**服务端口**）；或 18 个目录逐个「上传并部署：云端安装依赖」
 5. **初始化数据表** —— 控制台跑 `init_db`：`preview` → `create`，再按返回的清单手工建 10 条索引
 6. **导入词表与音频** —— 控制台跑 `seed_words` / `seed_audio`（音频先在本地生成、打包）
 7. **编译预览**
 
 ---
 
-## 云函数清单（15 个）
+## 云函数清单（18 个）
 
 每个函数都有自己的 `config.json` 声明超时，不依赖控制台默认值。
 
-**前端调用（10）**
+**前端调用（13）**
 
 | 函数 | 作用 | 超时 |
 |---|---|---|
 | `user_profile` | 登录 + 每日目标 | 20s |
 | `home_summary` | 首页聚合数据 | 20s |
-| `today_flow` | 当日流程状态机（前端唯一状态来源） | 20s |
+| `today_flow` | 当日流程状态机（前端唯一状态来源，含加练聚合 `extra`） | 20s |
 | `start_new_words` | 幂等生成当日新词队列 | 20s |
 | `word_card` | 单词卡（触发 AI 补全） | 30s |
-| `build_questions` | 生成题目（**答案留在服务端**） | 30s |
-| `submit_answer` | 服务端判题 + 推进复习池 | 20s |
+| `build_questions` | 生成题目（**答案留在服务端**；`round>0` 出加练题） | 30s |
+| `submit_answer` | 服务端判题 + 推进复习池（`round>0` 判加练题） | 20s |
 | `finish_checkin` | 打卡（幂等） | 30s |
+| `start_extra_round` | 发起加练「再学一组」（幂等，需当日已打卡） | 30s |
+| `finish_extra_round` | 结算加练组（推进游标 + 计入累计学习；**不写** checkins/streak/stage） | 30s |
 | `stats` | 统计与错题数据 | 30s |
 | `audio_cache` | 音频读缓存（命中直接返回 fileID） | 20s |
+| `dismiss_wrong` | 错题本「已掌握」：给 `records` 打标记，词移出错题本（以后再答错自动回来） | 10s |
 
 **服务端 / 管理调用（5）**
 
@@ -127,6 +141,18 @@ ielts-vocab/
 - **复习**：`user_words` 中 `status != mastered` 且 `nextReviewDate <= 今天` 的词，全部答对才解锁新词
 - **打卡**：`practiceQueue` 全部答对后 `finish_checkin` 推进 `streak` 与 `wordCursor`
 
+### 加练「再学一组」
+
+主流程 `stage` 之外的一条**旁路**，内嵌在 `daily_plans.extraRounds[]`（不另建文档，绕开 `_openid+date` 唯一索引）：
+
+- **入口**：首页 CTA 下方「再学一组 +N 词」；**仅当日已打卡后显示**，词库取尽时置灰
+- **发起** `start_extra_round`：取 `seq > wordCursor` 且 `audioReady` 的新词（排除当日已出过的），幂等（未完成的组会复用），**不限次数**（上限于 2026-09-29 取消，唯一终点是词库取尽）
+- **答题**：`build_questions` / `submit_answer` 带 `round` 参数路由到 `extraRounds[i].practiceQueue`——**不加 round 会覆盖主练习队列**
+- **结算** `finish_extra_round`：推进 `wordCursor`、把加练词注册进复习池、**计入 `totalLearned`（本组词数）**；**不写** `checkins`、**不动** `streak` / `plan.stage`。
+  - 计数与打卡对称：**只在结算时按整组入账**，不是学一个加一个；重复调用**不重复累加**（组 `stage==='done'` 幂等）
+  - 中途退出（学了词但没做完小测）不入账——这些词次日会被当新词重新取到，届时由打卡计入，**不会漏计只是延后**
+  - 回归：`node scripts/test_finish_extra_round.js`（云函数逻辑无头测试，21 条）
+
 ### 题型
 
 - **中选项**（`cn_option`）：英文单词 → 4 个中文释义
@@ -142,7 +168,7 @@ ielts-vocab/
 2. **云存储 + `audio_cache` 集合**（跨用户共享）→ 命中即返回 fileID，**全局零外呼**
 3. **前端 wx.storage 缓存 fileID** → 秒播，连云函数都不调
 
-例句发音走同一套链路（以整句文本为 key）。与单词不同，例句**没有兜底**——未预置音频时静默不播（补音频是渐进的，弹提示会持续打扰学习）。
+例句发音走同一套链路（以整句文本为 key）。与单词不同，例句**没有兜底**——未预置音频时静默不播（补音频是渐进的，弹提示会持续打扰学习）。首页「每日一句」的喇叭也走这条链路，所以那 12 句同样需要预先入库（见下方流水线）；**漏补的症状就是「点喇叭没声音、也没有任何提示」**。
 
 > 单词仍保留有道 `dictvoice` 兜底，仅用于词表外的词；`audioReady` 机制保证学习流程里出现的词都有音频，所以这条兜底实际不会触发。全量音频就绪后，可删掉 `downloadFile` 合法域名 `https://dict.youdao.com`，彻底摆脱第三方的版权灰区与限流风险。
 >
@@ -154,6 +180,7 @@ ielts-vocab/
 
 - **单词**：`build_wordlist.py` → `gen_audio.py` → `make_audition_page.py`（预检/试听）→ `pack_audio.py` → 控制台 `seed_audio`
 - **例句**：`gen_examples.py` → `gen_sentence_audio.py` → `make_audition_page.py` → `pack_audio.py` → 控制台 `seed_audio`
+- **每日一句**：`quotes_to_examples.py` → `gen_sentence_audio.py --outdir build/quote_audio` → `seed_quote_audio.py --apply`（12 句，不走云函数、无需 `ADMIN_TOKEN`）
 
 ---
 

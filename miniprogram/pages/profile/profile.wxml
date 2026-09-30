@@ -21,6 +21,7 @@
           wx:key="*this"
           class="pf-goal {{user.dailyGoal === item ? 'active' : ''}}"
           data-value="{{item}}"
+          hover-class="hover-dim"
           bindtap="setGoal"
         >
           {{item}} 个
@@ -29,12 +30,13 @@
       <view class="hint pf-tip">修改后从下一个自然日生效</view>
     </view>
 
-    <view class="card pf-link" bindtap="goStats">
+    <!-- M5：这两页已是 tab 页，跳转走 wx.switchTab（见 profile.js） -->
+    <view class="card pf-link" hover-class="hover-bg" bindtap="goStats">
       <view>学习统计</view>
       <view class="hint">打卡日历</view>
     </view>
 
-    <view class="card pf-link" bindtap="goWrong">
+    <view class="card pf-link" hover-class="hover-bg" bindtap="goWrong">
       <view>错题本</view>
       <view class="hint">易错单词</view>
     </view>

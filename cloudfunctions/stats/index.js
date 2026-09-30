@@ -24,9 +24,12 @@ exports.main = async () => {
       .limit(200)
       .get()
 
-    // 错题（去重取最近）
+    // 错题（去重取最近）；已被用户标「已掌握」的排除在外（dismiss_wrong 打标）。
+    // ⚠️ `_.neq(true)` 会一并匹配「字段不存在」的记录（MongoDB $ne 语义），
+    //    所以加这个字段**不需要回填历史数据**；之后再答错写的是新记录（无该字段），
+    //    自然重新进错题本。
     const wrongRes = await records
-      .where({ _openid: OPENID, isCorrect: false })
+      .where({ _openid: OPENID, isCorrect: false, mastered: _.neq(true) })
       .orderBy('createdAt', 'desc')
       .limit(200)
       .get()

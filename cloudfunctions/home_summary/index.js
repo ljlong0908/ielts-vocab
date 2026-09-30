@@ -32,6 +32,13 @@ exports.main = async () => {
     const ckRes = await checkins.where({ _openid: OPENID, date: today }).get()
     const todayDone = ckRes.data.length > 0
 
+    // 加练：当日已学到（走过学习页）的加练词数，供首页进度卡展示。
+    // ⚠️ 与 totalLearned 的口径不同，别混用：totalLearned 只在**结算**
+    //    （finish_extra_round）时按整组入账；这里的 learnedIds 含「学了但还没做完小测」的在途组，
+    //    所以 extraLearnedToday ≥ 今日已入账的加练词数，是正常的。
+    const rounds = plan && Array.isArray(plan.extraRounds) ? plan.extraRounds : []
+    const extraLearnedToday = rounds.reduce((s, r) => s + ((r.learnedIds || []).length), 0)
+
     return {
       code: 0,
       data: {
@@ -39,6 +46,7 @@ exports.main = async () => {
         streak: user.streak || 0,
         totalLearned: user.totalLearned || 0,
         learnedToday: plan ? (plan.learnedIds || []).length : 0,
+        extraLearnedToday,
         todayDone
       }
     }

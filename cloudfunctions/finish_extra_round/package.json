@@ -1,0 +1,9 @@
+{
+  "name": "finish_extra_round",
+  "version": "1.0.0",
+  "description": "结算加练组：推进词游标、加练词入复习池",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

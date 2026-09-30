@@ -1,7 +1,17 @@
 <view class="page ob">
+  <!-- 品牌区（M14-9）：填掉顶部空档，并回答首次用户的两个问题——「这是什么」「值不值得用」。
+       ⚠️ .ob-mark 是占位图形，最终应换成小程序头像资产（见 docs/tasks-ux-miniprogram.md M14） -->
+  <view class="ob-hero">
+    <view class="ob-mark"></view>
+    <view class="ob-brand">雅词本</view>
+    <view class="ob-sub">2987 个核心词 · 例句带发音</view>
+  </view>
+
   <view class="ob-head">
     <view class="ob-title">每天背几个单词？</view>
-    <view class="muted">目标要小到不会放弃。之后可以随时修改。</view>
+    <!-- M16：副标题只留「选小目标的理由」；「之后可以随时修改」是选完才成立的承诺，
+         下移进下方信息条，并补出落点（在「我的」里改），不再是无处可去的空承诺 -->
+    <view class="muted">目标要小到不会放弃</view>
   </view>
 
   <view
@@ -9,13 +19,31 @@
     wx:key="*this"
     class="ob-option {{selected === item ? 'active' : ''}}"
     data-value="{{item}}"
+    hover-class="hover-dim"
     bindtap="choose"
   >
-    <view class="ob-option-num">{{item}}</view>
-    <view class="ob-option-text">个单词 / 天</view>
+    <view class="ob-option-main">
+      <view class="ob-option-num">{{item}}</view>
+      <view class="ob-option-text">个单词 / 天</view>
+      <view wx:if="{{item === 5}}" class="tag">推荐</view>
+    </view>
+    <!-- 预计耗时：让用户预判成本，比只有数字更有决策依据 -->
+    <view class="ob-option-meta">{{item === 5 ? '约 1 分钟' : '约 2 分钟'}}</view>
   </view>
 
-  <view class="btn primary ob-btn {{submitting ? 'disabled' : ''}}" bindtap="confirm">
-    开始学习
+  <!-- 信息条（M16）：两条「选完之后才关心」的事实。
+       ⚠️ 整条刻意不可点、不加边框/箭头/主色 —— 一旦有按钮相，会被读成"第三个选项" -->
+  <view class="ob-note">
+    <view class="ob-note-line">背完会做几道小测，答错的词自动进错题本</view>
+    <view class="ob-note-line">之后可以随时在「我的」里修改</view>
+  </view>
+
+  <!-- 主操作固定底部（M14-1）：原实现跟随内容流，内容一短主操作就停在中部够着别扭 -->
+  <view class="bottombar">
+    <view
+      class="btn primary ob-btn {{submitting ? 'disabled' : ''}}"
+      hover-class="hover-press"
+      bindtap="confirm"
+    >开始学习</view>
   </view>
 </view>

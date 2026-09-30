@@ -1,4 +1,27 @@
 <view class="page">
+  <!-- 朋友圈「单页模式」落地视图（scene 1154）：
+       无登录态读不到云端数据，只展示品牌 + 本地每日一句，
+       引导用户点右上角「前往小程序」进入完整功能 -->
+  <block wx:if="{{singlePage}}">
+    <view class="sp-hero">
+      <view class="sp-brand">雅词本</view>
+      <view class="sp-slogan">一天一句好英文，顺手记住几个核心词</view>
+    </view>
+    <view wx:if="{{quote}}" class="card">
+      <view class="title">每日一句</view>
+      <view class="quote-en">{{quote.text}}</view>
+      <view class="quote-cn">{{quote.cn}}</view>
+      <view class="quote-foot">
+        <view class="author">— {{quote.author}}</view>
+        <view class="quote-tags">
+          <view wx:for="{{quote.tags}}" wx:key="*this" class="tag">{{item}}</view>
+        </view>
+      </view>
+    </view>
+    <view class="sp-guide">点右上角「前往小程序」，开始今天的词汇打卡</view>
+  </block>
+
+  <block wx:else>
   <view wx:if="{{loading}}" class="loading">加载中</view>
 
   <block wx:else>
@@ -6,11 +29,12 @@
       <view class="between">
         <view class="stat">
           <view class="stat-num">{{summary.streak}}</view>
-          <view class="muted">连续打卡（天）</view>
+          <view class="stat-label">连续打卡（天）</view>
         </view>
+        <view class="divider"></view>
         <view class="stat stat-right">
           <view class="stat-num">{{summary.totalLearned}}</view>
-          <view class="muted">累计学习（词）</view>
+          <view class="stat-label">累计学习（词）</view>
         </view>
       </view>
     </view>
@@ -26,21 +50,43 @@
       <view class="hint progress-hint">{{statusText}}</view>
     </view>
 
-    <view class="btn primary cta" bindtap="onStart">{{ctaText}}</view>
-
-    <view class="grid">
-      <view class="grid-item" bindtap="goStats">
-        <view class="grid-title">统计</view>
-        <view class="hint">打卡日历</view>
+    <!-- 每日一句（M12）：静态语料按日轮换，零后端；音频复用例句音频，未预置时静默 -->
+    <view wx:if="{{quote}}" class="card">
+      <view class="between">
+        <view class="title">每日一句</view>
+        <view class="speaker" hover-class="hover-dim" bindtap="playQuote">
+          <view class="speaker-icon"></view>
+        </view>
       </view>
-      <view class="grid-item" bindtap="goWrong">
-        <view class="grid-title">错题本</view>
-        <view class="hint">易错单词</view>
-      </view>
-      <view class="grid-item" bindtap="goProfile">
-        <view class="grid-title">我的</view>
-        <view class="hint">目标设置</view>
+      <view class="quote-en">{{quote.text}}</view>
+      <view class="quote-cn">{{quote.cn}}</view>
+      <view class="quote-foot">
+        <view class="author">— {{quote.author}}</view>
+        <view class="quote-tags">
+          <view wx:for="{{quote.tags}}" wx:key="*this" class="tag">{{item}}</view>
+        </view>
       </view>
     </view>
+  </block>
+
+  <!-- 主操作固定底部（M4，落进右手拇指区）。
+       tabBar 由框架渲染，页面视口本身不含它，所以 bottom:0 即在 tabBar 之上，无需测高偏移。 -->
+  <view wx:if="{{!loading}}" class="bottombar">
+    <view
+      class="btn primary {{summary.todayDone ? 'disabled' : ''}}"
+      hover-class="hover-press"
+      bindtap="onStart"
+    >{{ctaText}}</view>
+    <!-- M13「再学一组」：与主 CTA 并列的次级操作。D1=A → 仅当日已打卡后出现；
+         有未完成的组时文案变「继续学一组」；词库取尽 / 已达上限时置灰 + 底栏说明原因。
+         ⚠️ 不再「达上限就整个隐藏」——那会让中途退出的用户再也进不去自己那组（见 index.js 注释） -->
+    <view
+      wx:if="{{extraShow}}"
+      class="btn ghost {{extraDisabled ? 'disabled' : ''}}"
+      hover-class="hover-press"
+      bindtap="onExtra"
+    >{{extraText}}<text wx:if="{{extraSize}}" class="sup">+{{extraSize}} 词</text></view>
+    <view wx:if="{{extraTip}}" class="bar-tip">{{extraTip}}</view>
+  </view>
   </block>
 </view>

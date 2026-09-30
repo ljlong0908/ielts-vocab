@@ -1,0 +1,9 @@
+{
+  "name": "dismiss_wrong",
+  "version": "1.0.0",
+  "description": "标记错题为已掌握：在 records 上打 mastered 标记，错题本据此过滤",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

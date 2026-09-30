@@ -1,63 +1,147 @@
-.hero {
-  background: #185fa5;
-  border: none;
+/* M5 原生 tabBar 后，页面视口底部就在 tabBar 之上；
+   M4 固定底栏：主 CTA 88 + 间距 16 + 加练按钮 88 + 上下 padding 40 ≈ 232rpx，
+   再加错误提示行最多 ~76rpx，加 .card 的 24rpx 下边距 → 留 340rpx 富余
+   （底栏没加练按钮 / 没提示时只是多留一点，无副作用） */
+.page {
+  padding-bottom: 340rpx;
+}
+
+/* 底栏里两个按钮的间距（原型 .bottom .btn.primary { margin-bottom: 8px }） */
+.bottombar .btn.primary {
+  margin-bottom: 16rpx;
+}
+
+/* M19a：加练失败的原因显示在底栏内，不用 wx.showToast（位置会被按钮压住） */
+.bar-tip {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  line-height: 1.4;
+  text-align: center;
+  /* 提示属于承载信息的文字 → --text-2，不用仅作装饰的 --text-3 */
+  color: var(--text-2);
+}
+
+/* hero 卡：原型是浅蓝渐变 + 主色数字（不是深蓝底白字），改回原型 */
+.card.hero {
+  background: linear-gradient(135deg, #ffffff 0%, var(--primary-soft) 100%);
+  border-color: #d6e7f7;
+}
+
+.stat {
+  flex: 1;
+  text-align: center;
 }
 
 .stat-num {
   font-size: 56rpx;
-  font-weight: 500;
-  color: #ffffff;
+  font-weight: 700;
   line-height: 1.2;
+  color: var(--primary);
 }
 
-.hero .muted {
-  color: rgba(255, 255, 255, 0.75);
+/* 28px 大数字坐在浅蓝渐变上：#1d9e75 仅 2.96:1，达不到大文本 3:1 → --success-deep */
+.stat-right .stat-num {
+  color: var(--success-deep);
+}
+
+.stat-label {
+  margin-top: 4rpx;
   font-size: 24rpx;
+  color: var(--text-2);
 }
 
-.stat-right {
-  text-align: right;
+.divider {
+  width: 1rpx;
+  height: 64rpx;
+  background: var(--line);
 }
 
 .progress {
   height: 16rpx;
-  background: #eef0f3;
+  margin: 20rpx 0 12rpx;
+  background: var(--line);
   border-radius: 999rpx;
-  margin-top: 24rpx;
   overflow: hidden;
 }
 
+/* 进度条是图形（非文字），用 --primary（原型口径，原先错用了 --success） */
 .progress-bar {
   height: 100%;
-  background: #1d9e75;
+  background: var(--primary);
   border-radius: 999rpx;
-  transition: width 0.3s ease;
+  transition: width 0.25s;
 }
 
 .progress-hint {
-  margin-top: 16rpx;
+  margin-top: 8rpx;
 }
 
-.cta {
-  margin: 8rpx 0 32rpx;
+/* ===== 每日一句（M12）===== */
+.speaker-icon {
+  width: 60rpx;
+  height: 60rpx;
 }
 
-.grid {
+/* 英文用衬线体与正文拉开层次 */
+.quote-en {
+  margin: 24rpx 0 16rpx;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 32rpx;
+  line-height: 1.75;
+}
+
+.quote-cn {
+  margin-bottom: 24rpx;
+  font-size: 26rpx;
+  color: var(--text-2);
+}
+
+.quote-foot {
   display: flex;
-  gap: 24rpx;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.grid-item {
-  flex: 1;
-  background: #ffffff;
-  border: 1rpx solid #e5e6eb;
-  border-radius: 20rpx;
-  padding: 28rpx 20rpx;
+.quote-foot .author {
+  font-size: 24rpx;
+  color: var(--text-2);
+}
+
+.quote-tags {
+  display: flex;
+  gap: 12rpx;
+}
+
+/* 话题 tag 用浅绿底 + 深绿字（原型口径）；--success 在浅绿底仅 2.98:1 → --success-deep */
+.quote-tags .tag {
+  padding: 2rpx 16rpx;
+  background: var(--success-soft);
+  color: var(--success-deep);
+}
+
+/* ===== 朋友圈单页模式（scene 1154）落地视图 =====
+   无登录态：不出打卡/进度/底栏，只保留品牌 + 每日一句（本地语料） */
+.sp-hero {
+  padding: 64rpx 8rpx 48rpx;
   text-align: center;
 }
 
-.grid-title {
-  font-size: 28rpx;
-  font-weight: 500;
-  margin-bottom: 6rpx;
+.sp-brand {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.sp-slogan {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: var(--text-2);
+}
+
+.sp-guide {
+  margin-top: 40rpx;
+  font-size: 24rpx;
+  text-align: center;
+  line-height: 1.5;
+  color: var(--text-2);
 }

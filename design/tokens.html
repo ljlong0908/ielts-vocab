@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>雅词本 · 视觉规范 v1</title>
+<style>
+  :root {
+    /* 与 miniprogram/app.wxss 完全一致的设计变量 */
+    --primary: #185fa5;
+    --primary-soft: #e6f1fb;
+    --success: #1d9e75;
+    --success-soft: #e1f5ee;
+    --warn: #ba7517;
+    --danger: #a32d2d;
+    --danger-soft: #fcebeb;
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --text: #1f2329;
+    --text-2: #646a73;
+    --text-3: #8f959e;
+    --line: #e5e6eb;
+    --radius: 10px;       /* 20rpx */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 24px 16px 64px;
+  }
+  .wrap { max-width: 375px; margin: 0 auto; }
+
+  /* 页头 */
+  .hd { padding: 8px 4px 28px; }
+  .hd h1 { font-size: 22px; font-weight: 600; letter-spacing: .5px; }
+  .hd .sub { color: var(--text-2); font-size: 13px; margin-top: 6px; }
+  .hd .meta { color: var(--text-3); font-size: 12px; margin-top: 10px; }
+
+  /* 章节标题 */
+  .sec { margin-top: 36px; }
+  .sec > h2 { font-size: 15px; font-weight: 600; padding: 0 4px 12px; border-bottom: 1px solid var(--line); }
+  .sec > p.lead { color: var(--text-2); font-size: 12px; padding: 10px 4px 14px; }
+  .rpx { color: var(--text-3); font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  /* 配色 */
+  .pal { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .sw { border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: #fff; }
+  .sw .chip { height: 56px; }
+  .sw .info { padding: 8px 10px; }
+  .sw .name { font-size: 12px; font-weight: 600; }
+  .sw .hex { font-size: 11px; color: var(--text-3); font-family: ui-monospace, monospace; }
+  .sw .use { font-size: 11px; color: var(--text-2); margin-top: 2px; }
+
+  /* 字号阶梯 */
+  .type-row { display: flex; align-items: baseline; gap: 12px; padding: 10px 4px; border-bottom: 1px solid var(--line); }
+  .type-row .tag-spec { color: var(--text-3); font-size: 11px; font-family: ui-monospace, monospace; min-width: 96px; }
+  .t-h1 { font-size: 17px; font-weight: 600; }       /* 34rpx */
+  .t-h2 { font-size: 15px; font-weight: 600; }       /* 30rpx */
+  .t-body { font-size: 14px; }                       /* 28rpx */
+  .t-muted { font-size: 13px; color: var(--text-2); }/* 26rpx */
+  .t-hint { font-size: 12px; color: var(--text-3); } /* 24rpx */
+  .t-tag { font-size: 11px; }                        /* 22rpx */
+
+  /* 间距与圆角 */
+  .sp { display: flex; align-items: flex-end; gap: 16px; padding: 12px 4px; }
+  .sp .blk { background: var(--primary-soft); border-radius: 4px; }
+  .sp .lbl { font-size: 11px; color: var(--text-3); text-align: center; margin-top: 6px; font-family: ui-monospace, monospace; }
+  .rad { display: flex; gap: 14px; padding: 8px 4px 4px; align-items: center; }
+  .rad .demo { background: var(--primary-soft); border: 1px solid var(--primary); }
+
+  /* 组件预览区 */
+  .stage { background: var(--bg); border-radius: 8px; padding: 14px; margin-top: 8px; }
+  .stage .label { font-size: 11px; color: var(--text-3); margin: 14px 0 8px; }
+  .stage .label:first-child { margin-top: 0; }
+
+  /* 组件：卡片 */
+  .card { background: var(--surface); border-radius: var(--radius); padding: 16px; border: 1px solid var(--line); margin-bottom: 12px; }
+  .card .between { display: flex; align-items: center; justify-content: space-between; }
+  .card .title { font-size: 17px; font-weight: 500; }
+  .card .muted { color: var(--text-2); font-size: 13px; }
+  .card .hint { color: var(--text-3); font-size: 12px; }
+
+  /* 组件：按钮 */
+  .btn { display: block; height: 44px; line-height: 44px; border-radius: 22px; text-align: center; font-size: 15px; background: var(--surface); color: var(--text); border: 1px solid var(--line); margin-bottom: 10px; }
+  .btn.primary { background: var(--primary); color: #fff; border: none; }
+  .btn.disabled { opacity: .45; }
+
+  /* 组件：标签 */
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; background: var(--primary-soft); color: var(--primary); margin-right: 6px; }
+  .tag.s { background: var(--success-soft); color: var(--success); }
+  .tag.d { background: var(--danger-soft); color: var(--danger); }
+
+  /* 组件：进度条 */
+  .progress { height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; margin: 10px 0 6px; }
+  .progress .bar { height: 100%; background: var(--primary); border-radius: 999px; }
+
+  /* 组件：单词卡 */
+  .word-row { display: flex; align-items: center; gap: 8px; }
+  .word { font-size: 22px; font-weight: 600; }
+  .speaker { width: 28px; height: 28px; border-radius: 999px; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 14px; }
+  .phon { color: var(--text-2); font-size: 12px; margin: 6px 0; }
+  .pos { color: var(--success); font-size: 12px; }
+  .meaning { font-size: 15px; margin-top: 4px; }
+  .sec-title { font-size: 13px; font-weight: 600; color: var(--text-2); margin: 14px 0 8px; }
+  .ex-en { font-size: 14px; line-height: 1.5; }
+  .ex-cn { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+  .root-item { display: flex; gap: 8px; font-size: 13px; padding: 4px 0; }
+  .root-part { color: var(--primary); font-weight: 600; min-width: 60px; }
+  .root-type { color: var(--text-3); font-size: 11px; min-width: 40px; }
+  .etymo { font-size: 13px; color: var(--text-2); line-height: 1.6; }
+  .enriching { color: var(--warn); font-size: 12px; }
+  .lack { color: var(--text-3); font-size: 12px; }
+
+  /* 组件：题目选项 */
+  .opt { display: block; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); background: #fff; font-size: 14px; margin-bottom: 10px; }
+  .opt.sel { border-color: var(--primary); background: var(--primary-soft); }
+  .opt.right { border-color: var(--success); background: var(--success-soft); color: var(--success); }
+  .opt.wrong { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
+  .opt.disabled { opacity: .45; }
+  .opt .key { font-weight: 600; margin-right: 8px; color: var(--text-3); }
+
+  /* 组件：打卡日历 */
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .cal .cell { aspect-ratio: 1; border-radius: 8px; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-3); background: #fff; }
+  .cal .cell.checked { background: var(--success-soft); color: var(--success); border-color: var(--success); font-weight: 600; }
+  .cal .cell.today { border-color: var(--primary); color: var(--primary); font-weight: 600; }
+  .cal .cell.checked.today { background: var(--success); color: #fff; }
+  .cal .empty { border: none; background: transparent; }
+
+  /* 页脚 */
+  .ft { margin-top: 48px; padding: 16px 4px; border-top: 1px solid var(--line); color: var(--text-3); font-size: 11px; line-height: 1.8; }
+  code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-family: ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hd">
+    <h1>雅词本 · 视觉规范 v1</h1>
+    <div class="sub">配色 · 字号 · 间距 · 组件 token，作为 wxss 落地对照</div>
+    <div class="meta">设计稿基准 750rpx 宽 · 1rpx = 0.5px（375 物理宽）· 与 miniprogram/app.wxss 变量同源</div>
+  </header>
+
+  <section class="sec">
+    <h2>设计原则</h2>
+    <p class="lead">工具属性优先，克制装饰。蓝表专注（主色 / 进行中），绿表成功（打卡 / 答对）。信息靠留白与字重分层，不靠色块堆叠。</p>
+  </section>
+
+  <section class="sec">
+    <h2>1 · 配色系统</h2>
+    <p class="lead">四个语义色 + 一组中性色。软色（-soft）用于对应语义的低饱和背景，硬色用于文字与强调。</p>
+    <div class="pal">
+      <div class="sw"><div class="chip" style="background:#185fa5"></div><div class="info"><div class="name">主色 Primary</div><div class="hex">#185fa5</div><div class="use">按钮 / 链接 / 进行中</div></div></div>
+      <div class="sw"><div class="chip" style="background:#e6f1fb"></div><div class="info"><div class="name">主色软</div><div class="hex">#e6f1fb</div><div class="use">标签底 / 选中态</div></div></div>
+      <div class="sw"><div class="chip" style="background:#1d9e75"></div><div class="info"><div class="name">成功 Success</div><div class="hex">#1d9e75</div><div class="use">打卡 / 答对 / 已完成</div></div></div>
+      <div class="sw"><div class="chip" style="background:#e1f5ee"></div><div class="info"><div class="name">成功软</div><div class="hex">#e1f5ee</div><div class="use">日历已打卡 / 正确选项</div></div></div>
+      <div class="sw"><div class="chip" style="background:#ba7517"></div><div class="info"><div class="name">警告 Warn</div><div class="hex">#ba7517</div><div class="use">生成中提示</div></div></div>
+      <div class="sw"><div class="chip" style="background:#a32d2d"></div><div class="info"><div class="name">危险 Danger</div><div class="hex">#a32d2d</div><div class="use">答错 / 重置确认</div></div></div>
+      <div class="sw"><div class="chip" style="background:#f6f7f9;border:1px solid #e5e6eb"></div><div class="info"><div class="name">页面底</div><div class="hex">#f6f7f9</div><div class="use">页面背景</div></div></div>
+      <div class="sw"><div class="chip" style="background:#ffffff;border:1px solid #e5e6eb"></div><div class="info"><div class="name">表面</div><div class="hex">#ffffff</div><div class="use">卡片 / 按钮底</div></div></div>
+    </div>
+    <div class="pal" style="margin-top:10px">
+      <div class="sw"><div class="chip" style="background:#1f2329"></div><div class="info"><div class="name">文字主</div><div class="hex">#1f2329</div><div class="use">正文标题</div></div></div>
+      <div class="sw"><div class="chip" style="background:#646a73"></div><div class="info"><div class="name">文字次</div><div class="hex">#646a73</div><div class="use">副标题 / 说明</div></div></div>
+      <div class="sw"><div class="chip" style="background:#8f959e"></div><div class="info"><div class="name">文字弱</div><div class="hex">#8f959e</div><div class="use">提示 / 占位</div></div></div>
+      <div class="sw"><div class="chip" style="background:#e5e6eb"></div><div class="info"><div class="name">分割线</div><div class="hex">#e5e6eb</div><div class="use">边框 / 进度槽</div></div></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>2 · 字号阶梯</h2>
+    <p class="lead">两档字重：400 常规 / 500 强调。不用 600+，避免小程序里粗体渲染糊。rpx 为设计稿单位。</p>
+    <div class="type-row"><span class="t-h1">abandon 放弃</span><span class="tag-spec">34rpx · 500</span></div>
+    <div class="type-row"><span class="t-h2">今日进度</span><span class="tag-spec">30rpx · 500</span></div>
+    <div class="type-row"><span class="t-body">连续打卡 7 天</span><span class="tag-spec">28rpx · 400</span></div>
+    <div class="type-row"><span class="t-muted">累计学习 168 词</span><span class="tag-spec">26rpx · 400</span></div>
+    <div class="type-row"><span class="t-hint">坚持每天一点</span><span class="tag-spec">24rpx · 400</span></div>
+    <div class="type-row"><span class="t-tag">2 / 5</span><span class="tag-spec">22rpx · 400</span></div>
+  </section>
+
+  <section class="sec">
+    <h2>3 · 间距与圆角</h2>
+    <p class="lead">间距以 8rpx(4px) 为基步，卡片内边距 32rpx(16px)，页边距 24rpx(12px)。圆角分三档。</p>
+    <div class="sp">
+      <div style="text-align:center"><div class="blk" style="width:4px;height:4px"></div><div class="lbl">8rpx</div></div>
+      <div style="text-align:center"><div class="blk" style="width:8px;height:8px"></div><div class="lbl">16rpx</div></div>
+      <div style="text-align:center"><div class="blk" style="width:12px;height:12px"></div><div class="lbl">24rpx</div></div>
+      <div style="text-align:center"><div class="blk" style="width:16px;height:16px"></div><div class="lbl">32rpx</div></div>
+      <div style="text-align:center"><div class="blk" style="width:24px;height:24px"></div><div class="lbl">48rpx</div></div>
+    </div>
+    <div class="rad">
+      <div style="text-align:center"><div class="demo" style="width:44px;height:44px;border-radius:10px"></div><div class="lbl" style="margin-top:6px">卡片 20rpx</div></div>
+      <div style="text-align:center"><div class="demo" style="width:44px;height:44px;border-radius:22px"></div><div class="lbl" style="margin-top:6px">按钮 44rpx</div></div>
+      <div style="text-align:center"><div class="demo" style="width:44px;height:44px;border-radius:999px"></div><div class="lbl" style="margin-top:6px">标签 999rpx</div></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>4 · 组件预览</h2>
+    <p class="lead">以下是各组件的规范态。wxss 落地时以此为对照，命名沿用 app.wxss 既有 class（card / btn / tag / progress 等）。</p>
+
+    <div class="stage">
+      <div class="label">卡片 · 首页统计</div>
+      <div class="card">
+        <div class="between">
+          <div><div style="font-size:22px;font-weight:600">7</div><div class="muted">连续打卡（天）</div></div>
+          <div style="text-align:right"><div style="font-size:22px;font-weight:600">168</div><div class="muted">累计学习（词）</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="between"><span class="title" style="font-size:15px">今日进度</span><span class="tag">2 / 5</span></div>
+        <div class="progress"><div class="bar" style="width:40%"></div></div>
+        <div class="hint">坚持每天一点，积少成多</div>
+      </div>
+
+      <div class="label">按钮 · 主 / 次 / 禁用</div>
+      <div class="btn primary">开始今日学习</div>
+      <div class="btn">开始练习</div>
+      <div class="btn disabled">今日已完成，明天见</div>
+
+      <div class="label">标签 · 默认 / 成功 / 危险</div>
+      <span class="tag">2 / 5</span><span class="tag s">已完成</span><span class="tag d">易错</span>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>5 · 单词卡（learn 页核心）</h2>
+    <p class="lead">一张完整卡 + 一张暂缺卡，覆盖内容富化的两种状态。第三张演示"生成中"边界态。</p>
+
+    <div class="stage">
+      <div class="label">完整态：例句 / 词根 / 词源齐全</div>
+      <div class="card">
+        <div class="word-row"><span class="word">abandon</span><span class="speaker">▶</span></div>
+        <div class="phon">/əˈbændən/</div>
+        <div class="pos">v.</div>
+        <div class="meaning">放弃；抛弃</div>
+      </div>
+      <div class="card">
+        <div class="sec-title">例句</div>
+        <div class="ex-en">They had to abandon the car in the snow.</div>
+        <div class="ex-cn">他们不得不把车丢在雪地里。</div>
+      </div>
+      <div class="card">
+        <div class="sec-title">词根拆解</div>
+        <div class="root-item"><span class="root-part">ab-</span><span class="root-type">前缀</span><span>离开</span></div>
+        <div class="root-item"><span class="root-part">bandon</span><span class="root-type">词根</span><span>控制；命令</span></div>
+      </div>
+      <div class="card">
+        <div class="sec-title">单词演变</div>
+        <div class="etymo">源自古法语 abandoner，由 a-（去）+ bandon（控制权）构成，字面义为"交出控制权"，引申为放弃。</div>
+      </div>
+
+      <div class="label">暂缺态：扩展内容未生成</div>
+      <div class="card">
+        <div class="word-row"><span class="word">accommodate</span><span class="speaker">▶</span></div>
+        <div class="phon">/əˈkɒmədeɪt/</div>
+        <div class="pos">v.</div>
+        <div class="meaning">容纳；适应</div>
+      </div>
+      <div class="card">
+        <div class="sec-title">例句</div>
+        <div class="lack">暂缺</div>
+      </div>
+      <div class="card">
+        <div class="sec-title">词根拆解</div>
+        <div class="lack">暂缺</div>
+      </div>
+
+      <div class="label">生成中态：AI 补全进行时</div>
+      <div class="card">
+        <div class="word-row"><span class="word">ambiguous</span><span class="speaker">▶</span></div>
+        <div class="phon">/æmˈbɪɡjuəs/</div>
+        <div class="pos">adj.</div>
+        <div class="meaning">模棱两可的</div>
+        <div class="enriching" style="margin-top:10px">扩展内容生成中，稍后自动补全</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>6 · 题目选项（practice 页）</h2>
+    <p class="lead">四种态：默认 / 选中正确 / 选中错误 / 揭示正确答案。答错选项被禁用（降低透明度），点对后自动进下一题。</p>
+    <div class="stage">
+      <div class="label">默认态（未作答）</div>
+      <div class="opt"><span class="key">A</span>放弃；抛弃</div>
+      <div class="opt"><span class="key">B</span>抽象的</div>
+
+      <div class="label">作答后揭示：选中错误 + 揭示正确</div>
+      <div class="opt wrong disabled"><span class="key">A</span>适应</div>
+      <div class="opt right"><span class="key">B</span>承认；答谢</div>
+      <div class="opt disabled"><span class="key">C</span>放弃</div>
+      <div class="opt disabled"><span class="key">D</span>抽象的</div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>7 · 打卡日历（stats 页）</h2>
+    <p class="lead">已打卡日填成功软色，今日描主色边。连续打卡用 streak 数字单独强调。</p>
+    <div class="stage">
+      <div class="cal">
+        <div class="cell empty"></div><div class="cell empty"></div>
+        <div class="cell empty"></div><div class="cell empty"></div>
+        <div class="cell empty"></div><div class="cell empty"></div>
+        <div class="cell">1</div>
+        <div class="cell checked">2</div><div class="cell checked">3</div>
+        <div class="cell">4</div><div class="cell checked">5</div>
+        <div class="cell checked">6</div><div class="cell checked">7</div>
+        <div class="cell checked">8</div><div class="cell checked today">9</div>
+        <div class="cell">10</div><div class="cell">11</div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="ft">
+    <div>说明：本稿为设计方向参考，不进小程序包（位于 <code>design/</code>，在 <code>miniprogramRoot</code> 之外）。</div>
+    <div>所有数值与 <code>miniprogram/app.wxss</code> 的 CSS 变量同源，落地时直接复用 <code>--primary</code> / <code>--success</code> / <code>--radius</code> 等。</div>
+    <div>rpx 换算：在 750 宽设计稿下，<code>1rpx = 0.5px</code>（对应 375 物理宽真机）。本页用 px 渲染并标注等效 rpx。</div>
+  </footer>
+
+</div>
+</body>
+</html>

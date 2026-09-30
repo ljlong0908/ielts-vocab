@@ -12,9 +12,41 @@
   "window": {
     "backgroundTextStyle": "dark",
     "navigationBarBackgroundColor": "#ffffff",
-    "navigationBarTitleText": "雅思词汇",
+    "navigationBarTitleText": "雅词本",
     "navigationBarTextStyle": "black",
     "backgroundColor": "#f6f7f9"
+  },
+  "tabBar": {
+    "color": "#616770",
+    "selectedColor": "#185fa5",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "images/tab-home.png",
+        "selectedIconPath": "images/tab-home-on.png"
+      },
+      {
+        "pagePath": "pages/stats/stats",
+        "text": "统计",
+        "iconPath": "images/tab-stats.png",
+        "selectedIconPath": "images/tab-stats-on.png"
+      },
+      {
+        "pagePath": "pages/wrongbook/wrongbook",
+        "text": "错题本",
+        "iconPath": "images/tab-wrongbook.png",
+        "selectedIconPath": "images/tab-wrongbook-on.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "images/tab-profile.png",
+        "selectedIconPath": "images/tab-profile-on.png"
+      }
+    ]
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json",

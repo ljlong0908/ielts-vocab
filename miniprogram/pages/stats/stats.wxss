@@ -6,8 +6,8 @@
 
 .metric {
   flex: 1;
-  background: #ffffff;
-  border: 1rpx solid #e5e6eb;
+  background: var(--surface);
+  border: 1rpx solid var(--line);
   border-radius: 20rpx;
   padding: 28rpx 16rpx;
   text-align: center;
@@ -16,12 +16,12 @@
 .metric-num {
   font-size: 44rpx;
   font-weight: 500;
-  color: #185fa5;
+  color: var(--primary);
 }
 
 .metric-label {
-  font-size: 22rpx;
-  color: #8f959e;
+  font-size: 24rpx;
+  color: var(--text-2);
   margin-top: 6rpx;
 }
 
@@ -39,8 +39,8 @@
 .cal-week-cell {
   width: 14.28%;
   text-align: center;
-  font-size: 22rpx;
-  color: #8f959e;
+  font-size: 24rpx;
+  color: var(--text-2);
   padding-bottom: 12rpx;
 }
 
@@ -49,9 +49,10 @@
   flex-wrap: wrap;
 }
 
+/* 日历热区挂外层 88rpx，视觉圆 .cal-day 仍是 60rpx（M2 通用解法） */
 .cal-cell {
   width: 14.28%;
-  height: 80rpx;
+  height: 88rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -64,16 +65,16 @@
   text-align: center;
   border-radius: 50%;
   font-size: 26rpx;
-  color: #1f2329;
+  color: var(--text);
 }
 
 .cal-day.checked {
-  background: #1d9e75;
+  background: var(--success-deep);
   color: #ffffff;
 }
 
 .cal-day.today {
-  border: 2rpx solid #185fa5;
+  border: 2rpx solid var(--primary);
 }
 
 .cal-day.checked.today {

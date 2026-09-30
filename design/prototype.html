@@ -1,0 +1,1373 @@
+<!doctype html>
+<html lang="zh-CN" data-page-node-id="8KHKnVKdilWRImSF063dAc">
+<head data-page-node-id="BqMhiuwvBRTpFEIMniSwWU">
+<meta charset="utf-8" data-page-node-id="5xlqs5dL8aIXwAXd2j6o5K">
+<meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="ih9dVLJP5SAN1FAXnnh3UQ">
+<title>雅词本 · 全流程高保真原型（全交互）</title>
+<style>
+  :root {
+    /* 与 miniprogram/app.wxss 同源（rpx ÷ 2 = px） */
+    --primary: #185fa5;
+    --primary-soft: #e6f1fb;
+    --success: #1d9e75;
+    --success-soft: #e1f5ee;
+    /* 深绿：专供「浅底上的绿字」和「绿底上的白字」。
+       --success 在 #e1f5ee 上仅 2.98:1、在白字场景 3.39:1，移动端审核判定不达 AA 4.5；
+       --success-deep 可达 4.93:1（白底绿字）/ 5.31:1（浅绿底绿字）。描边、图标仍用 --success。 */
+    --success-deep: #0f6b4f;
+    --warn: #ba7517;
+    --danger: #a32d2d;
+    --danger-soft: #fcebeb;
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --text: #1f2329;
+    --text-2: #616770;   /* 原 #646a73 在引导页渐变顶 #dcebfb 上 4.50:1，正好卡在 AA 线上（浮点误差会判不过）→ 调深到 4.70:1 */
+    /* 原 #8f959e 在白底只有 3.02:1（12px 灰字看不清，实测 57 处）。
+       调深到 #7f8691 = 3.66:1；「承载信息」的文字（hint / 音标 / 时长 / 说明）另走 --text-2（4.5:1+）。
+       ⚠️ 改这里要同步 miniprogram/app.wxss（同源 token） */
+    --text-3: #7f8691;
+    --line: #e5e6eb;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* view / text 是微信标签，浏览器当未知元素按 inline 处理，会让布局全乱 —— 显式声明 */
+  view { display: block; }
+  text { display: inline; }
+  html, body { background: #e9ebef; }
+  /* —— 移动端基础（真机同款行为） ——
+     ① 去掉 iOS 点击时的灰色高亮块（微信里没有这个）
+     ② 禁掉长按选中：小程序 <text> 默认不可选，原型也照做，否则拖动页面时会误选文字
+     ③ touch-action: manipulation 消除双击缩放的 300ms 点击延迟 */
+  html, body { -webkit-tap-highlight-color: transparent; }
+  body {
+    color: var(--text);
+    font-family: -apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 28px 16px 48px;
+    display: flex;
+    justify-content: center;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  /* 说明面板是原型自己的调试区，不是小程序内容 → 保留可选中/可复制 */
+  .panel, .panel * { -webkit-user-select: text; user-select: text; }
+
+  .stage { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+
+  /* ============ 真机框：固定视口 + 页面内独立滚动区 ============ */
+  .phone {
+    position: relative;
+    width: 375px;
+    height: 720px;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    border-radius: 26px;
+    overflow: hidden;
+    box-shadow: 0 10px 44px rgba(0,0,0,.10);
+  }
+  .nav {
+    height: 44px; flex-shrink: 0; background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    border-bottom: 1px solid var(--line); position: relative;
+  }
+  .nav .nav-title { font-size: 16px; font-weight: 600; }
+  .nav .nav-back {
+    position: absolute; left: 0; top: 0; height: 44px; width: 48px;
+    display: none; align-items: center; justify-content: center;
+    color: var(--primary); font-size: 20px; line-height: 1; cursor: pointer;
+  }
+  .nav.has-back .nav-back { display: flex; }
+
+  .body { flex: 1; position: relative; overflow: hidden; }
+
+  .screen { position: absolute; inset: 0; display: none; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  .scroll { flex: 1; overflow-y: auto; padding: 12px 12px 20px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  /* 底部固定区：主操作/导航都落在这里（右手拇指舒适区）
+     ⚠️ padding-bottom 必须带 env(safe-area-inset-bottom) 避让 iPhone Home 条
+        （浏览器里 env = 0，真机才生效；审核项 SAFE_AREA 查的就是它）
+     落 wxml 同写法：padding-bottom: calc(24rpx + env(safe-area-inset-bottom)) */
+  .bottom { flex-shrink: 0; background: #fff; border-top: 1px solid var(--line); padding: 10px 12px calc(12px + env(safe-area-inset-bottom)); box-shadow: 0 -3px 14px rgba(0,0,0,.05); }
+  .bottom.flush { padding: 0 0 env(safe-area-inset-bottom); border-top: none; box-shadow: none; }
+  .bottom.flush .tabbar { padding-bottom: 8px; }
+
+  /* ============ app.wxss 全局类 ============ */
+  .card { background: var(--surface); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; border: 1px solid var(--line); }
+  .title { font-size: 17px; font-weight: 500; }
+  .muted { color: var(--text-2); font-size: 13px; }
+  .hint { color: var(--text-2); font-size: 12px; }   /* hint 承载信息（暂缺/生成中/进度提示）→ 走 --text-2，白底 5.45:1；纯装饰灰才用 --text-3 */
+  .between { display: flex; align-items: center; justify-content: space-between; }
+  .btn { display: block; height: 44px; line-height: 44px; border-radius: 22px; text-align: center; font-size: 15px; background: var(--surface); color: var(--text); border: 1px solid var(--line); cursor: pointer; }
+  .btn.primary { background: var(--primary); color: #fff; border: none; font-weight: 500; box-shadow: 0 4px 12px rgba(24,95,165,.25); }
+  .btn.disabled { opacity: .45; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; background: var(--primary-soft); color: var(--primary); }
+
+  /* 喇叭图标：原实现是 CSS 画的三角形，而三角形在移动端语义为"播放视频"，音频场景易误读
+     热区：视觉圆仍是 30px（小号 24px），但**容器撑到 44×44** —— 实测原 30×30 / 24×24
+     共 8 处不达 iOS HIG 44px 下限。用 ::before 画圆，避免 padding 把背景圆一起撑大。
+     ⚠️ 落 wxml 用同样结构：外层 view 44×44 做热区，内层圆用嵌套 view / 伪元素画；
+        svg 须换 image（base64/云存储）或 iconfont —— wxml 不支持内联 svg */
+  .speaker { position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; color: var(--primary); transition: transform .12s; }
+  .speaker::before { content: ''; position: absolute; left: 7px; top: 7px; width: 30px; height: 30px; border-radius: 50%; background: var(--primary-soft); }
+  .speaker svg { position: relative; width: 15px; height: 15px; }
+  .speaker-sm::before { left: 10px; top: 10px; width: 24px; height: 24px; }
+  .speaker-sm svg { width: 12px; height: 12px; }
+
+  /* ============ 底部 tab 栏（主 tab 页共用） ============ */
+  .tabbar { display: flex; }
+  .tab { flex: 1; text-align: center; padding: 6px 0 2px; color: var(--text-2); cursor: pointer; }   /* 未选中态用 --text-2：#7f8691 在 11px 下只有 3.67:1，看不清 */
+  .tab.active { color: var(--primary); }
+  .tab svg { width: 20px; height: 20px; }
+  .tab-label { font-size: 12px; line-height: 1.2; }   /* 11px 在真机上偏小（审核 FONT_SMALL）；胶囊标（badge/tag）保留 11px */
+
+  /* ============ onboarding ============ */
+  /* 用户反馈「上半部分显得空」。五轮调整：
+     ① 内容块在「导航栏→底栏」之间垂直居中 → 选项也一并落到好够的位置
+     ② 该区上半部加淡蓝纵向渐变底（与首页 hero 同色系）→ 破除"灰底上飘着几个卡片"的空感
+     ③ 选项加预计时长与「推荐」标、选项下加信息条 → 信息量撑起版面
+     ④ 主操作「开始学习」移入 .bottom 固定底栏，落进右手拇指舒适区
+     ⑤ 顶部加品牌区（.ob-hero）：实测内容仅 361px 落在 601px 可视区，上下各空 122/118px；
+        品牌区补 ~120px 后留白降到两侧各 ~50px，同时回答首次用户的两个问题——
+        「这是什么」（雅词本）、「值不值得用」（2987 个核心词 · 例句带发音）
+     ⑥ 副标题拆解：原句「目标要小到不会放弃。之后可以随时修改。」把**两件不同性质的事**
+        塞进一行最低权重的灰字——前半是"选小目标的理由"（解释标题，该在选项之前），
+        后半是"选完能反悔"（是选项带来的结果，该在选项之后），位置与语义错位；
+        且「随时修改」在页面上没有任何落点，属"承诺无法兑现"。
+        拆法：理由留在标题下（13px），承诺下移到选项后的信息条并补出落点「在『我的』里」——
+        选项区只被"建议"引导，说明区只讲"选完怎样"，两条信息不再同级打架
+     ⚠️ 落 wxml 时：.page.ob 加 min-height:100vh + flex column + justify-content:center + padding-bottom(等于底栏高)；
+        .ob-btn 改 position:fixed; left/right/bottom:0 + env(safe-area-inset-bottom)；
+        .ob-hero 的内联 svg 换 iconfont / image（见 docs/tasks-ux-miniprogram.md §3.4 与 M1） */
+  .ob {
+    display: flex; flex-direction: column; justify-content: center;
+    padding-top: 24px;
+    background: linear-gradient(180deg, #dcebfb 0%, #eef5fd 34%, var(--bg) 62%);
+  }
+  /* 品牌区：居中，让蓝色 banner 有视觉主体（全页其余内容仍左对齐，此处居中是刻意的"横幅"处理）
+     ⚠️ .ob-mark 是占位图形，最终应换成小程序头像资产（见 docs/tasks-ux-miniprogram.md §3.4） */
+  .ob-hero { display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 28px; }
+  .ob-mark {
+    width: 56px; height: 56px; border-radius: 16px; background: #fff; color: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(24,95,165,.16);
+  }
+  .ob-mark svg { width: 30px; height: 30px; }
+  .ob-brand { font-size: 20px; font-weight: 500; margin-top: 12px; }
+  .ob-sub { font-size: 13px; color: var(--text-2); margin-top: 6px; }   /* 坐在最深的浅蓝渐变上：#8f959e 只有 2.49:1，改 --text-2 = 4.50:1 */
+  .ob-head { margin-bottom: 22px; }
+  .ob-title { font-size: 22px; font-weight: 500; margin-bottom: 6px; }
+  .ob-option {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
+    padding: 18px 16px; margin-bottom: 12px; cursor: pointer;
+    transition: border-color .15s, background .15s, box-shadow .15s;
+  }
+  .ob-option.active { border-color: var(--primary); background: var(--primary-soft); box-shadow: 0 3px 10px rgba(24,95,165,.12); }
+  .ob-option-main { display: flex; align-items: baseline; }
+  .ob-option-num { font-size: 26px; font-weight: 500; color: var(--primary); margin-right: 8px; }
+  .ob-option-text { font-size: 14px; color: var(--text-2); }
+  /* 预计耗时：让用户预判成本，比只有数字更有决策依据；是信息不是装饰 → --text-2（4.76:1） */
+  .ob-option-meta { font-size: 12px; color: var(--text-2); }
+  .ob-option.active .ob-option-meta { color: var(--primary); }
+  /* 「推荐」标复用全局 .tag；选中卡底色本身就是 primary-soft，故反色成白底保持可见 */
+  .ob-option .tag { margin-left: 8px; border: 1px solid #bcd9f2; }
+  .ob-option.active .tag { background: #fff; }
+  /* 信息条：低饱和淡蓝底 + 无边框，与"可点卡片"明确区分（避免看起来像第三个选项） */
+  .ob-note { margin-top: 4px; padding: 10px 14px; border-radius: 8px; background: var(--primary-soft); color: var(--text-2); font-size: 12px; line-height: 1.5; }
+  /* 信息条内两行：各讲一件事，不用分隔线（12px 灰字已足够区分） */
+  .ob-note-line + .ob-note-line { margin-top: 2px; }
+  /* .ob-btn 不再有流内上边距——它已移入固定底栏，间距由 .bottom 的 padding 决定 */
+
+  /* ============ index ============ */
+  .card.hero { background: linear-gradient(135deg, #fff 0%, var(--primary-soft) 100%); border-color: #d6e7f7; }
+  .stat { text-align: center; flex: 1; }
+  .stat .stat-num { font-size: 28px; font-weight: 700; color: var(--primary); line-height: 1.2; }
+  .stat .stat-label { color: var(--text-2); font-size: 12px; margin-top: 2px; }
+  .stat-right .stat-num { color: var(--success-deep); }   /* 28px 大数字落在浅蓝渐变上：#1d9e75 仅 2.96:1，达不到大文本 3:1 */
+  .divider { width: 1px; height: 32px; background: var(--line); }
+  .progress { height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; margin: 10px 0 6px; }
+  .progress .progress-bar { height: 100%; background: var(--primary); border-radius: 999px; transition: width .25s; }
+  .progress-hint { margin-top: 4px; }
+  /* 次级按钮同样要 ≥44px 高（原 40px —— 实测在 351px 宽的通栏按钮上仍显矮，且不达热区下限） */
+  .btn.ghost { height: 44px; line-height: 42px; border-radius: 22px; background: var(--primary-soft); color: var(--primary); border: 1px solid #cfe3f6; font-size: 14px; font-weight: 500; }
+  .btn.ghost .sup { display: inline; font-size: 12px; color: var(--text-2); }   /* 原 #6f9ac4 在浅蓝底仅 2.58:1 → --text-2 = 4.76:1 */
+  .bottom .btn.primary { margin-bottom: 8px; }
+  .bottom .btn.ghost { margin-bottom: 8px; }
+
+  /* 每日一句：静态语料按日轮换；英文用衬线体拉开与正文的层次 */
+  .quote-en { font-family: Georgia, "Times New Roman", serif; font-size: 16px; line-height: 1.75; margin: 12px 0 8px; }
+  .quote-cn { font-size: 13px; color: var(--text-2); margin-bottom: 12px; }
+  .quote-foot { display: flex; align-items: center; justify-content: space-between; }
+  .quote-foot .author { font-size: 12px; color: var(--text-2); }
+  .quote-tags { display: flex; gap: 6px; }
+  .quote-tags .tag { background: var(--success-soft); color: var(--success-deep); font-size: 11px; padding: 1px 8px; }   /* 原 10px 过小（审核 FONT_TINY）；#1d9e75 在浅绿底 2.98:1 → --success-deep */
+
+  /* ============ learn ============ */
+  .head { margin-bottom: 12px; }
+  .word-row { display: flex; align-items: center; gap: 10px; }
+  .word { font-size: 30px; font-weight: 500; line-height: 1.3; }
+  .phonetic { color: var(--text-2); font-size: 14px; margin-top: 4px; }
+  .pos { display: inline-block; margin-top: 6px; padding: 1px 7px; border-radius: 3px; background: #f1efe8; color: #5f5e5a; font-size: 11px; }
+  .meaning { font-size: 17px; font-weight: 500; margin-top: 8px; }
+  .enriching-tip { margin-top: 8px; }
+  .sec-title { font-size: 13px; font-weight: 500; color: var(--primary); margin-bottom: 8px; }
+  .sec-head { display: flex; justify-content: space-between; align-items: center; }
+  .example-en { font-size: 15px; line-height: 1.7; }
+  .example-cn { color: var(--text-2); font-size: 13px; margin-top: 4px; }
+  .root-item { display: flex; align-items: baseline; gap: 6px; padding: 6px 0; border-bottom: 1px solid #f1f2f4; }
+  .root-item:last-child { border-bottom: none; }
+  .root-part { font-size: 15px; font-weight: 500; color: var(--success-deep); }   /* 原 --success 白底仅 3.39:1 → deep 4.93:1 */
+  .root-type { font-size: 12px; color: var(--text-2); background: #f5f6f7; padding: 1px 5px; border-radius: 3px; }
+  .root-meaning { font-size: 14px; }
+  .etymology { font-size: 14px; line-height: 1.8; }
+  /* 分段进度：词的进度是离散的（6 个词），分段比连续条贴切；
+     且固定在拇指区上方 —— 滚动时进度始终可见（顶部 1/6 tag 会滚走） */
+  .seg-progress { display: flex; gap: 4px; margin-bottom: 10px; }
+  .seg-progress .seg { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
+  .seg-progress .seg.cur { background: var(--primary); opacity: .45; }
+  .seg-progress .seg.done { background: var(--primary); }
+  .learn-mark { display: flex; align-items: center; justify-content: space-between; }
+  .learn-btn-row { display: flex; gap: 8px; }
+  .learn-btn-row .btn { flex: 1; }
+
+  /* ============ practice ============ */
+  .q-type { font-size: 12px; color: var(--text-2); margin-bottom: 8px; }   /* 题干类型是信息 → --text-2 */
+  .q-stem-row { display: flex; align-items: center; gap: 10px; }
+  .q-stem { font-size: 23px; font-weight: 500; line-height: 1.4; }
+  .options { margin-top: 4px; }
+  .option { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 14px 12px; margin-bottom: 10px; cursor: pointer; }
+  .option.ok, .option.answer { border-color: var(--success); background: var(--success-soft); }
+  .option.bad { border-color: var(--danger); background: var(--danger-soft); }
+  .opt-key { width: 22px; height: 22px; border-radius: 50%; background: #f1f2f4; color: var(--text-2); font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .option.ok .opt-key, .option.answer .opt-key { background: var(--success-deep); color: #fff; }   /* 白字绿底：#1d9e75 3.39:1 → deep 4.93:1 */
+  .option.bad .opt-key { background: var(--danger); color: #fff; }
+  .opt-text { font-size: 15px; }
+  .feedback { text-align: center; font-size: 13px; margin-top: 6px; min-height: 20px; }
+  .ok-text { color: var(--success-deep); }   /* 反馈文字 13px：#1d9e75 白底 3.39:1 → deep 4.93:1 */
+  .bad-text { color: var(--danger); }
+
+  /* ============ checkin ============ */
+  .ck { text-align: center; padding: 40px 12px 24px; }
+  .ck-check { width: 70px; height: 70px; border-radius: 50%; background: var(--success-soft); margin: 0 auto 20px; position: relative; }
+  .ck-check::after { content: ''; position: absolute; left: 23px; top: 17px; width: 17px; height: 31px; border-right: 5px solid var(--success); border-bottom: 5px solid var(--success); transform: rotate(45deg); }
+  .ck-title { font-size: 22px; font-weight: 500; }
+  .ck-sub { margin-top: 6px; }
+  .ck-streak { margin-top: 32px; }
+  .ck-streak-num { font-size: 60px; font-weight: 500; color: var(--primary); line-height: 1.1; }
+  .ck-streak-label { color: var(--text-2); font-size: 13px; }
+  .ck-total { margin-top: 8px; }
+
+  /* ============ stats ============ */
+  .metrics { display: flex; gap: 8px; margin-bottom: 12px; }
+  .metric { flex: 1; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px 8px; text-align: center; }
+  .metric-num { font-size: 22px; font-weight: 500; color: var(--primary); }
+  .metric-label { font-size: 12px; color: var(--text-2); margin-top: 3px; }
+  .cal-head { font-size: 15px; font-weight: 500; margin-bottom: 12px; text-align: center; }
+  .cal-week { display: flex; }
+  .cal-week-cell { width: 14.28%; text-align: center; font-size: 12px; color: var(--text-2); padding-bottom: 6px; }
+  .cal-grid { display: flex; flex-wrap: wrap; }
+  /* 格子间留缝：原实现相邻格子热区完全贴死（0px），点日期容易点到隔壁。
+     ⚠️ 物理约束：7 列 × 44px 下限 = 308px，容器 ~315px → 缝隙最多约 1px。
+        「44px 热区」与「8px 间距」在 375 屏上不可兼得，取前者（审核 HIT_CROWD 对此网格为已知例外） */
+  .cal-cell { width: calc(14.28% - 1px); margin: 0 0.5px 2px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .cal-day { width: 32px; height: 32px; line-height: 32px; text-align: center; border-radius: 50%; font-size: 13px; transition: transform .12s; }
+  /* 已打卡：白字坐在绿底上，--success 仅 3.39:1 → 用 --success-deep（4.93:1） */
+  .cal-day.checked { background: var(--success-deep); color: #fff; }
+  .cal-day.today { border: 1px solid var(--primary); }
+  .cal-day.checked.today { color: #fff; }
+  .cal-tip { margin-top: 8px; text-align: center; }
+
+  /* ============ wrongbook ============ */
+  .wb-item { padding: 14px 16px; cursor: pointer; }
+  .wb-main { flex: 1; }
+  .wb-word { font-size: 19px; font-weight: 500; }
+  .wb-phonetic { font-size: 12px; color: var(--text-2); margin-top: 2px; }   /* 音标是信息，要看清 → --text-2 */
+  .wb-meaning { font-size: 14px; color: var(--text-2); margin-top: 4px; }
+  .wb-count { font-size: 11px; color: var(--danger); background: var(--danger-soft); padding: 1px 7px; border-radius: 999px; }
+  .wb-item .speaker { margin-left: 10px; }
+
+  /* ============ profile ============ */
+  .pf-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+  .pf-val { font-size: 15px; font-weight: 500; }
+  .pf-goals { display: flex; gap: 12px; }
+  .pf-goal { flex: 1; text-align: center; padding: 12px 0; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; cursor: pointer; }
+  .pf-goal.active { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); font-weight: 500; }
+  .pf-tip { margin-top: 8px; }
+  .pf-link { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+
+  /* ============ 说明与直达面板 ============ */
+  .panel { width: 375px; }
+  .panel-title { font-size: 12px; font-weight: 600; color: #4b5563; margin-bottom: 8px; }
+  .director { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .director button {
+    font: inherit; font-size: 12px; cursor: pointer;
+    padding: 5px 11px; border-radius: 999px;
+    border: 1px solid #cbd2da; background: #fff; color: #39414b;
+  }
+  .director button.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .director button.tool.on { background: #ba7517; border-color: #ba7517; color: #fff; }
+  .audit { font-size: 11px; font-family: ui-monospace, monospace; background: #fff; border: 1px solid #dde1e6; border-radius: 8px; padding: 8px 10px; margin-bottom: 12px; color: #39414b; line-height: 1.9; }
+  .audit .ok { color: #1d9e75; }
+  .audit .warn { color: #a32d2d; }
+  .notes { font-size: 11px; color: #5b6470; line-height: 1.85; background: #fff; border: 1px solid #dde1e6; border-radius: 10px; padding: 12px 14px; }
+  .notes b { color: #39414b; }
+  .notes code { font-family: ui-monospace, monospace; font-size: 10px; background: #f0f2f5; padding: 1px 4px; border-radius: 3px; }
+
+  /* ============ 热区自检叠层 ============ */
+  .heat { position: absolute; inset: 0; pointer-events: none; z-index: 80; display: none; }
+  .phone.heatmap .heat { display: block; }
+  .hit-box { position: absolute; border: 1.5px solid rgba(24,95,165,.85); background: rgba(24,95,165,.10); border-radius: 5px; }
+  .hit-box.small { border-color: #d14343; background: rgba(209,67,67,.13); }
+  .hit-size {
+    position: absolute; top: -13px; left: -1px;
+    background: #185fa5; color: #fff; font-size: 9px; line-height: 1;
+    padding: 2px 4px; border-radius: 3px; font-family: ui-monospace, monospace; white-space: nowrap;
+  }
+  .hit-box.small .hit-size { background: #d14343; }
+
+  /* ============ toast ============ */
+  /* 改为绝对定位在真机框内（真机语义是 fixed 贴屏幕底，两者等价）。
+     bottom 由 JS 按「当前页底部固定区高度 + 16px」动态给：
+     原实现固定 40px，而 8 个页面的底栏高 56~171px → 真机上提示会被按钮盖住（审核 TOAST_COVER 8/8）。 */
+  .toast {
+    position: absolute; left: 50%; bottom: 96px; transform: translate(-50%, 10px);
+    background: rgba(31,35,41,.93); color: #fff; font-size: 12.5px; line-height: 1.55;
+    padding: 9px 15px; border-radius: 10px; max-width: 320px; text-align: center;
+    white-space: pre-line; opacity: 0; pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease; z-index: 200;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ============ 按压反馈（移动端的"点到了"确认） ============
+     审核项 NO_PRESS_STATE：原先所有可点类都没有 :active 态，手指按下没有任何视觉变化，
+     在移动端会被读成"没反应 / 卡住了"。
+     ⚠️ 落 wxml 用 hover-class（小程序没有 :active），只有 <button> 支持原生 hover-class，
+        其余要自己加 .hover 类 + 在 js 里 touchstart/touchend 切换（详见 docs/tasks-ux-miniprogram.md） */
+  .btn, .option, .ob-option, .pf-goal, .wb-item, .tab, .cal-day, .card.pf-link, .nav-back {
+    transition: transform .12s ease, opacity .12s ease, background-color .12s ease;
+  }
+  .btn:active { transform: scale(.985); opacity: .88; }
+  .option:active, .ob-option:active, .pf-goal:active, .tab:active, .card.pf-link:active, .nav-back:active { opacity: .68; }
+  .wb-item:active { background: #f7f9fb; }
+  .cal-cell:active .cal-day { transform: scale(.9); }
+</style>
+</head>
+<body data-page-node-id="xhE5qeetOxzzYSz4knOaxT">
+<div class="stage" data-page-node-id="V42CquL9tkW3YXo9AUJbio">
+
+  <!-- ========================= 真机框 ========================= -->
+  <div class="phone" id="phone" data-page-node-id="qHBxh6scGeg6rKlLO9GHax">
+    <div class="heat" id="heat" data-page-node-id="rp9QEFeJfFVW32P2yHbzBv"></div>
+    <div class="nav" id="nav" data-page-node-id="PuucpVwnf5UbPlBXFxYMls">
+      <div class="nav-back" data-act onclick="navBack()" data-page-node-id="fm7eBjP7XKv1NhxstF9fhs">‹</div>
+      <div class="nav-title" id="navTitle" data-page-node-id="tOs8F9kGfYIMhyXCQ7tpqC">雅词本</div>
+    </div>
+
+    <div class="body" data-page-node-id="PIOvBBLvsN6TAYGcaoPk6x">
+
+      <!-- ================= ① 引导页 onboarding ================= -->
+      <section class="screen" id="s-onboarding" data-page-node-id="LACNdKGYJDwXST0Y4BzPEt">
+        <div class="scroll ob" data-page-node-id="XhAABnQqLkfIzhs9FYWQpw">
+          <!-- 品牌区：填掉顶部 ~120px 空档，并回答"这是什么 / 有多少词"
+               原 .ob-icon（靶心）已移除——品牌 mark 已占住图标锚点，两个同款白底图标堆叠会显得重复 -->
+          <div class="ob-hero">
+            <!-- ⚠️ 占位图形：落 wxml 须换 iconfont / image，且最终应换成小程序头像资产 -->
+            <div class="ob-mark">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 6.6C10.6 5.1 8.7 4.4 6.4 4.4c-1 0-1.8.1-2.4.4v13c.6-.3 1.4-.4 2.4-.4 2.3 0 4.2.7 5.6 2.2 1.4-1.5 3.3-2.2 5.6-2.2 1 0 1.8.1 2.4.4v-13c-.6-.3-1.4-.4-2.4-.4-2.3 0-4.2.7-5.6 2.2z"/>
+                <path d="M12 6.6v13"/>
+              </svg>
+            </div>
+            <div class="ob-brand">雅词本</div>
+            <div class="ob-sub">2987 个核心词 · 例句带发音</div>
+          </div>
+          <div class="ob-head" data-page-node-id="eN999PuYZ4IpucEkHBn0D1">
+            <div class="ob-title" data-page-node-id="iNgjRm6Z5XVOT1SiI8QdrE">每天背几个单词？</div>
+            <div class="muted" data-page-node-id="FCujhx6gMdJGg5YWJrFljl">目标要小到不会放弃</div>
+          </div>
+          <div class="ob-option active" data-goal="5" data-act onclick="pickGoal(this)" data-page-node-id="ixLxQ0uhxd95AG4dGcMCDy">
+            <div class="ob-option-main">
+              <div class="ob-option-num" data-page-node-id="aMSEeZSWmWrXBpD4CcUjVQ">5</div>
+              <div class="ob-option-text" data-page-node-id="rN29gALbNz3IwABUuQKi7S">个单词 / 天</div>
+              <view class="tag">推荐</view>
+            </div>
+            <div class="ob-option-meta">约 1 分钟</div>
+          </div>
+          <div class="ob-option" data-goal="10" data-act onclick="pickGoal(this)" data-page-node-id="SwRZe9kKLhNP8on8PhoD91">
+            <div class="ob-option-main">
+              <div class="ob-option-num" data-page-node-id="ztsegjkbgUv7ea248cjv94">10</div>
+              <div class="ob-option-text" data-page-node-id="Lxcbn1YrTvhUIWFNS3Abqp">个单词 / 天</div>
+            </div>
+            <div class="ob-option-meta">约 2 分钟</div>
+          </div>
+          <!-- 信息条：两条「选完之后才关心」的事实——作答流程 + 目标可改。
+               放在选项下方而非标题下方，因为它们都不是对「背几个」这个问题的解释，而是选项带来的结果。
+               ⚠️ 整条不可点：刻意不加边框 / 箭头 / 主色，否则会被读成第三个选项或按钮 -->
+          <view class="ob-note">
+            <div class="ob-note-line">背完会做几道小测，答错的词自动进错题本</div>
+            <div class="ob-note-line">之后可以随时在「我的」里修改</div>
+          </view>
+        </div>
+        <!-- 主操作固定底部区：落进右手拇指舒适区（原实现跟随内容流，主操作停在中部够着别扭） -->
+        <div class="bottom" data-page-node-id="4VToQnu12S1QJIJw9oNlLI">
+          <view class="btn primary ob-btn" data-act onclick="finishOnboarding()">开始学习</view>
+        </div>
+      </section>
+
+      <!-- ================= ② 首页 index ================= -->
+      <section class="screen" id="s-index" data-page-node-id="l5ctG239xt4AVNYzQ8Bl9D">
+        <div class="scroll" data-page-node-id="gwSJyzO057MCaT32Twxjpl">
+          <view class="card hero" data-page-node-id="DCJF0bjpGIMS0AvMn2iMJI">
+            <div class="between" data-page-node-id="B4SLlWjEwF601xZ3NehBTo">
+              <div class="stat" data-page-node-id="BCEiTtLa55vQkYAZpQ12Yk">
+                <div class="stat-num" id="iStreak" data-page-node-id="JL1dMgwmTQDonAe2oZs5Am">7</div>
+                <div class="stat-label" data-page-node-id="5flLjBQzoe3wGvpZQp5CXM">连续打卡（天）</div>
+              </div>
+              <div class="divider" data-page-node-id="6ImB7GAPE3cfP3ZMUIUEUG"></div>
+              <div class="stat stat-right" data-page-node-id="ZKwPOdUxQBSDJPxEBLbBwU">
+                <div class="stat-num" id="iTotal" data-page-node-id="XR0pTbNqQIjVlHz2BoV97V">168</div>
+                <div class="stat-label" data-page-node-id="7cN20cScSx4Ga0vLWF0iZA">累计学习（词）</div>
+              </div>
+            </div>
+          </view>
+
+          <view class="card" data-page-node-id="qqSBMkDSNUsKtzV7JgsZmX">
+            <div class="between" data-page-node-id="blCUmOYxACbjKwQx2i3H8S">
+              <div class="title" data-page-node-id="lnWPQzFMOuBGoGF9vWCx7Z">今日进度</div>
+              <div class="tag" id="iTag" data-page-node-id="2Cw9pxYHTQ6SRnk8PVhJBa">2 / 5</div>
+            </div>
+            <div class="progress" data-page-node-id="uBwoG8oNq1ZvtzuzGYKpCF"><div class="progress-bar" id="iBar" style="width:40%" data-page-node-id="9JlpRWZDiPCGi86zAkungH"></div></div>
+            <div class="hint progress-hint" id="iHint" data-page-node-id="J0xxeFjJKFEa3xUJa4mCAo">还差 3 个词完成今天的目标</div>
+          </view>
+
+          <view class="card" data-page-node-id="859BoyW5zaRG8yIaUBAmbs">
+            <div class="between" data-page-node-id="ccHbvHDHo3cXh52lkzxSY3">
+              <div class="title" data-page-node-id="ZDSk9n7wkY8Qq2zCbAielE">每日一句</div>
+              <div class="speaker" data-act data-say="It does not matter how slowly you go as long as you do not stop." onclick="speak(this)" data-page-node-id="LgiwBB9gClOsiUIuK7qmLx">
+                <svg viewBox="0 0 16 16" fill="none" data-page-node-id="sBg8ca1aKe0uLKSXsCPADJ"><path d="M8 3L4.5 6H2v4h2.5L8 13z" fill="currentColor" data-page-node-id="gDGg7foiltrXy3PAPFB73U"/><path d="M10.5 5.5c1 1 1 4 0 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" data-page-node-id="Nqwn5cva5xWc6emKvOyx7q"/><path d="M12.6 3.9c1.8 1.8 1.8 6.4 0 8.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" data-page-node-id="uLoXi4BukpTDfL6gDhLc41"/></svg>
+              </div>
+            </div>
+            <div class="quote-en" data-page-node-id="2LlYwmGcXjdiHqVxRgFJuL">It does not matter how slowly you go as long as you do not stop.</div>
+            <div class="quote-cn" data-page-node-id="Mw6TjveF1CuFAFsZLvH35r">走得慢不要紧，只要不停下。</div>
+            <div class="quote-foot" data-page-node-id="Rhj1cVGcCy2zddCRzBZyia">
+              <div class="author" data-page-node-id="fTaAanVOBDiiGEGZCETd13">— Confucius</div>
+              <div class="quote-tags" data-page-node-id="5dKm4Z2uaLspiAFBGmngnC"><span class="tag" data-page-node-id="3WWAkgvxZ14CgZeE2otCBa">毅力</span><span class="tag" data-page-node-id="0f9fW09jvEA7yFlkB9szTG">坚持</span></div>
+            </div>
+          </view>
+        </div>
+
+        <div class="bottom" data-page-node-id="QzEtZdeugLUjpbct5e44hC">
+          <view class="btn primary" data-act onclick="startLearn(false)" data-page-node-id="AigvTPkzRwdnGTDjdkdS5c">开始今日学习</view>
+          <view class="btn ghost" data-act onclick="startLearn(true)" data-page-node-id="fJ76BZQ1ZEPzuS3q669zuf">再学一组 <span class="sup" id="iExtra" data-page-node-id="1veoCvJ2M4GPwvsAKx1eXT">+5 词</span></view>
+          <div class="tabbar" data-page-node-id="1QjFG93tXnNGyKCcwCqhPr">
+            <div class="tab active" data-tab="s-index" data-act onclick="goTab('s-index')" data-page-node-id="dPlO9bcw0SpRq4mfARKWAa">
+              <svg viewBox="0 0 20 20" fill="none" data-page-node-id="I4q8IoSHQfmRF7GKgKiWZG"><path d="M3 9.5L10 4l7 5.5V16a1 1 0 01-1 1h-4v-5H8v5H4a1 1 0 01-1-1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" data-page-node-id="Gbr5CZxjI5tAq4qB0EUqoq"/></svg>
+              <div class="tab-label" data-page-node-id="xrriE1nVNaz3D5iCKFRLlR">首页</div>
+            </div>
+            <div class="tab" data-tab="s-stats" data-act onclick="goTab('s-stats')" data-page-node-id="GrnxSegKx0XM6fqrURXtK5">
+              <svg viewBox="0 0 20 20" fill="none" data-page-node-id="DzHJRJFBuiyGaxNYKEDHDv"><rect x="3" y="11" width="3" height="6" rx="1" fill="currentColor" data-page-node-id="7oS5KaNKpP5qW13JM2gt0h"/><rect x="8.5" y="7" width="3" height="10" rx="1" fill="currentColor" data-page-node-id="9yOMRwoRPQk28DScYHdGII"/><rect x="14" y="4" width="3" height="13" rx="1" fill="currentColor" data-page-node-id="M6TAQxjWgpZImBsHD0CVOC"/></svg>
+              <div class="tab-label" data-page-node-id="DDvFHP6RdWpeOevJFwnAic">统计</div>
+            </div>
+            <div class="tab" data-tab="s-wrongbook" data-act onclick="goTab('s-wrongbook')" data-page-node-id="JFTXrJiBarLl8kkYxPtB51">
+              <svg viewBox="0 0 20 20" fill="none" data-page-node-id="TvOlFEKZlSvWRARzzw4dXA"><path d="M5 3h10v14H5z" stroke="currentColor" stroke-width="1.5" data-page-node-id="RoliCY931LqEV9QR6rTifH"/><path d="M8 7h4M8 10h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" data-page-node-id="2lWHFO8MyCOcP9RMDJNRZP"/></svg>
+              <div class="tab-label" data-page-node-id="3wmQ7JDnF9jJDOxcWPL4f2">错题本</div>
+            </div>
+            <div class="tab" data-tab="s-profile" data-act onclick="goTab('s-profile')" data-page-node-id="QFk1Oor4nYpwTzjgk3CRua">
+              <svg viewBox="0 0 20 20" fill="none" data-page-node-id="NRf4vIl3I4A0ZenCUjdVRL"><circle cx="10" cy="7" r="3" stroke="currentColor" stroke-width="1.5" data-page-node-id="eEdsEYHsLDFA03fHQUBUar"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.5" data-page-node-id="VrYyg40jdcTQdk5TeCsXwE"/></svg>
+              <div class="tab-label" data-page-node-id="MauZ2sHo99y7T79KZoiCbc">我的</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= ③ 学习页 learn ================= -->
+      <section class="screen" id="s-learn" data-page-node-id="DEzweOa32oQqLjTST9DIiQ">
+        <div class="scroll" data-page-node-id="icNPrZ6xqnx0AxsL7OAjt6">
+          <view class="between head" data-page-node-id="HIIm3V8hQT2F3IZnC0phK1">
+            <view class="hint" id="lPhase" data-page-node-id="pbg9qeB2UAF67sxdgLpB0F">今日新词</view>
+            <view class="tag" id="lTag" data-page-node-id="b4kkAl8gfsVA6yvGKZRosr">1 / 6</view>
+          </view>
+
+          <view class="card" data-page-node-id="q1shARFpGCxizR8e4L20XN">
+            <view class="word-row" data-page-node-id="zjsvMSjDV5OXjkD416RfO5">
+              <text class="word" id="lWord" data-page-node-id="m53b018qGTpZkPHHBsSYmr">abandon</text>
+              <view class="speaker" id="lSpeaker" data-act onclick="speakWord()" data-page-node-id="eZB12WmqNmW7EBwzc80h5b">
+                <svg viewBox="0 0 16 16" fill="none" data-page-node-id="lB2dhwPd8EyEdrTMkcQ6Mw"><path d="M8 3L4.5 6H2v4h2.5L8 13z" fill="currentColor" data-page-node-id="azkySZz1lrN1Ai0bBQO1li"/><path d="M10.5 5.5c1 1 1 4 0 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" data-page-node-id="NE5423MBUpyI0Nm1sxXkN4"/><path d="M12.6 3.9c1.8 1.8 1.8 6.4 0 8.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" data-page-node-id="Pj9hGFcF4r3EqZTQfM66xf"/></svg>
+              </view>
+            </view>
+            <view class="phonetic" id="lPhonetic" data-page-node-id="R4Lg26TOHjQihQrKRQazUp">/əˈbændən/</view>
+            <view class="pos" id="lPos" data-page-node-id="jgnvuxaOOgnqdmwV3bMC5Z">v.</view>
+            <view class="meaning" id="lMeaning" data-page-node-id="PwpMtVf1BrSlQKHTfm23yt">放弃；抛弃</view>
+            <view class="hint enriching-tip" id="lEnrichTip" style="display:none" data-page-node-id="rlhXCY1yjDWvTCYMNHZyTl">扩展内容生成中，稍后自动补全</view>
+          </view>
+
+          <view class="card" id="lExCard" data-page-node-id="bfVbdeOc8ElNggcczSIBNK"></view>
+          <view class="card" id="lRootCard" data-page-node-id="VTjju2xyciAHxxOIZReMR3"></view>
+          <view class="card" id="lEtymCard" data-page-node-id="aS1wYvGnwUEnevuwVo56n6"></view>
+        </div>
+
+        <div class="bottom" data-page-node-id="vW5vVDWavuX6Gh83mKAEZ6">
+          <div class="seg-progress" id="lSegs" data-page-node-id="DHICojfCZkhF7B8TCCaRqr"></div>
+          <view class="btn primary" id="lNext" data-act onclick="learnNext()" data-page-node-id="ALDTEyZAAo1V775UXEa2I7">下一个</view>
+        </div>
+      </section>
+
+      <!-- ================= ④ 练习页 practice ================= -->
+      <section class="screen" id="s-practice" data-page-node-id="RHSsOXlZGON0eeg6HZavQu">
+        <div class="scroll" data-page-node-id="Gq2cNJaFbnoBNjJ2uJcP0W">
+          <view class="between head" data-page-node-id="gLWXHrmN9P6X8zngsKPugD">
+            <view class="tag" id="pPhase" data-page-node-id="1GrWg6IgMphHGZK65mRqwR">今日练习</view>
+            <view class="hint" id="pProgress" data-page-node-id="cxVizqiLDeUKl4PBcoPAFC">1 / 4</view>
+          </view>
+
+          <view class="card" data-page-node-id="RHEDRmXvnsLsUB6oS2EuiJ">
+            <view class="q-type" id="qType" data-page-node-id="GimTX7hpkeuVqrCxGEAV3z">选出正确的中文释义</view>
+            <view class="q-stem-row" data-page-node-id="YjmVPrbxEojvIJVQG1d29H">
+              <text class="q-stem" id="qStem" data-page-node-id="sYR5XVA43VXxENrPNJNYuZ">abandon</text>
+              <view class="speaker" id="qSpeaker" data-act onclick="speakStem()" data-page-node-id="fr0g83oR5KBjoOJVQuKCis">
+                <svg viewBox="0 0 16 16" fill="none" data-page-node-id="zkqjqsWNQdpPEHQHlf5zmR"><path d="M8 3L4.5 6H2v4h2.5L8 13z" fill="currentColor" data-page-node-id="9wCRrk3Rj23YIGNrrFVBVX"/><path d="M10.5 5.5c1 1 1 4 0 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" data-page-node-id="uqUzcTAMXnwvcWsFL4jjNU"/><path d="M12.6 3.9c1.8 1.8 1.8 6.4 0 8.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" data-page-node-id="ovRxAS6Uz3NHREDFGIcZAL"/></svg>
+              </view>
+            </view>
+            <view class="phonetic" id="qPhonetic" data-page-node-id="W5LXfTvKL33HkqPEUO6lSi">/əˈbændən/</view>
+          </view>
+
+          <view class="options" id="qOptions" data-page-node-id="4q88m3kE7cimT36E0948mt"></view>
+          <div class="feedback" id="qFeedback" data-page-node-id="1RkDJ9TxkGFBA9XQ9c6DFi"></div>
+        </div>
+
+        <div class="bottom" data-page-node-id="ScKtlzOQEK7p4NK8uidm1l">
+          <view class="btn primary disabled" id="pNext" data-act onclick="practiceNext()" data-page-node-id="D0ArOuW1xGqW5ZL33mEvtS">下一题</view>
+        </div>
+      </section>
+
+      <!-- ================= ⑤ 打卡页 checkin ================= -->
+      <section class="screen" id="s-checkin" data-page-node-id="MDOmffdQEwbdz20momOBwq">
+        <div class="scroll" data-page-node-id="Ao5WMfprcUT14z1ExLQ0LT">
+          <div class="ck" data-page-node-id="mTXhrEoADTXeESkwQM31Tr">
+            <div class="ck-check" data-page-node-id="3wwGi9rpi25nlqCreDCxBq"></div>
+            <div class="ck-title" data-page-node-id="zBhaNxs8ZtErKh8UcSVDCu">打卡成功</div>
+            <div class="ck-sub muted" id="ckSub" data-page-node-id="gqLG4A46QiEnA5sMEzIbfF">今天学了 5 个单词</div>
+            <div class="ck-streak" data-page-node-id="lp6UJIJ4eNkxTDnuwUlVyr">
+              <div class="ck-streak-num" id="ckStreak" data-page-node-id="gaoDbKixsg2Ku957HHDe1x">8</div>
+              <div class="ck-streak-label" data-page-node-id="VOajEn7ckT0lVJtvukBdWn">连续打卡（天）</div>
+            </div>
+            <div class="ck-total hint" id="ckTotal" data-page-node-id="lpAAlVaAQZcuniplUhc0OY">累计学习 173 个单词</div>
+          </div>
+        </div>
+        <div class="bottom" data-page-node-id="s16KWnQCqn2zlLSfrheYrq">
+          <view class="btn primary" data-act onclick="goIndex()" data-page-node-id="tmh0N6RXTgQPBoJxGgVTlA">回到首页</view>
+          <view class="btn" style="margin-top:10px" data-act onclick="shareFriend()" data-page-node-id="qu3vHsD1u7lLsqSMskIoVg">分享给朋友</view>
+        </div>
+      </section>
+
+      <!-- ================= ⑥ 统计页 stats ================= -->
+      <section class="screen" id="s-stats" data-page-node-id="29wH9GWL4oz4A692LCiUCo">
+        <div class="scroll" data-page-node-id="mxYDurQ8WZnfNQbp4VeiCW">
+          <div class="metrics" data-page-node-id="vY51IwZ6f8QXAlYZABEtqX">
+            <div class="metric" data-page-node-id="oCzbWp1PWRcfHb3av8c8Ih"><div class="metric-num" id="mStreak" data-page-node-id="lXHx7DDbvKeIaOfl9wZ4LG">7</div><div class="metric-label" data-page-node-id="VQT96bFGSh8uQWbMXuGTr7">连续天数</div></div>
+            <div class="metric" data-page-node-id="5HkNGDDX8yKztRbHzqUM7Y"><div class="metric-num" id="mCheckins" data-page-node-id="bcF2zrtNOAlb8wNXvFYCv4">23</div><div class="metric-label" data-page-node-id="baecXGAuUUpnnChfevFnMh">累计打卡</div></div>
+            <div class="metric" data-page-node-id="GsT5yehhAjMPqOtxkASi2X"><div class="metric-num" id="mTotal" data-page-node-id="bYC6hSQKE54ASEGcVAVIoW">168</div><div class="metric-label" data-page-node-id="78YMRGyKqYY71bbGHZTl8z">累计单词</div></div>
+          </div>
+          <view class="card" data-page-node-id="L6kAWihZP7e65V8fYPuEEr">
+            <div class="cal-head" data-page-node-id="dklQgbfmdkvsHvKVDGoraB">2026 年 9 月</div>
+            <div class="cal-week" data-page-node-id="XnGqS6RnUaQHD25qkD8sCN">
+              <div class="cal-week-cell" data-page-node-id="ZPCsKdSLbbUhya7jIvw5XF">日</div><div class="cal-week-cell" data-page-node-id="82C7lNECnAkiflJQp2GmH1">一</div><div class="cal-week-cell" data-page-node-id="HxYxngHPQDVknMs6BNGiSX">二</div>
+              <div class="cal-week-cell" data-page-node-id="xrtSoIAPnzy2W2SvBb4GxS">三</div><div class="cal-week-cell" data-page-node-id="FxCtEYjK3m1v2Juq7vQV4B">四</div><div class="cal-week-cell" data-page-node-id="HutPeF9u6kNmxC2vQVDIXH">五</div>
+              <div class="cal-week-cell" data-page-node-id="1CoHQpZL4Uw6X1rwAJp5Fx">六</div>
+            </div>
+            <div class="cal-grid" id="calGrid" data-page-node-id="fmTDRePRILKxYhOElFrnuR"></div>
+            <div class="hint cal-tip" data-page-node-id="2tHJwPH9tKjSajxbNyHIcv">绿色为已打卡日期 · 点任意日期看详情</div>
+          </view>
+        </div>
+        <div class="bottom flush" id="tabbar-s-stats" data-page-node-id="DIjlI7kM7HYfFQERjNgots"></div>
+      </section>
+
+      <!-- ================= ⑦ 错题本 wrongbook ================= -->
+      <section class="screen" id="s-wrongbook" data-page-node-id="56uEk20bErCbi0bJN5SamD">
+        <div class="scroll" id="wbList" data-page-node-id="yy3iaL9WaSzHCwt2aGg1fg"></div>
+        <div class="bottom flush" data-page-node-id="gPkBHWUIlS7WvLnEf1n5bP">
+          <div style="padding:0 12px 8px" data-page-node-id="Dem8OW4brHBdBRFq8RdIoa">
+            <view class="btn primary" data-act onclick="practiceWrong()" data-page-node-id="26ZotIE9BaHYefcYZ8cPCO">再练一遍</view>
+          </div>
+          <div id="tabbar-s-wrongbook" data-page-node-id="mdVzX7lIfMcwhMPrB2AxF3"></div>
+        </div>
+      </section>
+
+      <!-- ================= ⑧ 我的 profile ================= -->
+      <section class="screen" id="s-profile" data-page-node-id="tHh0lkCq4Le5g2xzkZ0Oev">
+        <div class="scroll" data-page-node-id="fdCASmeP8bJQ964wfEWRCJ">
+          <view class="card" data-page-node-id="Lz2vd7cfbzPL4I8ZUH6n4O">
+            <div class="pf-row" data-page-node-id="Pxm2r0HKmuxn1YyCfxfR5o"><div class="muted" data-page-node-id="Cir34zzO0sWi8BtJkcHkgl">连续打卡</div><div class="pf-val" id="fStreak" data-page-node-id="nrIPMJK7L2sKbrWsLG7ZZt">7 天</div></div>
+            <div class="pf-row" data-page-node-id="5bkS6gDrnajodEU3fu4Ubi"><div class="muted" data-page-node-id="20KVvGD2onYTEFeG2UH5BT">累计学习</div><div class="pf-val" id="fTotal" data-page-node-id="dcFfXEu1FTh3aZ1okVnBEr">168 词</div></div>
+            <div class="pf-row" data-page-node-id="LVprBKL6YG4JdGKhk2mnfK"><div class="muted" data-page-node-id="tfPVMtA3WkxyDlCt58H0Pp">每日目标</div><div class="pf-val" id="fGoal" data-page-node-id="ernzAYgT0yAbQWKhq7QEcg">5 个</div></div>
+          </view>
+          <view class="card" data-page-node-id="Sl9kDEsAeoUkEpOFPnlxy1">
+            <div class="sec-title" data-page-node-id="zGAj3dtI3UCn4kWFswmXjn">每日学习量</div>
+            <div class="pf-goals" data-page-node-id="P7A4Jq8mQX3GaPTKTdBuu9">
+              <div class="pf-goal active" data-goal="5" data-act onclick="pickGoal2(this)" data-page-node-id="ZYTpK5pLReAp8d7q3sD3Ma">5 个</div>
+              <div class="pf-goal" data-goal="10" data-act onclick="pickGoal2(this)" data-page-node-id="x82h3GMLtp8w3NW10pFjz5">10 个</div>
+            </div>
+            <div class="hint pf-tip" data-page-node-id="74nd5glaz95248GeCFdraA">修改后从下一个自然日生效</div>
+          </view>
+          <view class="card pf-link" data-act onclick="goTab('s-stats')" data-page-node-id="DxcKwIP1TtEVaYXkZzYsBG">
+            <div data-page-node-id="Qb9tQOZPgtsdw5v7KeqMJ3">学习统计</div><div class="hint" data-page-node-id="81v1qHYiirh8IfNlpz2GPe">打卡日历 ›</div>
+          </view>
+          <view class="card pf-link" data-act onclick="goTab('s-wrongbook')" data-page-node-id="Ykk7Pjreq8NXIPvdz0GVvL">
+            <div data-page-node-id="7amJALK1qEFBEmAA5DJgbL">错题本</div><div class="hint" id="fWrong" data-page-node-id="oUUSiJsxUiCFZqbW6VPGiW">3 个易错词 ›</div>
+          </view>
+          <view class="card pf-link" data-act onclick="toast('雅词本 v0.1.0 · 原型\n词表 ECDICT（MIT）· 音频 Kokoro-82M 本地生成')" data-page-node-id="nrXdvoAH9RY67qn23sv0w9">
+            <div data-page-node-id="jrUB0ay0tmMrTa7R58FWZj">关于</div><div class="hint" data-page-node-id="rN0JeOib0UEZf4nVtWqoPB">v0.1.0 ›</div>
+          </view>
+        </div>
+        <div class="bottom flush" id="tabbar-s-profile" data-page-node-id="1Ar1PLxmdeGi2VCDasQkUn"></div>
+      </section>
+
+    </div>
+
+    <!-- toast 放在真机框内（绝对定位在底部固定区之上）；真机对应 position:fixed 贴屏幕底 -->
+    <div class="toast" id="toast" data-page-node-id="oAzrSuqTSNJkoPWW8DiuVB"></div>
+  </div>
+
+  <!-- ========================= 说明面板 ========================= -->
+  <div class="panel" data-page-node-id="H3SSRksuDIoFwBoFUGdDm5">
+    <div class="panel-title" data-page-node-id="VgdnPkxtiEpIzc0L9nC5Vd">页面直达（原型每处可点，底部按钮能走通全流程）</div>
+    <div class="director" id="director" data-page-node-id="cePTj94YmhBoXouNAXiCzK"></div>
+    <div class="director" data-page-node-id="uPVNhNSqvpQHIsFigDtw1D">
+      <button id="hitToggle" class="tool" onclick="toggleHeatmap()" data-page-node-id="RbRMHKGlQQgc3WmEEe2OrI">显示热区</button>
+      <button class="tool" onclick="resetAll()" data-page-node-id="vOCCj3QLFHGdvzA2TeRApz">重置数据</button>
+      <button class="tool" onclick="sceneDone()">今日已完成态</button>
+    </div>
+    <div class="audit" id="audit" data-page-node-id="TX5zkOb3L58IxDBDup0kFl"></div>
+    <div class="notes" data-page-node-id="b4rJuRidkstyVvponMA1Hs">
+      <b data-page-node-id="B4dbaDycee3UDulwwv5Wnd">全交互</b>：每个按钮都有响应，无死点。学习页 6 个词逐词推进（含"暂缺 / 生成中"两个边界态），练习页四态可玩，打卡后首页进度自动补满。<br data-page-node-id="AXCVVHesTTSDHwKntkYREV">
+      <b data-page-node-id="cVfvnT5srPRl0ONaqCFCsA">完整流程</b>：引导 → 首页 → 学习 → 练习 → 打卡 → 回首页
+      <div class="flow" data-page-node-id="qjnZ5V8imaZIbHnbEkdKe2">onboarding → index → learn → practice → checkin → index</div>
+      <div class="flow" data-page-node-id="5Gn2Te0STQiLHZvEwfHNUn">index ⇄ stats / wrongbook / profile（tab 互跳）</div>
+      <b data-page-node-id="Vp4WMtrOwybdWsEWc4gtwC">热区自检</b>：点「显示热区」→ 蓝框=可点区域，<span style="color:#a32d2d" data-page-node-id="2XId7fg5RRW6GYa5KJX2wo">红框=小于 44px 触控下限</span>，标注实际像素尺寸。<br data-page-node-id="VSMVfuduerHsyaKPov3l8q">
+      <b data-page-node-id="LvUYOQi7hbaOzabhfyPu5a">单页速览</b>：地址栏会实时反映当前页，如 <code data-page-node-id="fgPadjXayZzzor10rPknbu">#learn</code>、<code data-page-node-id="JxDPZgIkDlYwxhIXV3FI7q">#stats</code>（不含 s- 前缀）。重载后停在原页；也可直接改锚点跳页。<br data-page-node-id="V7KrMaruEWx8jUMOVmkADN">
+      <b data-page-node-id="XKoAkPNqhzN4qMcJzZKoKl">⚠️ 图标</b>：这里是内联 <code data-page-node-id="5LhJUsRwXvvo7yX1MuTBSe">&lt;svg&gt;</code>，<b data-page-node-id="SdeXLdQg7dF0mzU1jF8luJ">wxml 不支持</b>，落地须换 <code data-page-node-id="YjCnl8K4q8d6CjuDe5RH27">&lt;image&gt;</code>（base64/云存储）或 iconfont。<br data-page-node-id="2blAWJrrVAv5HWllJ4SVYI">
+      <b data-page-node-id="dFL4Cr6ufei4AiSoZBBmBo">⚠️ 文案风险</b>：<code data-page-node-id="m1UbAIIGz8ZECFEHpviwtf">app.json</code> 的 <code data-page-node-id="Cigtoe2KtxQWCBg9uyI5G5">navigationBarTitleText</code> 仍是「雅思词汇」，与本原型「雅词本」不一致，且「雅思」是他人在先商标。
+    </div>
+  </div>
+
+</div>
+<script>
+/* ================================================================== */
+/* 路由                                                                */
+/* ================================================================== */
+// 导航栏标题：逐条对齐各页真实 page.json 的 navigationBarTitleText
+// （index 的「雅思词汇」按 M0 合规项改为「雅词本」；learn/onboarding 此前原型误用「雅词本」，已纠正）
+const TITLES = {
+  's-onboarding': '设置学习计划',
+  's-index': '雅词本',
+  's-learn': '学习单词',
+  's-practice': '练习',
+  's-checkin': '今日打卡',
+  's-stats': '学习统计',
+  's-wrongbook': '错题本',
+  's-profile': '我的'
+}
+// 二级页（有返回箭头、无 tab 栏）
+const SECOND_LEVEL = ['s-learn', 's-practice', 's-checkin']
+// 返回层级：与真实小程序的页面栈一致
+const BACK = { 's-learn': 's-index', 's-practice': 's-learn', 's-checkin': 's-index' }
+
+let current = 's-onboarding'
+
+function render() {
+  document.querySelectorAll('.screen').forEach((el) => {
+    el.classList.toggle('active', el.id === current)
+  })
+  document.getElementById('navTitle').textContent = TITLES[current] || '雅词本'
+  document.getElementById('nav').classList.toggle('has-back', SECOND_LEVEL.includes(current))
+  // tab 高亮同步
+  document.querySelectorAll('.tab').forEach((t) => {
+    t.classList.toggle('active', t.dataset.tab === current)
+  })
+  // 直达按钮高亮
+  document.querySelectorAll('.director button[data-to]').forEach((b) => {
+    b.classList.toggle('on', b.dataset.to === current)
+  })
+  if (heatOn) refreshHeatmap()
+}
+
+// id → 地址栏锚点。不带 s- 前缀，避免与元素 id 同名触发浏览器原生滚动
+const SLUG = {}
+Object.keys(TITLES).forEach((id) => { SLUG[id] = id.replace(/^s-/, '') })
+
+// 把当前页写进地址栏：① 外部（人/工具）能读到"在哪一页" ② 重载后停在原页，不被弹回引导页
+function syncHash() {
+  const next = '#' + SLUG[current]
+  if (location.hash === next) return
+  try {
+    history.replaceState(null, '', next)          // http / 预览面板环境
+  } catch (e) {
+    try { location.replace(next) } catch (e2) { /* 极端受限环境：放弃同步，不影响原型 */ }
+  }
+}
+
+function go(id) {
+  current = id
+  render()
+  syncHash()
+  if (!heatOn) renderAudit()
+  const sc = document.querySelector('#' + id + ' .scroll')
+  if (sc) sc.scrollTop = 0
+  if (heatOn) setTimeout(refreshHeatmap, 0)
+}
+
+function goTab(id) { go(id) }
+function goIndex() { go('s-index') }
+
+// 进页前先把该页状态准备好，避免看到上一轮的残留
+function openPage(id) {
+  if (id === 's-learn') renderLearn()
+  if (id === 's-practice') resetPractice('practice')
+  if (id === 's-checkin') document.getElementById('ckStreak').textContent = state.streak + 1
+  go(id)
+}
+
+// 返回：按页面栈层级，而不是一律回首页
+function navBack() {
+  const to = BACK[current]
+  if (to) go(to)
+}
+
+/* ================================================================== */
+/* 全局状态：让原型闭环自洽（学完→进度满；打卡→连续天数+1）             */
+/* ================================================================== */
+const INIT = {
+  streak: 7,
+  totalLearned: 168,
+  learnedToday: 2,
+  dailyGoal: 5,
+  totalCheckins: 23,
+  // 今天是否已打卡：与 checkedDates（日历格子）分开存。
+  // 真机的"是否已打卡"由 checkins 集合按 _openid+date 判定，与日历渲染解耦，
+  // 原型照此建模，避免"日历已绿但页面还在邀请打卡"的状态自相矛盾。
+  checkedToday: false,
+  checkedDates: ['2026-09-23', '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27', '2026-09-28', '2026-09-29']
+}
+let state = JSON.parse(JSON.stringify(INIT))
+
+function resetAll() {
+  state = JSON.parse(JSON.stringify(INIT))
+  learnIdx = 0
+  learnExtra = false
+  renderIndex(); renderLearn(); renderStats(); renderWrongbook(); renderProfile()
+  toast('已重置为初始数据')
+}
+
+/* ================================================================== */
+/* toast：任何点击都有可见反馈（避免"点了没反应"的假死感）              */
+/* ================================================================== */
+// toast 落点动态避让「当前页底部固定区」——固定 40px 会被底栏按钮盖住（审核 TOAST_COVER 8/8）
+let toastTimer = null
+function toast(msg) {
+  const t = document.getElementById('toast')
+  const screen = document.getElementById(current)
+  const bar = screen && screen.querySelector('.bottom')
+  const barH = bar ? bar.getBoundingClientRect().height : 0
+  t.style.bottom = (barH + 16) + 'px'
+  t.textContent = msg
+  t.classList.add('show')
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200)
+}
+
+/* 连点保护：320ms 内的重复触发丢弃。
+   实测（审核 RAPID_FIRE）连点两次「下一个」会静默跳过一个词、连点打卡会重复累加连续天数。
+   真机同样存在：bindtap 连点没有节流，需要在按钮上做 loading / 节流态。 */
+let lastAct = 0
+function guard() {
+  const now = Date.now()
+  if (now - lastAct < 320) return false
+  lastAct = now
+  return true
+}
+
+/* ================================================================== */
+/* 发音：原型用浏览器 TTS 真发声（真机走 Kokoro 预生成 mp3）             */
+/* ================================================================== */
+const SPEAK_OK = typeof window !== 'undefined' && !!window.speechSynthesis
+let warnedSpeak = false
+
+function speak(el, text) {
+  const say = text || el.dataset.say || ''
+  el.style.transform = 'scale(.88)'
+  setTimeout(() => { el.style.transform = '' }, 130)
+  if (!say) { toast('这个词暂无发音文本'); return }
+  if (!SPEAK_OK) {
+    if (!warnedSpeak) { warnedSpeak = true; toast('当前环境不支持浏览器发声\n真机上会播放 Kokoro 预生成的音频') }
+    return
+  }
+  try {
+    window.speechSynthesis.cancel()
+    const u = new SpeechSynthesisUtterance(say)
+    u.lang = 'en-US'
+    u.rate = 0.9
+    window.speechSynthesis.speak(u)
+  } catch (e) {
+    toast('发音失败：' + e.message)
+  }
+}
+function speakWord() { speak(document.getElementById('lSpeaker'), LEARN_WORDS[learnIdx].word) }
+function speakStem() {
+  const q = QUESTIONS[qi]
+  const text = q.type === 'cn_option' ? q.stem : q.options[q.answer]
+  speak(document.getElementById('qSpeaker'), text)
+}
+
+/* ================================================================== */
+/* 引导页 / 我的页：目标选择                                            */
+/* ================================================================== */
+function pickGoal(el) {
+  el.parentNode.querySelectorAll('.ob-option').forEach((o) => o.classList.remove('active'))
+  el.classList.add('active')
+  toast('已选：每天 ' + el.dataset.goal + ' 个单词')
+}
+
+function finishOnboarding() {
+  if (!guard()) return
+  const el = document.querySelector('.ob-option.active')
+  const goal = el ? Number(el.dataset.goal) : 5
+  state.dailyGoal = goal
+  state.learnedToday = Math.min(state.learnedToday, goal)
+  renderIndex(); renderProfile()
+  toast('目标已设为每天 ' + goal + ' 个\n开始今天的学习吧')
+  goIndex()
+}
+
+function pickGoal2(el) {
+  el.parentNode.querySelectorAll('.pf-goal').forEach((o) => o.classList.remove('active'))
+  el.classList.add('active')
+  const goal = Number(el.dataset.goal)
+  state.dailyGoal = goal
+  renderIndex(); renderProfile()
+  toast('每日学习量已改为 ' + goal + ' 个\n从下一个自然日生效')
+}
+
+/* 边界态入口：今日已完成（对应 mock 的 MOCK_SCENE=done / 真机 buildCta 的 review 态）。
+   原型原先只有 happy path，这个态没有入口 → 属审核项「边界态可达」。 */
+function sceneDone() {
+  state.learnedToday = state.dailyGoal
+  renderIndex()
+  go('s-index')
+  toast('边界态：今日目标已完成\n真机首页 CTA 会切到复习态（index.js buildCta 四态）')
+}
+
+/* ================================================================== */
+/* 首页                                                                */
+/* ================================================================== */
+function renderIndex() {
+  document.getElementById('iStreak').textContent = state.streak
+  document.getElementById('iTotal').textContent = state.totalLearned
+  const done = Math.min(state.learnedToday, state.dailyGoal)
+  document.getElementById('iTag').textContent = done + ' / ' + state.dailyGoal
+  document.getElementById('iBar').style.width = Math.round((done / state.dailyGoal) * 100) + '%'
+  const rest = state.dailyGoal - done
+  document.getElementById('iHint').textContent = rest > 0
+    ? '还差 ' + rest + ' 个词完成今天的目标'
+    : '今天的目标已完成，可以再学一组'
+  document.getElementById('iExtra').textContent = '+' + state.dailyGoal + ' 词'
+  // CTA 文案随进度切换：已完成时语义变「复习」（对应 index.js buildCta 的 review 态）
+  const cta = document.querySelector('#s-index .bottom .btn.primary')
+  if (cta) cta.textContent = rest > 0 ? '开始今日学习' : '今日已完成 · 去复习错题'
+}
+
+function startLearn(extra) {
+  if (!guard()) return
+  // 目标已完成 → 主操作指向复习，而不是重复「开始学习」（对应真机 CTA 的 review 态）
+  if (!extra && state.learnedToday >= state.dailyGoal) {
+    go('s-wrongbook')
+    toast('今日目标已完成\n去错题本过一遍更稳')
+    return
+  }
+  learnExtra = !!extra
+  learnIdx = 0
+  go('s-learn')
+  renderLearn()
+  if (extra) toast('加练一组：' + state.dailyGoal + ' 个词\n（后端 start_extra_round 待实现 · 任务单 T1）')
+}
+
+/* ================================================================== */
+/* 学习页：6 个词逐词推进（与 learn.js 的 next() 一致）                 */
+/* ================================================================== */
+// 与 miniprogram/utils/mock.js 的 WORDS 一致（含两个边界态）
+const LEARN_WORDS = [
+  {
+    word: 'abandon', phonetic: '/əˈbændən/', pos: 'v.', meaning: '放弃；抛弃',
+    example: { en: 'They had to abandon the car in the snow.', cn: '他们不得不把车丢在雪地里。' },
+    roots: [{ part: 'ab-', type: '前缀', meaning: '离开' }, { part: 'bandon', type: '词根', meaning: '控制；命令' }],
+    etymology: '源自古法语 abandoner，由 a-（去）+ bandon（控制权）构成，字面义为"交出控制权"，引申为放弃。',
+    enriching: false
+  },
+  {
+    word: 'abstract', phonetic: '/ˈæbstrækt/', pos: 'adj.', meaning: '抽象的；摘要',
+    example: { en: 'Beauty is an abstract concept.', cn: '美是一个抽象的概念。' },
+    roots: [{ part: 'abs-', type: '前缀', meaning: '脱离' }, { part: 'tract', type: '词根', meaning: '拉；抽' }],
+    etymology: '源自拉丁语 abstractus，abs-（脱离）+ trahere（拉），本义为"从中抽出"，引申为抽象。',
+    enriching: false
+  },
+  {
+    word: 'academic', phonetic: '/ˌækəˈdemɪk/', pos: 'adj.', meaning: '学术的；学院的',
+    example: { en: 'The academic year starts in September.', cn: '学年从九月开始。' },
+    roots: [{ part: 'academ-', type: '词根', meaning: '学院（源自 Akademos 园）' }, { part: '-ic', type: '后缀', meaning: '…的' }],
+    etymology: '源自古希腊 Akademos 园，柏拉图在此讲学，后泛指学术机构与学术研究。',
+    enriching: false
+  },
+  {
+    word: 'acknowledge', phonetic: '/əkˈnɒlɪdʒ/', pos: 'v.', meaning: '承认；答谢',
+    example: { en: 'She refused to acknowledge her mistake.', cn: '她拒绝承认自己的错误。' },
+    roots: [{ part: 'ac-', type: '前缀', meaning: '向' }, { part: 'knowledge', type: '词根', meaning: '认知' }],
+    etymology: 'ac-（向）+ knowledge（知识），意为"使之进入认知"，即承认、确认。',
+    enriching: false
+  },
+  {
+    // 边界态①：扩展内容暂缺
+    word: 'accommodate', phonetic: '/əˈkɒmədeɪt/', pos: 'v.', meaning: '容纳；适应',
+    example: null, roots: [], etymology: '', enriching: false
+  },
+  {
+    // 边界态②：扩展内容生成中
+    word: 'ambiguous', phonetic: '/æmˈbɪɡjuəs/', pos: 'adj.', meaning: '模棱两可的',
+    example: null, roots: [], etymology: '', enriching: true
+  }
+]
+
+const SPK_LG = '<svg viewBox="0 0 16 16" fill="none"><path d="M8 3L4.5 6H2v4h2.5L8 13z" fill="currentColor"/><path d="M10.5 5.5c1 1 1 4 0 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12.6 3.9c1.8 1.8 1.8 6.4 0 8.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>'
+
+let learnIdx = 0
+let learnExtra = false
+
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function renderLearn() {
+  const w = LEARN_WORDS[learnIdx]
+  const n = LEARN_WORDS.length
+
+  document.getElementById('lPhase').textContent = learnExtra ? '加练新词' : '今日新词'
+  document.getElementById('lTag').textContent = (learnIdx + 1) + ' / ' + n
+  document.getElementById('lWord').textContent = w.word
+  document.getElementById('lPhonetic').textContent = w.phonetic || ''
+  const pos = document.getElementById('lPos')
+  pos.textContent = w.pos || ''
+  pos.style.display = w.pos ? 'inline-block' : 'none'
+  document.getElementById('lMeaning').textContent = w.meaning || ''
+  document.getElementById('lEnrichTip').style.display = w.enriching ? 'block' : 'none'
+
+  // 例句卡（含"暂缺"态）
+  const ex = document.getElementById('lExCard')
+  if (w.example) {
+    ex.innerHTML =
+      '<view class="sec-title sec-head"><text>例句</text>' +
+      '<view class="speaker speaker-sm" data-act data-say="' + esc(w.example.en) + '" onclick="speak(this)">' + SPK_LG + '</view></view>' +
+      '<view class="example-en">' + esc(w.example.en) + '</view>' +
+      '<view class="example-cn">' + esc(w.example.cn) + '</view>'
+  } else {
+    ex.innerHTML = '<view class="sec-title">例句</view><view class="hint">暂缺</view>'
+  }
+
+  // 词根卡（含"暂缺"态）
+  const rc = document.getElementById('lRootCard')
+  if (w.roots && w.roots.length) {
+    rc.innerHTML = '<view class="sec-title">词根拆解</view>' + w.roots.map((r) =>
+      '<view class="root-item"><text class="root-part">' + esc(r.part) + '</text>' +
+      '<text class="root-type">' + esc(r.type) + '</text>' +
+      '<text class="root-meaning">' + esc(r.meaning) + '</text></view>'
+    ).join('')
+  } else {
+    rc.innerHTML = '<view class="sec-title">词根拆解</view><view class="hint">暂缺</view>'
+  }
+
+  // 演变卡（含"暂缺"态）
+  const ec = document.getElementById('lEtymCard')
+  ec.innerHTML = '<view class="sec-title">单词演变</view>' +
+    (w.etymology ? '<view class="etymology">' + esc(w.etymology) + '</view>' : '<view class="hint">暂缺</view>')
+
+  // 分段进度
+  let segs = ''
+  for (let i = 0; i < n; i++) {
+    segs += '<div class="seg' + (i < learnIdx ? ' done' : i === learnIdx ? ' cur' : '') + '"></div>'
+  }
+  document.getElementById('lSegs').innerHTML = segs
+
+  // 主按钮：最后一个词变"开始练习"（与 learn.wxml 的 isLast 一致）
+  document.getElementById('lNext').textContent = learnIdx === n - 1 ? '开始练习' : '下一个'
+}
+
+function learnNext() {
+  if (!guard()) return   // 连点会静默跳过单词
+  const n = LEARN_WORDS.length
+  if (learnIdx === n - 1) {
+    // 学完今日组 → 今日进度补满 → 进练习
+    if (!learnExtra) {
+      state.learnedToday = state.dailyGoal
+      renderIndex()
+    }
+    // 加练要走 extra 阶段（对应后端 build_questions/submit_answer 的 round 参数），
+    // 否则加练答题会被当成主练习写入 —— 后端文档 C4 的静默破坏点
+    resetPractice(learnExtra ? 'extra' : 'practice')
+    go('s-practice')
+    toast(learnExtra ? '加练组学完，进入练习' : '今日新词学完，进入练习')
+  } else {
+    learnIdx++
+    renderLearn()
+    const sc = document.querySelector('#s-learn .scroll')
+    if (sc) sc.scrollTop = 0
+  }
+}
+
+/* ================================================================== */
+/* 练习页：四态交互（答错可重选，与 practice.js 一致）                  */
+/* ================================================================== */
+// 与 mock.js 的 QUESTIONS / ANSWERS 一致
+const QUESTIONS = [
+  { type: 'cn_option', stem: 'abandon', phonetic: '/əˈbændən/', options: ['放弃；抛弃', '抽象的', '学术的', '模棱两可的'], answer: 0 },
+  { type: 'en_option', stem: '学术的；学院的', phonetic: '', options: ['abstract', 'academic', 'abandon', 'acknowledge'], answer: 1 },
+  { type: 'cn_option', stem: 'acknowledge', phonetic: '/əkˈnɒlɪdʒ/', options: ['适应', '承认；答谢', '放弃', '抽象的'], answer: 1 },
+  { type: 'cn_option', stem: 'abstract', phonetic: '/ˈæbstrækt/', options: ['学术的', '抽象的；摘要', '承认', '模棱两可的'], answer: 1 }
+]
+const OPT_KEYS = ['A', 'B', 'C', 'D']
+let qi = 0
+let answered = false   // 是否已答对（答对即本题结束）
+let wrongPicked = {}   // 已答错的选项索引：答错可继续重选，与 practice.js 一致
+let practicePhase = 'practice'
+
+function resetPractice(phase) {
+  qi = 0
+  practicePhase = phase || 'practice'
+  const label = { practice: '今日练习', wrong: '错题重练', extra: '加练练习' }[practicePhase] || '今日练习'
+  document.getElementById('pPhase').textContent = label
+  renderQuestion()
+}
+
+function renderQuestion() {
+  const q = QUESTIONS[qi]
+  document.getElementById('pProgress').textContent = (qi + 1) + ' / ' + QUESTIONS.length
+  document.getElementById('qType').textContent =
+    q.type === 'cn_option' ? '选出正确的中文释义' : '选出正确的英文单词'
+  document.getElementById('qStem').textContent = q.stem
+  const ph = document.getElementById('qPhonetic')
+  ph.textContent = q.phonetic
+  ph.style.display = q.phonetic ? 'block' : 'none'
+  document.getElementById('qSpeaker').style.display = q.phonetic ? 'flex' : 'none'
+  document.getElementById('qFeedback').textContent = ''
+  document.getElementById('qFeedback').className = 'feedback'
+  const next = document.getElementById('pNext')
+  next.textContent = qi === QUESTIONS.length - 1 ? '完成练习' : '下一题'
+  next.classList.add('disabled')   // 未答对不放行（与真实交互一致）
+  answered = false
+  wrongPicked = {}
+
+  const box = document.getElementById('qOptions')
+  box.innerHTML = ''
+  q.options.forEach((text, i) => {
+    const el = document.createElement('div')
+    el.className = 'option'
+    el.setAttribute('data-act', '')
+    el.innerHTML = '<div class="opt-key">' + OPT_KEYS[i] + '</div><div class="opt-text"></div>'
+    el.querySelector('.opt-text').textContent = text
+    el.onclick = () => choose(i, el)
+    box.appendChild(el)
+  })
+  if (heatOn) setTimeout(refreshHeatmap, 0)
+}
+
+function choose(i, el) {
+  if (answered) { toast('本题已答对，点下方「' + (qi === QUESTIONS.length - 1 ? '完成练习' : '下一题') + '」继续'); return }
+  if (wrongPicked[i]) { toast('这个选项已经选过了，换一个试试'); return }
+  const q = QUESTIONS[qi]
+  const fb = document.getElementById('qFeedback')
+
+  if (i === q.answer) {
+    el.classList.add('ok')
+    answered = true
+    fb.textContent = '答对了'
+    fb.className = 'feedback ok-text'
+    document.getElementById('pNext').classList.remove('disabled')
+  } else {
+    wrongPicked[i] = true
+    el.classList.add('bad')
+    // 答错时揭示正确答案（真实逻辑：revealed 且非所选 → 标 answer）
+    document.querySelectorAll('#qOptions .option')[q.answer].classList.add('answer')
+    fb.textContent = '答错了，正确答案已标出，请重新选择'
+    fb.className = 'feedback bad-text'
+  }
+}
+
+function practiceNext() {
+  if (!guard()) return   // 连点保护（真机同样需要按钮节流/loading）
+  if (!answered) { toast('先答对这一题才能继续'); return }   // 未答对不放行
+  const last = qi === QUESTIONS.length - 1
+  if (last) {
+    if (practicePhase === 'practice') doCheckin()
+    else { go('s-wrongbook'); toast(practicePhase === 'wrong' ? '错题重练完成' : '加练练习完成') }
+    return
+  }
+  qi++
+  renderQuestion()
+  const sc = document.querySelector('#s-practice .scroll')
+  if (sc) sc.scrollTop = 0
+}
+
+function practiceWrong() {
+  resetPractice('wrong')
+  go('s-practice')
+  toast('错题重练：' + WRONG_WORDS.length + ' 个词（复用 build_questions 的 round 参数）')
+}
+
+/* ================================================================== */
+/* 打卡页：由状态推导，与 finish_checkin 返回一致                       */
+/* ================================================================== */
+function doCheckin() {
+  if (!guard()) return   // 连点节流：320ms 内的重复触发直接丢弃（真机也要防）
+  // ⚠️ 真机是幂等的：cloudfunctions/finish_checkin/index.js:42-46 按 _openid+date 查重，
+  //    当天重复提交直接返回 { already:true }，不累加 streak / totalLearned。
+  //    原型必须复刻这一点——否则会表演出一个真机上根本不存在的「重复打卡」缺陷。
+  if (state.checkedToday) { toast('今天已经打过卡了'); return }
+  state.checkedToday = true
+  state.streak += 1
+  const learned = state.dailyGoal
+  state.totalLearned += learned
+  state.totalCheckins += 1
+  state.checkedDates.push('2026-09-29')
+
+  document.getElementById('ckSub').textContent = '今天学了 ' + learned + ' 个单词'
+  document.getElementById('ckStreak').textContent = state.streak
+  document.getElementById('ckTotal').textContent = '累计学习 ' + state.totalLearned + ' 个单词'
+  renderIndex(); renderStats(); renderProfile()
+  go('s-checkin')
+}
+
+function shareFriend() {
+  toast('已唤起微信分享卡片（原型模拟）\n标题：雅词本｜连续打卡 ' + state.streak + ' 天\n配图：打卡成就卡（待设计）')
+}
+
+/* ================================================================== */
+/* 统计页：日历（复刻 stats.js 算法）+ 日期可点                        */
+/* ================================================================== */
+function renderStats() {
+  document.getElementById('mStreak').textContent = state.streak
+  document.getElementById('mCheckins').textContent = state.totalCheckins
+  document.getElementById('mTotal').textContent = state.totalLearned
+  buildCalendar()
+}
+
+function buildCalendar() {
+  const checked = {}
+  state.checkedDates.forEach((d) => { checked[d] = true })
+
+  const y = 2026, m = 8 // 8 = 9 月（0-based）
+  const firstWeekday = new Date(y, m, 1).getDay() // 2026-09-01 是周二 → 2
+  const days = new Date(y, m + 1, 0).getDate()    // 30
+  const todayStr = '2026-09-29'
+
+  let html = ''
+  for (let i = 0; i < firstWeekday; i++) html += '<div class="cal-cell"></div>'
+  for (let d = 1; d <= days; d++) {
+    const ds = y + '-09-' + String(d).padStart(2, '0')
+    const cls = ['cal-day']
+    const on = !!checked[ds]
+    const isToday = ds === todayStr
+    if (on) cls.push('checked')
+    if (isToday) cls.push('today')
+    html += '<div class="cal-cell" data-act onclick="pickDay(\'' + ds + '\',' + on + ',' + isToday + ')">' +
+      '<div class="' + cls.join(' ') + '">' + d + '</div></div>'
+  }
+  document.getElementById('calGrid').innerHTML = html
+}
+
+function pickDay(ds, on, isToday) {
+  toast(ds + (isToday ? ' · 今天' : '') + '\n' + (on ? '已打卡 · 学了当日目标词数' : '未打卡'))
+}
+
+/* ================================================================== */
+/* 错题本                                                              */
+/* ================================================================== */
+// ⚠️ wrongCount 是原型新增字段建议：显示错误次数，用户能判断优先级
+const WRONG_WORDS = [
+  { word: 'acknowledge', phonetic: '/əkˈnɒlɪdʒ/', meaning: '承认；答谢', wrongCount: 2 },
+  { word: 'ambiguous', phonetic: '/æmˈbɪɡjuəs/', meaning: '模棱两可的', wrongCount: 2 },
+  { word: 'accommodate', phonetic: '/əˈkɒmədeɪt/', meaning: '容纳；适应', wrongCount: 1 }
+]
+
+function renderWrongbook() {
+  const box = document.getElementById('wbList')
+  box.innerHTML = WRONG_WORDS.map((w, i) =>
+    '<view class="card wb-item" data-act onclick="openWrong(' + i + ')">' +
+      '<div class="between">' +
+        '<div class="wb-main">' +
+          '<div class="between"><div class="wb-word">' + esc(w.word) + '</div>' +
+          '<div class="wb-count">错 ' + w.wrongCount + ' 次</div></div>' +
+          '<div class="wb-phonetic">' + esc(w.phonetic) + '</div>' +
+          '<div class="wb-meaning">' + esc(w.meaning) + '</div>' +
+        '</div>' +
+        '<div class="speaker" data-act data-say="' + esc(w.word) + '" onclick="event.stopPropagation();speak(this)">' + SPK_LG + '</div>' +
+      '</div>' +
+    '</view>'
+  ).join('')
+  document.getElementById('fWrong').textContent = WRONG_WORDS.length + ' 个易错词 ›'
+}
+
+function openWrong(i) {
+  const w = WRONG_WORDS[i]
+  speak(document.querySelectorAll('#wbList .speaker')[i], w.word)
+  toast(w.word + ' ' + w.phonetic + '\n' + w.meaning + ' · 累计错 ' + w.wrongCount + ' 次')
+}
+
+/* ================================================================== */
+/* 我的                                                                */
+/* ================================================================== */
+function renderProfile() {
+  document.getElementById('fStreak').textContent = state.streak + ' 天'
+  document.getElementById('fTotal').textContent = state.totalLearned + ' 词'
+  document.getElementById('fGoal').textContent = state.dailyGoal + ' 个'
+  document.querySelectorAll('.pf-goal').forEach((g) => {
+    g.classList.toggle('active', Number(g.dataset.goal) === state.dailyGoal)
+  })
+}
+
+/* ================================================================== */
+/* 主 tab 页共用底部 tab 栏（复用首页那份）                             */
+/* ================================================================== */
+function buildTabBars() {
+  const src = document.querySelector('#s-index .tabbar')
+  ;['s-stats', 's-wrongbook', 's-profile'].forEach((id) => {
+    const slot = document.getElementById('tabbar-' + id)
+    if (!slot) return
+    slot.appendChild(src.cloneNode(true))
+  })
+  // 重新绑定克隆出来的 tab 点击
+  document.querySelectorAll('.tabbar .tab').forEach((t) => {
+    t.onclick = () => goTab(t.dataset.tab)
+  })
+}
+
+/* ================================================================== */
+/* 热区自检：显示所有可点区域 + 标出小于 44px 的触控热区               */
+/* ================================================================== */
+const MIN_HIT = 44
+let heatOn = false
+
+function toggleHeatmap() {
+  heatOn = !heatOn
+  document.getElementById('phone').classList.toggle('heatmap', heatOn)
+  const btn = document.getElementById('hitToggle')
+  btn.classList.toggle('on', heatOn)
+  btn.textContent = heatOn ? '隐藏热区' : '显示热区'
+  refreshHeatmap()
+  if (heatOn) toast('蓝框 = 可点区域　红框 = 小于 ' + MIN_HIT + 'px\n数字为实际像素尺寸（rpx ÷ 2）')
+}
+
+function refreshHeatmap() {
+  const overlay = document.getElementById('heat')
+  overlay.innerHTML = ''
+  if (!heatOn) { renderAudit(); return }
+
+  const phoneRect = document.getElementById('phone').getBoundingClientRect()
+  // 取全部可点元素，靠尺寸过滤掉隐藏屏里的（隐藏元素 rect 全为 0）
+  const els = document.querySelectorAll('.phone [data-act]')
+  let small = 0
+
+  els.forEach((el) => {
+    const r = el.getBoundingClientRect()
+    const w = Math.round(r.width), h = Math.round(r.height)
+    if (w < 4 || h < 4) return          // 隐藏元素跳过
+    const isSmall = Math.min(w, h) < MIN_HIT
+    if (isSmall) small++
+    const box = document.createElement('div')
+    box.className = 'hit-box' + (isSmall ? ' small' : '')
+    box.style.left = (r.left - phoneRect.left) + 'px'
+    box.style.top = (r.top - phoneRect.top) + 'px'
+    box.style.width = w + 'px'
+    box.style.height = h + 'px'
+    box.innerHTML = '<span class="hit-size">' + w + '×' + h + '</span>'
+    overlay.appendChild(box)
+  })
+  renderAudit(small)
+}
+
+/* ================================================================== */
+/* 接线自检：所有可点元素是否都绑了事件（证明"没有死按钮"）            */
+/* ================================================================== */
+function renderAudit(smallCount) {
+  const els = [].slice.call(document.querySelectorAll('.phone [data-act]'))
+  const dead = els.filter((el) => !el.onclick && !el.getAttribute('onclick'))
+  const total = els.length
+
+  const idx = PAGES.findIndex((p) => p[0] === current)
+  const label = idx >= 0 ? PAGES[idx][1] : current
+
+  let html = ''
+  html += '<div>当前页：<b>' + label + '</b> &nbsp;<code>#' + SLUG[current] + '</code></div>'
+  html += '<div>' + (dead.length === 0 ? '<span class="ok">✓</span>' : '<span class="warn">✗</span>') +
+    ' 可点元素接线：' + (total - dead.length) + ' / ' + total + '</div>'
+  html += '<div>' + (total - dead.length === total ? '<span class="ok">✓</span>' : '<span class="warn">✗</span>') +
+    ' 死按钮：' + dead.length + (dead.length ? '（' + dead.slice(0, 3).map((d) => d.className || d.id).join(', ') + '）' : '') + '</div>'
+  if (heatOn) {
+    html += '<div>' + (smallCount ? '<span class="warn">⚠</span>' : '<span class="ok">✓</span>') +
+      ' 当前页热区：' + smallCount + ' 个小于 ' + MIN_HIT + 'px</div>'
+  } else {
+    html += '<div><span class="ok">·</span> 点「显示热区」检查触控尺寸</div>'
+  }
+  document.getElementById('audit').innerHTML = html
+}
+
+/* ================================================================== */
+/* 页面直达按钮                                                        */
+/* ================================================================== */
+const PAGES = [
+  ['s-onboarding', '① 引导'],
+  ['s-index', '② 首页'],
+  ['s-learn', '③ 学习'],
+  ['s-practice', '④ 练习'],
+  ['s-checkin', '⑤ 打卡'],
+  ['s-stats', '⑥ 统计'],
+  ['s-wrongbook', '⑦ 错题本'],
+  ['s-profile', '⑧ 我的']
+]
+function buildDirector() {
+  const box = document.getElementById('director')
+  PAGES.forEach(([id, label]) => {
+    const b = document.createElement('button')
+    b.textContent = label
+    b.dataset.to = id
+    b.onclick = () => openPage(id)
+    box.appendChild(b)
+  })
+}
+
+/* ================================================================== */
+/* init                                                                */
+/* ================================================================== */
+renderIndex()
+renderLearn()
+renderStats()
+renderWrongbook()
+renderProfile()
+buildTabBars()
+buildDirector()
+resetPractice('practice')
+renderAudit()
+
+// 支持 #index / #learn 这类锚点直达单页（方便单独调某一页，也方便截图复核）
+// ⚠️ 锚点不带 s- 前缀：若与元素 id 同名会触发浏览器原生滚动，把导航栏顶出视口
+const hash = (location.hash || '').replace(/^#/, '')
+if (hash && TITLES['s-' + hash]) openPage('s-' + hash)
+else render()
+window.scrollTo(0, 0)
+
+// 滚动时热区叠层要跟着重算（绝对定位在真机框坐标系里）
+document.querySelectorAll('.scroll').forEach((s) => {
+  s.addEventListener('scroll', () => { if (heatOn) refreshHeatmap() })
+})
+</script>
+</body>
+</html>

@@ -1,3 +1,8 @@
+/* M8：底栏高 16 + 88 + 8 + 88 + 24 = 224rpx → 内容区留 240rpx，避免累计数字被遮 */
+.page {
+  padding-bottom: 240rpx;
+}
+
 .ck {
   text-align: center;
   padding: 96rpx 24rpx 64rpx;
@@ -7,11 +12,12 @@
   width: 140rpx;
   height: 140rpx;
   border-radius: 50%;
-  background: #e1f5ee;
+  background: var(--success-soft);
   margin: 0 auto 40rpx;
   position: relative;
 }
 
+/* 对勾是图形（非文字），用 --success */
 .ck-check::after {
   content: '';
   position: absolute;
@@ -19,8 +25,8 @@
   top: 34rpx;
   width: 34rpx;
   height: 62rpx;
-  border-right: 10rpx solid #1d9e75;
-  border-bottom: 10rpx solid #1d9e75;
+  border-right: 10rpx solid var(--success);
+  border-bottom: 10rpx solid var(--success);
   transform: rotate(45deg);
 }
 
@@ -40,12 +46,12 @@
 .ck-streak-num {
   font-size: 120rpx;
   font-weight: 500;
-  color: #185fa5;
+  color: var(--primary);
   line-height: 1.1;
 }
 
 .ck-streak-label {
-  color: #646a73;
+  color: var(--text-2);
   font-size: 26rpx;
 }
 
@@ -53,14 +59,21 @@
   margin-top: 16rpx;
 }
 
-.btn.primary {
-  margin-top: 32rpx;
+/* 底栏内主按钮与分享之间的间距（原来靠 .btn.primary 的 margin-top，已随底栏改造移除） */
+.bottombar .btn.primary {
+  margin-bottom: 8rpx;
 }
 
-/* 分享按钮：button 组件自带默认样式，这里重置后与 .btn 外观保持一致 */
+/* M8 分享按钮降权：button 组件自带默认样式，这里重置成"文字链接"外观。
+   保留 height:88rpx（热区下限 44px），只压掉填充/描边/字重 */
 .share-btn {
-  margin-top: 24rpx;
+  height: 88rpx;
+  line-height: 88rpx;
   padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-size: 28rpx;
   font-weight: normal;
 }
 

@@ -1,7 +1,7 @@
 # 部署与上线步骤（从零到可用）
 
 > 本文是**唯一权威的部署清单**，按顺序执行即可跑通。`README.md` 是上手概览，细节以本文为准。
-> 整条链路分两段：**云端（微信开发者工具里部署 15 个云函数）** 与 **本地（生成词表与音频、初始化数据）**。
+> 整条链路分两段：**云端（微信开发者工具里部署 18 个云函数）** 与 **本地（生成词表与音频、初始化数据）**。
 > 数据初始化已完全本地化（`init_cloud.py` / `seed_cloud.py` 走云开发 HTTP API），
 > 只剩**集合权限**要手工点一次。
 
@@ -27,9 +27,9 @@
 
 | 位置 | 必做 |
 |---|---|
-| **全部 15 个云函数** | 逐个重新「上传并部署：云端安装依赖」。`audio_cache` 与 `seed_audio` 有实质改动（例句分支 + 正则放宽），其余为依赖版本与超时声明统一 |
+| **全部 18 个云函数** | **一条命令搞定**：`python3 scripts/deploy_functions.py --all`（需先开「服务端口」，见 4.1）。或按界面逐个「上传并部署：云端安装依赖」。`audio_cache` 与 `seed_audio` 有实质改动（例句分支 + 正则放宽），其余为依赖版本与超时声明统一；**加练（`start_extra_round` / `finish_extra_round`）与错题本「已掌握」（`dismiss_wrong`）为新增函数，旧环境必须补部署**。⚠️ `finish_extra_round` 后来又加了「加练计入累计学习」，**若你已部署过加练版本，需再传一次**（漏传的表现：加练完成后首页「累计学习」数字不涨）。⚠️ `dismiss_wrong` 依赖 `stats` 同步更新（错题查询加了 `mastered` 过滤），**两个必须一起部署**，只部署一个会导致「点了已掌握、列表里还在」或反之 |
 | **词表 + 数据** | 旧词表按**字母序**、新词表按**词频序**，两套 `seq` 语义不同，必须清空重导：`python scripts/seed_cloud.py --apply --reset`（脚本会先自动备份到 `build/backup/`）。⚠️ 不带 `--reset` 跑只会把新词**追加**在旧词后面，出词顺序全乱 |
-| **云存储音频** | **无需重传**。`audio_cache` 与云存储 `audio/` 不参与重置，重跑 `seed_cloud.py` 会按 `(text, type)` 自动跳过已缓存的音频 |
+| **云存储音频** | **无需重传**。`audio_cache` 与云存储 `audio/` 不参与重置，重跑 `seed_cloud.py` 会按 `(text, type)` 自动跳过已缓存的音频。⚠️ **但老环境缺「每日一句」的 12 句音频**（`audio_cache` 只有 200 条 = 100 单词 + 100 例句），需按 **7.5 节**补跑一次，否则首页喇叭点了没声音、也无提示 |
 | **小程序前端** | 重新编译上传（`app.js` / `config.js` / `utils/*` / `pages/learn/*` 均有改动；包体已从 970KB 降到约 164KB） |
 | **环境变量** | 若曾轮换过 DeepSeek Key（旧 Key 暴露在历史代码中），需到 `enrich_word` → 配置 → 环境变量更新 `DEEPSEEK_API_KEY`；改动代码不会覆盖环境变量，**漏改则单词卡退化为只显示词表基础字段** |
 | **数据表** | 已建过则不必重跑。用 `python scripts/init_cloud.py`（只读体检）核对集合与索引是否齐全，缺了再 `--apply` |
@@ -97,34 +97,76 @@ openssl rand -hex 24
 `init_db` 入参：`{"_token":"wrong"}`。逐个函数打一遍即可确认。
 
 > **本地也能自查（不用翻控制台）**：`.env` 里已写 `ADMIN_TOKEN` 时，用 HTTP API 调 `init_db` 即可 ——
-> `POST /tcb/invokecloudfunction?access_token=<token>&env=<ENV_ID>&name=init_db`，
-> body 传 `{"_token":"<本地同一个值>","mode":"preview"}`。
+> `POST /tcb/invokecloudfunction?access_token=<token>&name=init_db`，
+> body 传 `{"env":"<ENV_ID>","_token":"<本地同一个值>","mode":"preview"}`。
 > 返回 `{"code":0,"data":{"ready":true,"collections":{...}}}` = **云端 token 与本地一致 + 7 个集合齐备**，一次验两件事。
 > 反之若回 `INVALID_ADMIN_TOKEN`，说明两边值不一样。
+>
+> ⚠️ **入参格式（踩过坑，别照抄网上的 `data` 写法）**：事件字段要**平铺在 body 顶层**。
+> 写成 `{"env":…,"data":{…}}`（无论 `data` 传对象还是 JSON 字符串）函数都收不到字段 ——
+> 表现是函数内 `event.text` 之类的取值为空，返回它自己的「缺参数」错误（如音频函数回
+> `{"code":-1,"message":"missing text"}`），而外层 `errcode` 仍是 **0**，极易误判成「函数有 bug」。
+> 另外**用不需要入参的函数（`stats` / `today_flow`）试格式会得到假阳性**：它们随便什么 body 都正常返回。
 
 ---
 
-## 4. 部署云函数（共 15 个）
+## 4. 部署云函数（共 18 个）
+
+### 4.1 推荐：一条命令（`scripts/deploy_functions.py`）
+
+```bash
+python3 scripts/deploy_functions.py              # 只部署「改动过的」（默认）
+python3 scripts/deploy_functions.py --all        # 全部 18 个
+python3 scripts/deploy_functions.py --names stats dismiss_wrong
+python3 scripts/deploy_functions.py --dry-run    # 先看要传哪些，不动云端
+```
+
+脚本内部走开发者工具自带的 CLI，`--remote-npm-install` 等价于界面上的「云端安装依赖」。
+「改动过」＝ 三者的并集（宁多勿漏）：① `git status` 里的未提交改动与未跟踪新目录
+② 文件 mtime 比 `build/.deploy-state.json` 记录的上次部署时间新 ③ state 里没记录过的
+（基线不存在时不启用 ②，避免首次运行退化成「全部」）。
+部署成功后写入 state，供下次做增量。
+
+> ⚠️ **前置：开发者工具 → 设置 → 安全设置 → 打开「服务端口」**，且 IDE 保持运行。
+> CLI 靠它与 IDE 通信，**不打开会静默卡死**（实测 3 分钟无任何输出，最终被系统杀掉），
+> 既不报错也不提示，极易误判成「CLI 不能用」。脚本对此有超时兜底并会直接告诉你这一步。
+
+> 💡 **为什么该用 `-r`（云端安装依赖）而不是连 `node_modules` 一起传**：
+> 本项目 `enrich_word` / `seed_words` / `start_extra_round` / `finish_extra_round`
+> 四个目录各带了约 80MB 本地 `node_modules`（`cloudfunctions/` 合计 322MB），
+> 那是早期为绕开 `-504002` 手工拷进去的。加了 `-r` 后这四个只传几十 KB，
+> 依赖由云端按 `package.json` 安装 —— 前提是每个函数的三件套齐全（`check_miniprogram.js` 会查）。
+> 需要连本地依赖一起传时（云端装不上依赖的兜底）加 `--local-deps`。
+
+### 4.2 等价备选：界面逐个点
 
 对 `cloudfunctions/` 下**每一个**目录：右键 → **上传并部署：云端安装依赖**（不要选「上传所有文件」，否则依赖不装）。
 
-> **批量替代**（省掉手点 15 次）：开发者工具自带 CLI，装在该路径下
-> `/Applications/wechatwebdevtools.app/Contents/MacOS/cli`。`--remote-npm-install` 等价于「云端安装依赖」：
->
-> ```bash
-> CLI=/Applications/wechatwebdevtools.app/Contents/MacOS/cli
-> "$CLI" cloud functions deploy --project /Users/lijinlong/Projects/ielts-vocab \
->   --env cloud1-d3g7gz4uo668f8faa --remote-npm-install \
->   --names user_profile home_summary today_flow start_new_words word_card \
->           build_questions submit_answer finish_checkin stats audio_cache \
->           enrich_word seed_words seed_audio reset_words init_db
-> ```
->
-> ⚠️ **前置：开发者工具 → 设置 → 安全设置 → 打开「服务端口」**。CLI 靠它与 IDE 通信，**不打开会静默卡死**（实测跑 3 分钟无任何输出，最终被系统杀掉），既不报错也不提示，很容易误判成「CLI 不能用」。
->
-> 首次运行会自动拉起开发者工具，需先登录。核对结果：`"$CLI" cloud functions list --env <ENV_ID>`（`--env` 是**必填**参数，漏了只会打印帮助不报错）。
->
-> 云函数**没有 HTTP API**（试 `/tcb/getfunctionlist` 报 `40066 invalid url`），所以列表与部署只能走 IDE 界面或这个 CLI，无法脚本化 —— 这也是本项目唯一没被「本地一键」覆盖的环节。
+> ⚠️ **每个云函数目录必须齐三件**：`index.js` + `config.json` + `package.json`。
+> 漏 `package.json` 时「云端安装依赖」无从可装，函数能上传成功但**一调用就报**
+> `Cannot find module 'wx-server-sdk'`（`errcode: -504002`）——看起来像代码 bug，其实是缺依赖声明。
+> `package.json` 里必须含 `"dependencies": { "wx-server-sdk": "~2.6.3" }`，与其余 16 个函数保持一致。
+> 一键核对：`node scripts/check_miniprogram.js`（第 ⑤ 项会逐个列出缺件）。
+
+### 4.3 直接用 CLI（不用脚本）
+
+`CLI=/Applications/wechatwebdevtools.app/Contents/MacOS/cli`，手动指定函数名：
+
+```bash
+"$CLI" cloud functions deploy --project /Users/lijinlong/Projects/ielts-vocab \
+  --env cloud1-d3g7gz4uo668f8faa --remote-npm-install \
+  --names user_profile home_summary today_flow start_new_words word_card \
+          build_questions submit_answer finish_checkin stats audio_cache \
+          start_extra_round finish_extra_round dismiss_wrong \
+          enrich_word seed_words seed_audio reset_words init_db
+```
+
+> `--names` 是 array 类型，要放**最后**，否则会吞掉紧随其后的参数。
+> 核对结果：`"$CLI" cloud functions list --env <ENV_ID>`（`--env` 是**必填**，漏了只会打印帮助不报错）。
+
+> 云函数**没有 HTTP API**（试 `/tcb/getfunctionlist` 报 `40066 invalid url`），所以列表与部署只能走 IDE 界面或这个 CLI。
+> 「批量部署」可以脚本化（上面 4.1），但**首次开启服务端口**这一步只能在图形界面里点。
+
 
 | # | 云函数 | 作用 | 调用方 | 超时 |
 |---|---|---|---|---|
@@ -138,11 +180,14 @@ openssl rand -hex 24
 | 8 | `finish_checkin` | 打卡（幂等） | 前端 | 30s |
 | 9 | `stats` | 统计 + 错题 | 前端 | 30s |
 | 10 | `audio_cache` | 音频读缓存 | 前端 | 20s |
-| 11 | `enrich_word` | AI 内容补全（含定时触发器） | `word_card` 服务端调用 + 定时 | 30s |
-| 12 | `seed_words` | 词表导入 | 本地脚本（备选：控制台） | 60s |
-| 13 | `seed_audio` | 音频入库 + 点亮 `audioReady` | 本地脚本（备选：控制台） | 60s |
-| 14 | `reset_words` | 词库重置（破坏性） | 本地脚本（备选：控制台） | 60s |
-| 15 | `init_db` | 数据表初始化（建集合） | 本地脚本（备选：控制台） | 60s |
+| 11 | `start_extra_round` | 发起加练「再学一组」（幂等，需当日已打卡） | 前端 | 30s |
+| 12 | `finish_extra_round` | 结算加练组（推进游标 + 计入累计学习；不动 streak / checkins / stage） | 前端 | 30s |
+| 13 | `enrich_word` | AI 内容补全（含定时触发器） | `word_card` 服务端调用 + 定时 | 30s |
+| 14 | `seed_words` | 词表导入 | 本地脚本（备选：控制台） | 60s |
+| 15 | `seed_audio` | 音频入库 + 点亮 `audioReady` | 本地脚本（备选：控制台） | 60s |
+| 16 | `reset_words` | 词库重置（破坏性） | 本地脚本（备选：控制台） | 60s |
+| 17 | `init_db` | 数据表初始化（建集合） | 本地脚本（备选：控制台） | 60s |
+| 18 | `dismiss_wrong` | 错题本「已掌握」：给 `records` 打 `mastered` 标 | 前端 | 10s |
 
 **部署后核对两件事**（控制台 → 云函数 → 配置）：
 
@@ -392,6 +437,28 @@ python scripts/seed_cloud.py --apply
 > 例句音频**不点亮 `audioReady`**（不参与出词）；`audio_cache` 对例句**只查库不兜底**。
 > ⚠️ 用 `force: true` 重新生成 AI 内容会让例句文本变化、旧音频失效，需重跑 ②~④。
 
+### 7.5 每日一句音频（12 句）
+
+首页「每日一句」的喇叭走的是**和例句一样的链路**（`playSentence` → `audio_cache` `kind:'sentence'`），
+所以这 12 句同样必须**预先入库**。**漏做这一步的症状是「点喇叭没声音，而且没有任何提示」**
+（`audio_cache` 查不到 → 返回 `NOT_PRESEEDED` → `playSentence` 静默跳过）。
+
+```bash
+# ① quotes.js → 例句脚本能吃的 JSON（quotes.js 恒为唯一数据源）
+python scripts/quotes_to_examples.py
+
+# ② 合成整句音频 → build/quote_audio/us/s_{hash}.mp3（12 句约 216KB，CPU 约 7s）
+python scripts/gen_sentence_audio.py --examples assets/examples/quotes-12.json \
+    --outdir build/quote_audio --types us
+
+# ③ 上传 + 写 audio_cache（默认只体检，--apply 才动云端）
+python scripts/seed_quote_audio.py
+python scripts/seed_quote_audio.py --apply
+```
+
+> 这一步**不走 `seed_audio` 云函数，也不需要 `ADMIN_TOKEN`** —— 直接走云开发 HTTP API 上传云存储并写库。
+> ⚠️ 改了 `utils/quotes.js` 里的句子，必须重跑 ①②③（音频以整句文本为 key，改一个字旧音频即失效）。
+
 ---
 
 ## 8. 编译预览与验收
@@ -412,8 +479,8 @@ python scripts/seed_cloud.py --apply
 
 | 位置 | 期望 |
 |---|---|
-| 云开发 → 存储 | `audio/2/` 下有对应 mp3（例句为 `s_*.mp3`） |
-| 云开发 → 数据库 → `audio_cache` | 200 条（100 单词 + 100 例句），`source = preseed` |
+| 云开发 → 存储 | `audio/2/` 下有对应 mp3（例句与每日一句为 `s_*.mp3`） |
+| 云开发 → 数据库 → `audio_cache` | 212 条（100 单词 + 100 例句 + 12 每日一句），`source = preseed` |
 | 云开发 → 数据库 → `words` | `audioReady = true` 的词 = 100，`seq` 从 1 起连续 |
 
 `python scripts/seed_cloud.py` 体检输出的「复查」段会把这些数直接打出来；
@@ -426,6 +493,7 @@ python scripts/seed_cloud.py --apply
 | 报错 | 原因 | 处理 |
 |---|---|---|
 | `FUNCTION_NOT_FOUND` | 云函数没部署 | 逐个「上传并部署：云端安装依赖」 |
+| `Cannot find module 'wx-server-sdk'`（`-504002`） | 该函数目录缺 `package.json`，云端没装依赖 | 补 `package.json`（含 `wx-server-sdk` 依赖）后**重新部署**；核对：`node scripts/check_miniprogram.js` |
 | `FunctionName取值与规范不符` | 函数名以下划线开头 | 改成字母开头 |
 | `Db not exist` / `collection not exists` | 集合没建 | 跑 `python scripts/init_cloud.py --apply`（见 5.1）或 `init_db`（见 5.2） |
 | `ADMIN_TOKEN_NOT_CONFIGURED` | 该函数没配环境变量 | 见第 3 节，注意**函数级隔离** |

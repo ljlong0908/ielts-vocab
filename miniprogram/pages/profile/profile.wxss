@@ -13,7 +13,7 @@
 .sec-title {
   font-size: 26rpx;
   font-weight: 500;
-  color: #185fa5;
+  color: var(--primary);
   margin-bottom: 20rpx;
 }
 
@@ -26,16 +26,16 @@
   flex: 1;
   text-align: center;
   padding: 24rpx 0;
-  border: 2rpx solid #e5e6eb;
+  border: 2rpx solid var(--line);
   border-radius: 16rpx;
   font-size: 28rpx;
-  color: #1f2329;
+  color: var(--text);
 }
 
 .pf-goal.active {
-  border-color: #185fa5;
-  background: #e6f1fb;
-  color: #185fa5;
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
   font-weight: 500;
 }
 

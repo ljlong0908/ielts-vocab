@@ -16,13 +16,16 @@
  *
  * 流程：
  *   play(text) → 查前端缓存 fileID
- *     ├─ 命中 → InnerAudioContext.src = fileID → 播放
- *     └─ 未命中 → 调 audio_cache 云函数拿 fileID → 缓存 fileID → 播放
+ *     ├─ 命中 → 转 https 临时链接 → InnerAudioContext.src → 播放
+ *     └─ 未命中 → 调 audio_cache 云函数拿 fileID → 缓存 fileID → 转 https 临时链接 → 播放
  *                   └─ 单词：云函数失败则降级直接播 dictvoice URL
+ *
+ *   ⚠️ 最后一步「cloud:// → https」不能省：fileID 直填 src 真机会播到一半截断。
  *
  * ⚠️ 需在小程序后台配置 downloadFile 合法域名：https://dict.youdao.com
  */
 const config = require('../config')
+const mock = require('./mock')
 
 const CACHE_PREFIX = 'audio_cache_'
 
@@ -97,10 +100,52 @@ function fallbackUrl(text, type) {
 }
 
 /**
+ * cloud:// fileID → 临时 HTTPS 链接（带内存级 TTL 缓存）
+ *
+ * ⚠️ 必须转换的原因（真机踩坑）：InnerAudioContext.src 直接填 cloud:// fileID
+ *    在开发者工具里正常，**真机上会播放中途截断**（实测：每日一句第一次播两个词就停，
+ *    第二次点因内部缓存才播完整）。转成 getTempFileURL 的 https 临时链接后稳定。
+ *    临时链接有效期 2 小时 → 缓存 100 分钟，过期自动重取。
+ */
+const TEMP_URL_TTL = 100 * 60 * 1000
+const tempUrlMemo = {} // fileID → { url, ts }
+
+function isCloudId(src) {
+  return typeof src === 'string' && src.indexOf('cloud://') === 0
+}
+
+function toTempUrl(src) {
+  if (!isCloudId(src)) return Promise.resolve(src) // dictvoice https / mock 路径原样透传
+  const hit = tempUrlMemo[src]
+  if (hit && Date.now() - hit.ts < TEMP_URL_TTL) return Promise.resolve(hit.url)
+  return new Promise((resolve) => {
+    wx.cloud.getTempFileURL({
+      fileList: [src],
+      success: (res) => {
+        const f = (res && res.fileList && res.fileList[0]) || {}
+        if (f.tempFileURL) {
+          tempUrlMemo[src] = { url: f.tempFileURL, ts: Date.now() }
+          resolve(f.tempFileURL)
+        } else {
+          resolve(src) // 转换失败退回 fileID：宁可冒截断风险也不哑掉
+        }
+      },
+      fail: () => resolve(src)
+    })
+  })
+}
+
+/**
  * 内部：获取播放源（三层缓存：前端 → 云存储 → dictvoice 兜底）
  * @param {'word'|'sentence'} kind
  */
 async function resolveSrc(text, type, kind) {
+  // mock 旁路：USE_MOCK 时不联网。单词走 dictvoice URL（能响），
+  // 例句返回 null（静默）——与真实链路「例句未预置音频静默」一致
+  if (config.USE_MOCK) {
+    return mock.audioSrc(text, type, kind)
+  }
+
   // 1. 查前端缓存
   let src = await getCache(text, type)
 
@@ -115,7 +160,9 @@ async function resolveSrc(text, type, kind) {
   if (!src && kind !== 'sentence') {
     src = fallbackUrl(text, type)
   }
-  return src
+
+  // 4. cloud:// fileID → https 临时链接（真机截断坑，见 toTempUrl 注释）
+  return toTempUrl(src)
 }
 
 /**

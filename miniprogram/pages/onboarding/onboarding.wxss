@@ -1,9 +1,57 @@
-.ob {
-  padding-top: 96rpx;
+/* M14 引导页拇指区 + 版面填空。
+   ① 内容顶部对齐（2026-09-29 用户反馈：居中导致上半部留白过大）→ padding-top 给一点呼吸，
+      富余空间自然落到「信息条 ↔ 底栏」之间，主操作仍在拇指区
+   ② 上半部淡蓝纵向渐变底 → 留白读作"呼吸"而不是"没做完"（灰底上的留白才显空）
+   ③ 底栏固定 + 顶部品牌区，主操作进右手拇指舒适区 */
+.page.ob {
+  min-height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-top: 88rpx;
+  padding-bottom: 200rpx; /* 硬约束：固定底栏必须给内容区让位，否则最后一块被永久遮住 */
+  background: linear-gradient(180deg, #dcebfb 0%, #eef5fd 34%, var(--bg) 62%);
 }
 
+/* ===== 品牌区（M14-9）：居中，让蓝色 banner 有视觉主体。
+   全页其余内容仍左对齐，此处居中是刻意的「横幅」处理 ===== */
+.ob-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 56rpx;
+}
+
+/* 占位图形：主色图书。wxml 不支持内联 svg，这里用 wxss 内联 svg background（同 .speaker-icon 手法） */
+.ob-mark {
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 32rpx;
+  background-color: var(--surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23185fa5' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 6.6C10.6 5.1 8.7 4.4 6.4 4.4c-1 0-1.8.1-2.4.4v13c.6-.3 1.4-.4 2.4-.4 2.3 0 4.2.7 5.6 2.2 1.4-1.5 3.3-2.2 5.6-2.2 1 0 1.8.1 2.4.4v-13c-.6-.3-1.4-.4-2.4-.4-2.3 0-4.2.7-5.6 2.2z'/%3E%3Cpath d='M12 6.6v13'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 60rpx 60rpx;
+  box-shadow: 0 8rpx 28rpx rgba(24, 95, 165, 0.16);
+}
+
+.ob-brand {
+  margin-top: 24rpx;
+  font-size: 40rpx;
+  font-weight: 500;
+}
+
+.ob-sub {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: var(--text-2);
+}
+
+/* ===== 问题区 ===== */
 .ob-head {
-  margin-bottom: 64rpx;
+  margin-bottom: 44rpx;
 }
 
 .ob-title {
@@ -12,33 +60,74 @@
   margin-bottom: 12rpx;
 }
 
+/* ===== 选项：行内左右两段（左=选什么，右=要多久） ===== */
 .ob-option {
   display: flex;
-  align-items: baseline;
-  background: #ffffff;
-  border: 2rpx solid #e5e6eb;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 2rpx solid var(--line);
   border-radius: 20rpx;
   padding: 36rpx 32rpx;
   margin-bottom: 24rpx;
 }
 
 .ob-option.active {
-  border-color: #185fa5;
-  background: #e6f1fb;
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  box-shadow: 0 6rpx 20rpx rgba(24, 95, 165, 0.12);
+}
+
+.ob-option-main {
+  display: flex;
+  align-items: baseline;
 }
 
 .ob-option-num {
   font-size: 52rpx;
   font-weight: 500;
-  color: #185fa5;
+  color: var(--primary);
   margin-right: 16rpx;
 }
 
 .ob-option-text {
   font-size: 28rpx;
-  color: #646a73;
+  color: var(--text-2);
 }
 
-.ob-btn {
-  margin-top: 48rpx;
+.ob-option-meta {
+  font-size: 24rpx;
+  color: var(--text-2);
 }
+
+.ob-option.active .ob-option-meta {
+  color: var(--primary);
+}
+
+/* 「推荐」标复用全局 .tag；选中卡底色本身就是 primary-soft，故反色成白底保持可见 */
+.ob-option .tag {
+  margin-left: 16rpx;
+  border: 1rpx solid #bcd9f2;
+}
+
+.ob-option.active .tag {
+  background: var(--surface);
+}
+
+/* ===== 信息条（M16）：低饱和淡蓝底 + 无边框，与"可点卡片"明确区分 ===== */
+.ob-note {
+  margin-top: 8rpx;
+  padding: 20rpx 28rpx;
+  border-radius: 16rpx;
+  background: var(--primary-soft);
+  color: var(--text-2);
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+/* 两行各讲一件事，不用分隔线（12px 灰字已足够区分） */
+.ob-note-line + .ob-note-line {
+  margin-top: 4rpx;
+}
+
+/* .ob-btn 不再有流内上边距 —— 它已移入固定底栏，间距由底栏 padding 决定 */

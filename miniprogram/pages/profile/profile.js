@@ -34,11 +34,12 @@ Page({
     }
   },
 
+  // M5 原生 tabBar：stats / wrongbook 已是 tab 页，navigateTo 到 tab 页会被拒，必须 switchTab
   goStats() {
-    wx.navigateTo({ url: '/pages/stats/stats' })
+    wx.switchTab({ url: '/pages/stats/stats' })
   },
 
   goWrong() {
-    wx.navigateTo({ url: '/pages/wrongbook/wrongbook' })
+    wx.switchTab({ url: '/pages/wrongbook/wrongbook' })
   }
 })

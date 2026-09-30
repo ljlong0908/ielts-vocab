@@ -4,14 +4,16 @@ page {
   --primary-soft: #e6f1fb;
   --success: #1d9e75;
   --success-soft: #e1f5ee;
+  /* 深绿：浅底绿字 / 绿底白字专用（--success 在浅底仅 ~3:1 不达 AA 4.5；描边与图标仍用 --success） */
+  --success-deep: #0f6b4f;
   --warn: #ba7517;
   --danger: #a32d2d;
   --danger-soft: #fcebeb;
   --bg: #f6f7f9;
   --surface: #ffffff;
   --text: #1f2329;
-  --text-2: #646a73;
-  --text-3: #8f959e;
+  --text-2: #616770;
+  --text-3: #7f8691;
   --line: #e5e6eb;
   --radius: 20rpx;
 
@@ -47,7 +49,7 @@ page {
 }
 
 .hint {
-  color: var(--text-3);
+  color: var(--text-2);
   font-size: 24rpx;
 }
 
@@ -78,6 +80,41 @@ page {
   opacity: 0.45;
 }
 
+/* 次级按钮（首页「再学一组」等并列操作）：与主 CTA 同高 88rpx（原 80rpx 不达热区下限），
+   靠 primary-soft 底色 + 描边区分层级，而不是靠变矮 */
+.btn.ghost {
+  height: 88rpx;
+  line-height: 84rpx;
+  border-radius: 44rpx;
+  background: var(--primary-soft);
+  color: var(--primary);
+  border: 1rpx solid #cfe3f6;
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+.btn.ghost .sup {
+  display: inline;
+  margin-left: 8rpx;
+  font-size: 24rpx;
+  color: var(--text-2);
+}
+
+/* 按压反馈（M19-3）：小程序没有 :active，<view> 用原生 hover-class 属性挂下面这几个类，
+   不用自己写 touchstart/touchend 切类。<button> 走原生 hover-class 即可。 */
+.hover-press {
+  transform: scale(0.985);
+  opacity: 0.88;
+}
+
+.hover-dim {
+  opacity: 0.68;
+}
+
+.hover-bg {
+  background-color: #f7f9fb;
+}
+
 .tag {
   display: inline-block;
   padding: 4rpx 16rpx;
@@ -90,12 +127,49 @@ page {
 .loading {
   padding: 120rpx 0;
   text-align: center;
-  color: var(--text-3);
+  color: var(--text-2);
   font-size: 26rpx;
 }
 
 .empty {
   padding: 120rpx 40rpx;
   text-align: center;
-  color: var(--text-3);
+  color: var(--text-2);
+}
+
+/* 固定底部区（M3）：任何页加了固定底部，必须给 .page 加对应 padding-bottom，
+   否则最后一块内容被永久遮挡（滚动到底也看不见）。env(safe-area-inset-bottom)
+   不可省，iPhone 上不加会被 Home 条压住。 */
+.bottombar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16rpx 24rpx;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 1rpx solid var(--line);
+  z-index: 100;
+  box-sizing: border-box;
+}
+
+/* 喇叭按钮（M1+M2）：热区统一 88rpx（≥44px），视觉圆尺寸由各页 .speaker-icon 覆盖。
+   喇叭图形为内联 svg（url-encode，<1KB，全站复用），色固定 --primary。
+   原三角形在移动端是「播放视频」语义，换成喇叭图形。 */
+.speaker {
+  width: 88rpx;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.speaker-icon {
+  border-radius: 50%;
+  background-color: var(--primary-soft);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23185fa5' d='M3 10v4h3l5 3.5v-11L6 10H3z'/%3E%3Cg fill='none' stroke='%23185fa5' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M14.5 8.5c1.2 1.6 1.2 5.4 0 7'/%3E%3Cpath d='M17 6.5c2.2 2.8 2.2 8.2 0 11'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 48%;
 }

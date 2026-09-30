@@ -1,20 +1,61 @@
 <view class="page">
+  <!-- 操作失败提示条（M19-1 的替代方案）：错题本是 tab 页、底部有原生 tabBar，
+       wx.showToast 的位置不可控（居中偏下）会被底栏压住（审核 TOAST_COVER），
+       所以这里自绘一条顶部提示，4 秒后自动收起。 -->
+  <view wx:if="{{errTip}}" class="wb-tip">{{errTip}}</view>
+
   <view wx:if="{{loading}}" class="loading">加载中</view>
 
   <view wx:elif="{{words.length === 0}}" class="empty">还没有错题，继续保持</view>
 
   <block wx:else>
-    <view wx:for="{{words}}" wx:key="_id" class="card wb-item">
+    <!-- W2（用户追加）：整卡点击 = 进学习页复习这个词。
+         ⚠️ 这一条**修订了 M10-1**：原规则是「整卡可点 = 发音、喇叭不单独绑 tap」，
+            改为「整卡 = 进复习」之后，发音必须有自己的热区，于是本页的热区关系变成
+            「一个父热区 + 两个 catchtap 子热区」：
+              · 整卡（bindtap=openReview）  → 进学习页复习该词
+              · 喇叭（catchtap=play）       → 只发音，不跳转
+              · 已掌握（catchtap=markMastered）→ 只标记，不跳转
+            两个子热区都用 catchtap 隔断冒泡：点它们不会顺带触发父热区的跳转。
+            它们都完整坐落在卡片热区**之内**（嵌套，不是并列压盖），且各有 88rpx 热区，
+            不产生误触（审核 HIT_OVERLAP 针对的是并列压盖的父子热区）。 -->
+    <view
+      wx:for="{{words}}"
+      wx:key="_id"
+      class="card wb-item"
+      data-id="{{item._id}}"
+      hover-class="hover-bg"
+      bindtap="openReview"
+    >
       <view class="between">
         <view class="wb-main">
           <view class="wb-word">{{item.word}}</view>
           <view class="wb-phonetic">{{item.phoneticUS || item.phoneticUK}}</view>
           <view class="wb-meaning">{{item.meaning}}</view>
         </view>
-        <view class="speaker" data-word="{{item.word}}" bindtap="play">
-          <view class="speaker-icon"></view>
+        <view class="wb-acts">
+          <view
+            class="wb-mastered-hit"
+            data-id="{{item._id}}"
+            data-word="{{item.word}}"
+            hover-class="hover-dim"
+            catchtap="markMastered"
+          >
+            <view class="wb-mastered">已掌握</view>
+          </view>
+          <view
+            class="speaker"
+            data-word="{{item.word}}"
+            hover-class="hover-dim"
+            catchtap="play"
+          >
+            <view class="speaker-icon"></view>
+          </view>
         </view>
       </view>
     </view>
   </block>
+  <!-- M10-2「再练一遍」底部出口**暂不做**：原型 practiceWrong() 走的是 build_questions 的
+       round 参数（后端 T1），当前云函数只认 phase='review'|'practice'。
+       照原型实现会覆盖当日主练习队列（后端任务单 C4，静默破坏主流程）→ 等 T1 落地再接。 -->
 </view>

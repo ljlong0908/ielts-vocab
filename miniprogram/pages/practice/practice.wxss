@@ -4,7 +4,7 @@
 
 .q-type {
   font-size: 24rpx;
-  color: #8f959e;
+  color: var(--text-2);
   margin-bottom: 16rpx;
 }
 
@@ -20,28 +20,14 @@
   line-height: 1.4;
 }
 
-.speaker {
+/* .speaker / .speaker-icon 的热区与喇叭图形由 app.wxss 提供，此处只覆盖视觉圆尺寸 */
+.speaker-icon {
   width: 60rpx;
   height: 60rpx;
-  border-radius: 50%;
-  background: #e6f1fb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.speaker-icon {
-  width: 0;
-  height: 0;
-  border-top: 13rpx solid transparent;
-  border-bottom: 13rpx solid transparent;
-  border-left: 20rpx solid #185fa5;
-  margin-left: 5rpx;
 }
 
 .phonetic {
-  color: #646a73;
+  color: var(--text-2);
   font-size: 26rpx;
   margin-top: 10rpx;
 }
@@ -54,26 +40,26 @@
   display: flex;
   align-items: center;
   gap: 20rpx;
-  background: #ffffff;
-  border: 2rpx solid #e5e6eb;
+  background: var(--surface);
+  border: 2rpx solid var(--line);
   border-radius: 16rpx;
   padding: 28rpx 24rpx;
   margin-bottom: 20rpx;
 }
 
 .option.ok {
-  border-color: #1d9e75;
-  background: #e1f5ee;
+  border-color: var(--success);
+  background: var(--success-soft);
 }
 
 .option.bad {
-  border-color: #a32d2d;
-  background: #fcebeb;
+  border-color: var(--danger);
+  background: var(--danger-soft);
 }
 
 .option.answer {
-  border-color: #1d9e75;
-  background: #e1f5ee;
+  border-color: var(--success);
+  background: var(--success-soft);
 }
 
 .opt-key {
@@ -81,7 +67,7 @@
   height: 44rpx;
   border-radius: 50%;
   background: #f1f2f4;
-  color: #646a73;
+  color: var(--text-2);
   font-size: 24rpx;
   display: flex;
   align-items: center;
@@ -91,18 +77,18 @@
 
 .option.ok .opt-key,
 .option.answer .opt-key {
-  background: #1d9e75;
+  background: var(--success-deep);
   color: #ffffff;
 }
 
 .option.bad .opt-key {
-  background: #a32d2d;
+  background: var(--danger);
   color: #ffffff;
 }
 
 .opt-text {
   font-size: 30rpx;
-  color: #1f2329;
+  color: var(--text);
 }
 
 .feedback {
@@ -112,9 +98,9 @@
 }
 
 .ok-text {
-  color: #1d9e75;
+  color: var(--success-deep);
 }
 
 .bad-text {
-  color: #a32d2d;
+  color: var(--danger);
 }

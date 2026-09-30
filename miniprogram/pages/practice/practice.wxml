@@ -4,7 +4,7 @@
 
   <block wx:else>
     <view class="between head">
-      <view class="tag">{{phase === 'review' ? '复习昨日单词' : '今日练习'}}</view>
+      <view class="tag">{{phase === 'review' ? '复习昨日单词' : (round > 0 ? '加练练习' : '今日练习')}}</view>
       <view class="hint">{{index + 1}} / {{questions.length}}</view>
     </view>
 
@@ -25,6 +25,7 @@
         wx:key="*this"
         class="option {{selected === index ? (correct ? 'ok' : 'bad') : ''}} {{revealed && index === answerIndex && !correct ? 'answer' : ''}}"
         data-index="{{index}}"
+        hover-class="hover-dim"
         bindtap="choose"
       >
         <view class="opt-key">{{optKeys[index]}}</view>

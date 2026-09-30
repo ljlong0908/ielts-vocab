@@ -4,7 +4,7 @@
 
   <block wx:else>
     <view class="between head">
-      <view class="hint">今日新词</view>
+      <view class="hint">{{isReview ? '错题复习' : (isExtra ? '加练单词' : '今日新词')}}</view>
       <view class="tag">{{index + 1}} / {{total}}</view>
     </view>
 
@@ -14,7 +14,7 @@
       <view class="card">
         <view class="word-row">
           <text class="word">{{card.word}}</text>
-          <view class="speaker" bindtap="play">
+          <view class="speaker" hover-class="hover-dim" bindtap="play">
             <view class="speaker-icon"></view>
           </view>
         </view>
@@ -28,7 +28,7 @@
         <view class="sec-title sec-head">
           <text>例句</text>
           <!-- 例句发音：整句音频由本地 Kokoro 预生成，未预置时静默不播 -->
-          <view wx:if="{{card.example}}" class="speaker speaker-sm" bindtap="playExample">
+          <view wx:if="{{card.example}}" class="speaker speaker-sm" hover-class="hover-dim" bindtap="playExample">
             <view class="speaker-icon"></view>
           </view>
         </view>
@@ -56,8 +56,20 @@
         <view wx:if="{{card.etymology}}" class="etymology">{{card.etymology}}</view>
         <view wx:else class="hint">暂缺</view>
       </view>
-
-      <view class="btn primary" bindtap="next">{{isLast ? '开始练习' : '下一个'}}</view>
     </block>
   </block>
+
+  <!-- M6：主操作移出文档流固定底部 —— 本页是全站最高频操作页（每词点一次），
+       「主按钮进拇指区」在这里收益最大。分段进度固定在底栏上方：
+       词的进度是离散的，且顶部那个「1 / 6」tag 一滑就滚没了 -->
+  <view wx:if="{{!loading && !empty}}" class="bottombar">
+    <view class="seg-progress">
+      <view wx:for="{{segs}}" wx:key="k" class="seg {{item.cls}}"></view>
+    </view>
+    <view
+      class="btn primary {{locked ? 'disabled' : ''}}"
+      hover-class="hover-press"
+      bindtap="next"
+    >{{nextLabel}}</view>
+  </view>
 </view>

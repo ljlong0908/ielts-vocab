@@ -16,7 +16,7 @@ Page({
 
   onShareAppMessage() {
     const n = this.data.totalLearned || 0
-    const title = n > 0 ? `雅词本｜我已累计记住 ${n} 个雅思词` : ''
+    const title = n > 0 ? `雅词本｜我已累计记住 ${n} 个词` : ''
     return share.toFriend(title ? { title } : undefined)
   },
 

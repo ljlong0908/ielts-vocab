@@ -31,7 +31,9 @@ Page({
     }
   },
 
+  // M5 原生 tabBar：首页已是 tab 页，reLaunch 虽不报错但会重建页面栈，
+  // 语义上这里要的就是「切到首页 tab」→ switchTab
   goHome() {
-    wx.reLaunch({ url: '/pages/index/index' })
+    wx.switchTab({ url: '/pages/index/index' })
   }
 })

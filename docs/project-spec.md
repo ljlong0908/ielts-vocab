@@ -14,7 +14,7 @@
 | 形态 | 微信小程序（原生，非 uni-app/Taro） |
 | 定位 | 雅思词汇**每日学习闭环**工具 |
 | 核心闭环 | 微信静默登录 → 设每日目标(5/10) → **先复习旧词** → 学今日新词 → 做题 → **全对才打卡** → 次日循环 |
-| 后端 | 微信云开发 CloudBase（**15 个云函数** + 7 个文档型集合 + 云存储），无自建服务器 |
+| 后端 | 微信云开发 CloudBase（**18 个云函数** + 7 个文档型集合 + 云存储），无自建服务器 |
 | AI 能力 | DeepSeek（`deepseek-chat`）生成例句 / 词根拆解 / 词源演变 |
 | 发音 | **本地 Kokoro-82M（Apache-2.0）离线预生成 → 云存储**，运行时零 TTS 外呼；dictvoice 仅作词表外单词兜底 |
 | 部署 | 见 `docs/deploy.md`（从零到可用的唯一权威清单） |
@@ -90,6 +90,8 @@ ielts-vocab/
 │   ├── pack_words.py             # 打包成 seed_words 的入参（按词表分批，每批一份完整入参）
 │   ├── init_cloud.py             # 本地初始化数据库：建集合 + 建索引（走云开发 HTTP API）
 │   ├── fill_token.py             # 批量把 batch-*.json 的 __ADMIN_TOKEN__ 换成真实密钥
+│   ├── quotes_to_examples.py     # 「每日一句」quotes.js → assets/examples/quotes-12.json（供音频合成）
+│   ├── seed_quote_audio.py       # 「每日一句」音频上传云存储 + 写 audio_cache（走 HTTP API，幂等）
 │   └── requirements.txt
 ├── miniprogram/                  # 小程序前端根（miniprogramRoot）
 │   ├── app.js                    # 启动：仅 wx.cloud.init（不缓存用户态，由各页面按需拉取）
@@ -192,6 +194,7 @@ ielts-vocab/
 | `reviewQueue` | array | 复习题目（**含答案**，不下发） |
 | `practiceQueue` | array | 练习题目（**含答案**，不下发） |
 | `stage` | string | `review` / `learning` / `practice` / `practice_done` / `done` |
+| `extraRounds` | array | **加练组**（M13/T1）：`[{roundId, wordIds, learnedIds, practiceQueue, stage, startedAt, finishedAt}]`。内嵌不另建文档，绕开 `_openid+date` 唯一索引；读取处一律 `plan.extraRounds \|\| []` 兜底 |
 | `createdAt` / `updatedAt` | date | |
 
 ### 4.5 `records` — 答题记录
@@ -203,8 +206,12 @@ ielts-vocab/
 | `isCorrect` | boolean | 本次是否答对 |
 | `choice` | number | 用户选择的选项下标 |
 | `createdAt` | date | |
+| `mastered` | boolean | **仅答错记录会有**。用户在错题本点「已掌握」后由 `dismiss_wrong` 置 `true`，`stats` 据此把该词移出错题本。写在记录上（而非独立集合）的两个原因：① 流水保持完整，将来按 `records` 统计正确率不受影响 ② 「复活」零成本——之后再答错写的是新记录（无此字段），自然重新进错题本 |
+| `masteredAt` | date | 标记时间，便于回溯 |
 
 > 注意：每次提交（含答错重选）都会新增一条记录。
+> ⚠️ `mastered` **不需要回填历史数据**：`stats` 的查询条件是 `mastered: _.neq(true)`，
+> 而 MongoDB 的 `$ne` 会一并匹配「字段不存在」的文档。
 
 ### 4.6 `checkins` — 打卡记录
 | 字段 | 类型 | 说明 |
@@ -230,7 +237,7 @@ ielts-vocab/
 
 ---
 
-## 5. 云函数契约（共 15 个）
+## 5. 云函数契约（共 18 个）
 
 > 统一返回 `{ code: 0, data }` 成功 / `{ code: -1, message }` 失败。前端 `api.js` 依据 `code` 判定。
 > 所有函数均 `cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })`，用户身份取自 `cloud.getWXContext().OPENID`（无需前端传）。
@@ -240,20 +247,23 @@ ielts-vocab/
 | # | 云函数 | 入参 | 出参（data） | 职责与关键逻辑 |
 |---|---|---|---|---|
 | 1 | `user_profile` | `{ action?: 'get'\|'setGoal', dailyGoal? }` | 用户对象 | 登录：按 openid 查/建用户；`setGoal` 时写 `dailyGoal`（仅接受 5 或 10） |
-| 2 | `home_summary` | `{}` | `{dailyGoal,streak,totalLearned,totalCheckins,learnedToday,stage,todayDone}` | 首页聚合。`todayDone` 判据 = 今日 checkins 存在 |
-| 3 | `today_flow` | `{}` 或 `{action:'markLearned', wordId}` | `{plan,dailyGoal,streak,totalLearned}` | **前端唯一状态来源**。首次进入创建当日 plan：有待复习→`review`，否则→`learning`；若今日已打卡则强制 `stage='done'`。`markLearned` 轻量累加 `learnedIds` |
+| 2 | `home_summary` | `{}` | `{dailyGoal,streak,totalLearned,learnedToday,extraLearnedToday,todayDone}` | 首页聚合。`todayDone` 判据 = 今日 checkins 存在；`extraLearnedToday` = 当日各加练组 `learnedIds` 之和 |
+| 3 | `today_flow` | `{}` 或 `{action:'markLearned', wordId, round?}` | `{plan,dailyGoal,streak,totalLearned,extra}` | **前端唯一状态来源**。首次进入创建当日 plan：有待复习→`review`，否则→`learning`；若今日已打卡则强制 `stage='done'`（只改内存，不落库）。`markLearned` 轻量累加 `learnedIds`；`round>0` 时改累加**该加练组**的 `learnedIds`。`extra` = `{canStart,exhausted,limitReached,pendingRound,roundsToday,extraLearnedToday,groupSize}`，供首页「再学一组」按钮决策；返回的 `plan.extraRounds` 已剥掉 `practiceQueue`（避免答案下发） |
 | 4 | `start_new_words` | `{}` | `{newWordIds,reused,exhausted}` | **幂等**生成当日新词：若 plan 已有 newWordIds 直接复用；否则按 `seq > wordCursor` **且 `audioReady === true`** 的顺序取 `dailyGoal` 个。✅ 没音频的词不会出（见 7.3） |
 | 5 | `word_card` | `{ wordId }` | 单词卡文档 + `enriching` | 读词；`enriched=false` 时**同步调用** `enrich_word` 再读一次；仍失败则返回基础字段 + `enriching:true` |
-| 6 | `build_questions` | `{ phase:'review'\|'practice' }` | `{questions,reused}` | 生成题目（**先查缓存复用**）。题型 `i%2` 交替 cn_option/en_option，再 shuffle；干扰项从**非本批**词库随机取 3 个；答案存服务端，下发前 `sanitize` 剔除 |
-| 7 | `submit_answer` | `{ phase, questionIndex, choice }` | `{correct,answerIndex,wordId,word,meaning,phaseDone}` | 服务端判题；写 `records`；推进 `user_words` 复习状态；全对时推进 `stage` |
+| 6 | `build_questions` | `{ phase:'review'\|'practice', round? }` | `{questions,reused}` | 生成题目（**先查缓存复用**）。`round>0` 时读写 `extraRounds[round-1].practiceQueue`、词源取该组 `wordIds`（**C4**：不加 round 会覆盖 `plan.practiceQueue`）。题型 `i%2` 交替 cn_option/en_option，再 shuffle；干扰项从**非本批**词库随机取 3 个；答案存服务端，下发前 `sanitize` 剔除 |
+| 7 | `submit_answer` | `{ phase, questionIndex, choice, round? }` | `{correct,answerIndex,wordId,word,meaning,phaseDone}` | 服务端判题；写 `records`；推进 `user_words` 复习状态；`round===0` 时全对推进 `plan.stage`，`round>0` 时只更新组内队列与组 `stage`（**C3**：绝不写 `plan.stage`） |
 | 8 | `finish_checkin` | `{}` | `{already,streak,learnedCount,totalLearned}` | **幂等**打卡。前置：practiceQueue 全部 passed。写 `checkins`、更新 `streak`/`totalLearned`、**`wordCursor` 取当日已学词的最大 `seq`**（`words.where({_id: _.in(newWordIds)}).orderBy('seq','desc')`）、新词入复习池（`nextReviewDate=次日`）、`stage='done'` |
-| 9 | `stats` | `{}` | `{streak,totalLearned,dailyGoal,totalCheckins,dates[],wrongWords[]}` | 打卡日历日期列表 + 错题（`records.isCorrect=false` 去重取最近 50）+ 词条 |
+| 9 | `stats` | `{}` | `{streak,totalLearned,dailyGoal,totalCheckins,dates[],wrongWords[]}` | 打卡日历日期列表 + 错题（`records.isCorrect=false` **且未被标 `mastered`** 去重取最近 50）+ 词条 |
 | 10 | `audio_cache` | `{ text, type, kind? }` | `{fileID,cached}` | **两类文本两种策略**。① 单词（`kind` 缺省）：查 `audio_cache` 命中直接返回；未命中下载 dictvoice → 上传云存储 → 写索引 → 返回 fileID。② 例句（`kind:'sentence'`）：**只查库，未命中直接返回 `NOT_PRESEEDED`，不调第三方也不写云存储**（整句 dictvoice 必返回 null；且在此开放「下载+写存储」等于给任意长文本开滥用口子）。**入参校验**：单词 `^[A-Za-z][A-Za-z'\u2019\- ]{0,39}$`（≤40 字符）、例句 `^[A-Za-z][^\x00-\x1F\x7F\\`]{0,199}$`（≤200 字符，**排除集**写法，见 7.8），`type` 收敛为 1/2 |
 | 11 | `enrich_word` | `{ wordId, force?, _token? }` 或定时事件 `{Type:'Timer'}` | `{enriched}` / `{locked}` / `{skipped}` | AI 补全：乐观锁 `pending→generating`，调 DeepSeek（JSON Output），`msgSecCheck` 后写回 `enriched=true`。定时任务释放超时锁 + 批量重试。**鉴权**：`force` 仅在 `_token === ADMIN_TOKEN` 时生效，否则忽略（防绕过缓存无限烧余额） |
 | 12 | `seed_words` | `{ _token, words[], offset?, limit?, startSeq? }` | `{inserted,skipped,total,nextOffset,hasMore,lastSeq}` | 词表导入。`seq` 自动续号、按 `word` 去重、支持分批。写入时 `audioReady: false`。**鉴权**：必须携带 `_token === ADMIN_TOKEN`；未配 `ADMIN_TOKEN` 时拒绝一切调用 |
 | 13 | `seed_audio` | `{ _token, items: [{ word \| kind:'sentence'+text, type, base64 }] }` | `{received,uploaded,cached,updated,marked,sentences,notInWords?,failed?}` | **音频入库**（一次调用做几件事）：① `uploadFile` 到云存储（单词 `audio/{type}/{slug}.mp3`，例句 `audio/{type}/s_{hash}.mp3`）；② upsert `audio_cache`（以文本+type 为键，存在则更新 fileID）；③ **仅单词**把 `words` 中同名词的 `audioReady` 置 `true`（分批 50 条，`where({word: _.in(chunk), audioReady: _.neq(true)})`）——例句不参与出词，故不点亮。单次 ≤80 条 / 单条 base64 ≤600KB。**鉴权**：同 `seed_words`。配套脚本：单词 `gen_audio.py`、例句 `gen_examples.py`+`gen_sentence_audio.py`，统一由 `pack_audio.py` 打包 |
 | 14 | `reset_words` | `{ _token, mode?: 'preview'\|'purge', confirm?, collections?, resetCursor?, resetStats? }` | `preview`：`{mode,before,wouldPurge,keptByDefault}`；`purge`：`{targets,removed,cursorReset,before,after,errors?}` | **词库重置（破坏性）**。用于「换词表、推倒重来」。默认清 `words` + `user_words` + `records` + `daily_plans`（后三者按 `wordId` 引用 `words._id`），并把 `users.wordCursor` 归零（否则新词从 seq 1 开始会被旧游标跳过）。**保留** `audio_cache`（按 `text` 建索引，重导可复用）与 `checkins`（不含词引用）。分批 100 条删除。**鉴权**：`_token === ADMIN_TOKEN` **且** `mode:'purge'` 时必须额外传 `confirm:'PURGE'`（双保险防误触） |
 | 15 | `init_db` | `{ _token, mode?: 'preview'\|'create', collections?: string[] }` | `{mode,total,created[],missing[],ready,collections{name:{exists,docs}},descriptions[],indexes[]}` | **数据表体检 / 初始化（幂等）**。云开发的集合必须先「存在」才能读写，否则抛 `Db not exist`；本函数用 `db.createCollection()` 建缺失集合（已存在的按 `already exist` / `-501001` 识别后跳过），`preview` 模式只体检、不写任何数据。**⚠️ 云开发 SDK 只能建集合、不能建索引**，故返回体 `indexes` 是必须在控制台手工创建的清单（含 `words` 的 `audioReady + seq` 出词关键索引）。**鉴权**：`_token === ADMIN_TOKEN`，未配置则拒绝一切调用。见 `docs/deploy.md` 第 5 节 |
+| 16 | `start_extra_round` | `{}` | `{roundId,wordIds,reused,exhausted}` | **加练发起**（M13/T1）。前置：当日 plan 存在 **且 已打卡**（D1=A）。幂等：末尾有未完成的组则原样复用（`reused:true`）。~~上限 3 组/日~~ **上限已取消（2026-09-29，不限次数）**，唯一终点是词库取尽。取 `seq > wordCursor` 且 `audioReady` 的词，排除当日 `newWordIds` 与已出过的加练词；取尽返 `exhausted:true` 且不建空组。**不推进 `wordCursor`**（学完才推） |
+| 17 | `finish_extra_round` | `{ roundId }` | `{already,roundId,learnedCount,totalLearned}` | **加练结算**。幂等（组 `stage==='done'` 直接返回，**绝不重复累加计数**）。前置：该组 `practiceQueue` 全 passed。推进 `wordCursor` 到本组 max(seq)、**`totalLearned += wordIds.length`**、加练词入复习池（`nextReviewDate=次日`）、组 `stage='done'`。**⛔ 不写 `checkins`、不改 `streak`/`plan.stage`** |
+| 18 | `dismiss_wrong` | `{ wordId }` | `{wordId,updated}` | **错题本「已掌握」**（用户追加，非原型项）。把该用户该词的**所有答错记录**打 `mastered:true`（`updated` = 命中条数），`stats` 随即不再下发该词。**⚠️ 不删流水**（见 §4.5 `records.mastered` 的取舍说明）；幂等——重复标记只是重写同一个值，无副作用，故不额外加「未标记」条件（少一个 `where().update()` 的 command 不确定项） |
 
 ---
 
@@ -261,13 +271,13 @@ ielts-vocab/
 
 | 页面 | 路径 | 数据来源（云函数） | 关键行为 |
 |---|---|---|---|
-| 首页 | `pages/index` | `home_summary` + `today_flow` | 计算进度百分比；按 `stage` 生成 CTA 文案与跳转目标；未 `onboarded` 则 redirect 到 onboarding |
+| 首页 | `pages/index` | `home_summary` + `today_flow` | 计算进度百分比；按 `stage` 生成 CTA 文案与跳转目标；未 `onboarded` 则 redirect 到 onboarding；底栏另挂「再学一组」按钮（**仅当日已打卡后显示**，读 `today_flow.extra`）。显隐优先级：**有未完成组（`pendingRound`）→ 必显示且文案「继续学一组」（优先于上限判断）** ＞ `exhausted`/`limitReached` → 显示但置灰 + 底栏说明原因 ＞ 正常 → 可点。⚠️ **不得静默隐藏**（见 §11.13） |
 | 引导 | `pages/onboarding` | `user_profile(setGoal)` | 选 5/10 → 写目标 + `wx.setStorageSync('onboarded',true)` → reLaunch 首页 |
-| 单词卡 | `pages/learn` | `today_flow` / `start_new_words` / `word_card` / `today_flow(markLearned)` | 逐张卡片；**预取下一张**触发 AI 生成；`next()` 时 `markLearned`；最后一张跳 `practice?phase=practice`；单词/例句发音 |
-| 练习 | `pages/practice` | `build_questions` / `submit_answer` | `phase` 由 URL 参数决定；答对自动进下一题（900ms），答错标错并**禁用该选项要求重选**；答对播放发音；review 全对跳 learn，practice 全对跳 checkin |
+| 单词卡 | `pages/learn` | `today_flow` / `start_new_words` / `word_card` / `today_flow(markLearned)` | 逐张卡片；**进词自动播单词发音**；**预取下一张**触发 AI 生成；`next()` 时 `markLearned`（带连点锁）；最后一张跳 `practice?phase=practice`；单词/例句发音。**`?round=N` 为加练模式**：词源取 `plan.extraRounds[N].wordIds` 并**跳过该组已学过的词**（按 `learnedIds`，剩余为空则直接跳小测）、「加练单词」标签、`markLearned` 带 round。**`?review=<wordId>` 为错题复习（W2）**：词源**只来自参数**，单卡、「错题复习」标签、按钮「复习完成」→ `navigateBack` 回错题本；**不读 `today_flow`、不调 `start_new_words`、不写 `markLearned`**（否则点一下错题本就会推进当日游标、污染今日进度） |
+| 练习 | `pages/practice` | `build_questions` / `submit_answer` / `finish_extra_round` | `phase` 由 URL 参数决定；答对自动进下一题（900ms），答错标错并**禁用该选项要求重选**；答对播放发音；review 全对跳 learn，practice 全对跳 checkin。**`?round=N` 为加练**：出题/判题带 round，全对后 `finish_extra_round` 再 `switchTab` 回首页 |
 | 打卡 | `pages/checkin` | `finish_checkin` | 进入即打卡（幂等）；展示 streak / 当日词数 / 累计 |
 | 统计 | `pages/stats` | `stats` | 本地生成当月日历格子，标记已打卡日 |
-| 错题本 | `pages/wrongbook` | `stats`（wrongWords） | 展示错词，点击发音 |
+| 错题本 | `pages/wrongbook` | `stats`（wrongWords） / `dismiss_wrong` | 展示错词。**点卡片 → 进学习页复习该词**（`/pages/learn/learn?review=<id>`，W2）；喇叭是独立的 `catchtap` 热区（只发音、不跳转）；**每项带「已掌握」按钮**（`catchtap` 拦冒泡）→ `wx.showModal` 二次确认 → **乐观移除**（不等云函数往返）+ 失败回滚、顶部提示条（本页有 tabBar，M19-1 禁用 `wx.showToast`） |
 | 我的 | `pages/profile` | `user_profile` | 展示用户；改目标（提示「次日生效」）；统计/错题本入口 |
 
 ---
@@ -294,6 +304,13 @@ review ──(reviewQueue 全对)──▶ learning ──(学完 newWordIds)─
 
 - 前端不做状态推断，一切以 `today_flow` 返回的 `plan.stage` 为准。
 - `stage` 的推进由 `submit_answer`（review→learning、practice→practice_done）与 `finish_checkin`（→done）完成。
+
+> **加练是主流程之外的一条旁路**：它有自己的 `plan.extraRounds[].stage`（`learning → practice_done → done`），
+> 与主流程 `stage` **完全隔离**。隔离靠 `build_questions` / `submit_answer` / `today_flow(markLearned)` 的 `round` 参数路由——
+> 少了它，加练会写进主队列与主讲度（后端任务单里的 C2/C3/C4 三个静默破坏点）。
+> 加练完成**不产生 checkins、不改 streak**，只推进 `wordCursor`、把词放进复习池，并**计入 `totalLearned`**
+> （D3 于 2026-09-29 由「不计入」改为「计入」；只在结算时按整组入账，口径与 `finish_checkin` 对称）。
+> 计数的回归测试见 `scripts/test_finish_extra_round.js`。
 
 ### 7.2 登录与首次引导
 - 无账号体系，用 `OPENID` 作为唯一标识（云函数自动注入上下文）。
@@ -403,6 +420,26 @@ word_card(wordId)
 - 体量：实测约 21KB/条（单词约 6KB），按每批 base64 ≤600KB 切 → 100 条例句分 5 批；3000 词约 65MB 存储
 - `gen_examples.py` 的 prompt 模板**不要用 `str.format()`**：模板里塞着 JSON，花括号成对出现，必须逐个转义成 `{{ }}`，漏一个就报 `KeyError`（曾踩过，已改为 `__WORD__` 风格的手动替换）
 
+**每日一句音频（第三条流水线，2026-09-29 补）**
+
+首页「每日一句」的喇叭走的是**例句音频链路**（`playQuote` → `audio.playSentence` → `audio_cache` `kind:'sentence'`），
+而 `audio_cache` 对例句**只读不写**，所以这 12 句必须有音频**预先入库**——否则查不到 →
+`playSentence` 的 `if (!src) return` **静默跳过** → 点喇叭既不响也不报错（这正是上线初期「每日一句没声音」的根因）。
+
+```
+① 转格式 quotes_to_examples.py   miniprogram/utils/quotes.js → assets/examples/quotes-12.json
+                                 从 quotes.js 现抽现转，**quotes.js 恒为唯一数据源**（手工维护第二份清单必然漂移）
+② 合成   gen_sentence_audio.py   Kokoro → build/quote_audio/us/s_{hash}.mp3（实测 12 句 / 216KB / 平均 18KB）
+③ 上传   seed_quote_audio.py     --apply → 云存储 audio/2/s_{hash}.mp3 + audio_cache(kind='sentence')
+                                 复用 wxcloud.py 的 Cloud 句柄，**不需要 ADMIN_TOKEN、不经过 seed_audio 云函数**
+```
+
+- `seed_quote_audio.py` 自带三道自检：① 文本过云端正则 `TEXT_RE_SENTENCE`（否则传了也查不出）② 文件名 hash 与文本重算值一致（防三处算法漂移）③ 本地 mp3 存在；`--apply` 才动云端，默认只读体检
+- 幂等键 `(text, type)`；`--force` 可覆盖重传（换音色时用）
+- 与 `seed_cloud.py` **分开**的原因：那边的例句音频强绑定 pilot-100（`load_local()` 会校验「音频 manifest 的句子 == 富化例句文本」，混进去直接 `sys.exit`），且每日一句与词表毫无关系，不该被 `--reset` 之类动作牵连
+- ⚠️ **改了 `quotes.js` 的句子就必须重跑 ①②③**——音频以整句文本为 key，改一个字旧音频即失效（与 `force:true` 重生例句同理）
+- `scripts/quotes_to_examples.py` 会断言「抽到的条数 == quotes.js 里 `text:` 的声明条数」，防正则漏收
+
 ### 7.9 发音（离线预生成音频 + 前端 fileID 缓存）
 ```
 playWord(word)
@@ -417,7 +454,14 @@ playWord(word)
 - 音频全部自持后，可**移除** downloadFile 合法域名 `https://dict.youdao.com`。
 - 缓存键：前端 `audio_cache_{type}_{text}`，`text` 为单词或整句；`audio_cache` 集合跨用户共享。
 - 云存储路径有两种，别混：**预置音频**是 `audio/{type}/{slug}.mp3`（单词）与 `audio/{type}/s_{hash}.mp3`（例句，见 7.8）；**dictvoice 兜底**落盘为 `audio/{type}_{hash}.mp3`。两者互不影响，排查时按来源看 `audio_cache.source`（`preseed` / `dictvoice`）。
-- `playSentence(text)`：播放**整句音频**（本地 Kokoro 预生成，见 7.8 例句流水线）。走 `resolveSrc(text, type, 'sentence')` → 以**整句文本**为 key 查 `audio_cache` → 命中即播。**无 dictvoice 兜底**（整句必失败）；云函数返回 `NOT_PRESEEDED` 时**静默不播** —— 补音频是渐进的，期间大量例句尚无音频，弹提示会持续打扰学习。早期的「逐词链式朗读」实现已废弃（听感生硬）。
+- `playSentence(text)`：播放**整句音频**（本地 Kokoro 预生成，见 7.8 例句流水线）。走 `resolveSrc(text, type, 'sentence')` → 以**整句文本**为 key 查 `audio_cache` → 命中即播。**无 dictvoice 兜底**（实测整句请求 dictvoice 返回 HTTP 500 / 120 字节 JSON，必失败）；云函数返回 `NOT_PRESEEDED` 时**静默不播** —— 补音频是渐进的，期间大量例句尚无音频，弹提示会持续打扰学习。早期的「逐词链式朗读」实现已废弃（听感生硬）。
+- `playWord(word)` 的调用方：① learn 页 —— **进入每个单词页自动播一次**（`loadCard()` 里 `setData` 之后调，首个词与「下一个」共用同一入口）+ 喇叭按钮手动重播；② 将来练习/复习页如需可复用。自动播放在 `setData` 之后触发，保证「词先出现、再出声」；连点由 `locked` 挡住，`playSrc` 内部先 `ctx.stop()` 也不会叠音。
+- `playSentence` 的**两个调用方**都要在这里对号：① learn 页单词卡的例句（见 7.8 例句流水线）② 首页「每日一句」（见 7.8 每日一句流水线，12 句已全部预置）。**任一路径新增句子而没补音频，症状都是「静默不播」**，排查先查 `audio_cache` 有无该整句文本。
+- ⚠️ **`cloud://` fileID 不能直填 `InnerAudioContext.src`（真机截断坑）**：开发者工具里正常，
+  真机上会**播放中途截断**（实测：每日一句第一次播两个词就停，第二次点因内部缓存才完整）。
+  `resolveSrc` 最后一步用 `wx.cloud.getTempFileURL` 把 fileID 转成 https 临时链接再交给播放器，
+  内存缓存 100 分钟（临时链接有效期 2h），转换失败降级回 fileID（宁可冒截断风险也不哑掉）。
+  回归：`scripts/test_audio.js`（9 条，含转换/缓存/透传/降级四条路径）。
 - 停止：`stop()` 中断并清事件监听。
 - 配置：`config.TTS_LANG` 映射 type（`en_US`→2，`en_GB`→1）。
 
@@ -452,8 +496,9 @@ playWord(word)
 | 答案安全 | 题目答案存服务端，下发前剔除 |
 | 防重复 | `start_new_words` / `build_questions` / `finish_checkin` 均幂等 |
 | 集合权限 | `words` 建议「所有用户可读，仅管理端可写」，其余「仅创建者可读写」 |
-| 超时 | 20s：`user_profile`/`home_summary`/`today_flow`/`start_new_words`/`submit_answer`/`audio_cache`；30s：`word_card`/`enrich_word`/`build_questions`/`finish_checkin`/`stats`；60s：`seed_words`/`seed_audio`/`reset_words`/`init_db`。均由各函数 `config.json` 声明，部署后可在控制台核对 |
+| 超时 | 20s：`user_profile`/`home_summary`/`today_flow`/`start_new_words`/`submit_answer`/`audio_cache`；30s：`word_card`/`enrich_word`/`build_questions`/`finish_checkin`/`stats`/`start_extra_round`/`finish_extra_round`；60s：`seed_words`/`seed_audio`/`reset_words`/`init_db`；**10s：`dismiss_wrong`**（一次数据库 update，无外部依赖）。均由各函数 `config.json` 声明，部署后可在控制台核对 |
 | 分享 | 只用 `onShareAppMessage`（转发给朋友/群），路径统一回首页；**不开朋友圈**（单页模式无登录态，云开发读不到数据） |
+| 错题本「已掌握」 | 语义是**打标过滤**，不是删除（见 §4.5）。因为「之后再答错会自动回来」，所以**不做撤销功能、不做回收站**——这两样都是多余的。前端必须二次确认（误点代价虽低，但会打乱复习节奏） |
 
 ---
 
@@ -488,11 +533,14 @@ playWord(word)
 | **部署步骤 / 报错排查** | `docs/deploy.md` |
 | 例句文本来源 | 运行时：`cloudfunctions/enrich_word`（`buildPrompt`）；离线批量：`scripts/gen_examples.py` |
 | 发音音源（例句） | `scripts/gen_examples.py` → `scripts/gen_sentence_audio.py`（本地生成，`s_{hash}`）→ `seed_audio`（`kind:'sentence'` 上传）→ `audio.js` 的 `playSentence` / `audio_cache`（**只读不写**） |
+| 发音音源（每日一句） | `scripts/quotes_to_examples.py` → `gen_sentence_audio.py` → `scripts/seed_quote_audio.py`（上传 + 写 `audio_cache`，**不走 seed_audio 云函数**）；播放复用 `audio.js` 的 `playSentence` |
+| 每日一句语料 | `miniprogram/utils/quotes.js`（静态、按日取模轮换，零后端；`utils/mock.js` 的 `DAILY_LINES` 与此同源） |
 | 词表来源 / 筛选 / 归一 | `scripts/build_wordlist.py`（ECDICT → `assets/word_lists/ielts-full.json`；基础词排除 + 专名剔除 + 名词复数归一，规则全部固化为脚本常量） |
 | 词表导入入参打包 | `scripts/pack_words.py` → `build/seed_words/batch-*.json` |
 | 音频入参打包 | `scripts/pack_audio.py` → `build/seed_audio/` 或 `build/seed_sentence/` |
 | 分享标题/路径/配图 | `miniprogram/utils/share.js`（`toFriend`），各页 `onShareAppMessage()` |
 | 状态机流转 | `cloudfunctions/today_flow` + `submit_answer` + `finish_checkin` |
+| **错题本「已掌握」（移出错题本）** | `cloudfunctions/dismiss_wrong/index.js`（给 `records` 打 `mastered` 标）+ `stats/index.js`（错题查询排除 `mastered:true`）+ `pages/wrongbook/wrongbook.js`（`markMastered`，乐观移除 + 失败回滚） |
 | 页面跳转 | 各 `pages/*/index.js`（`wx.navigateTo`） |
 
 ---
@@ -543,7 +591,7 @@ playWord(word)
 | `specs/` | 整个目录（`design.md` + `requirements.md`） | 设计阶段历史稿；方案已全部落地为代码，PRD 的验收标准已转为 `docs/deploy.md` 的验收清单 |
 | `miniprogram/project.config.json`、`miniprogram/project.private.config.json` | 两份配置 | 仓库根的 `project.config.json` 已声明 `miniprogramRoot: miniprogram/`，包内这两份不会被读取，属重复 |
 | `miniprogram/images/` | 空目录 | 品牌素材已移至 `assets/brand/`，全仓零引用 |
-| `cloudfunctions/{enrich_word,seed_words}/package-lock.json` | 2 份 lock | 15 个函数里只有这 2 个有，反而不一致；依赖已由 `package.json` 的 `~` 约束。云函数走「云端安装依赖」，不需要 lock |
+| `cloudfunctions/{enrich_word,seed_words}/package-lock.json` | 2 份 lock | 当时 15 个函数里只有这 2 个有，反而不一致；依赖已由 `package.json` 的 `~` 约束。云函数走「云端安装依赖」，不需要 lock |
 | `build/` 下 25 个文件 | 一次性校验脚本（`hash_check.*` / `check_re_sentence.*` / `fix_spacy.py` …）与临时日志 | 逻辑已固化进 `scripts/` 正式脚本，或核验已完成。产物目录，不入库 |
 | `README.md` | 34KB → 约 8KB | 与 `docs/` 大量重复（部署步骤、流水线细节）。重写为概览：定位 / 目录树 / 快速开始 / 云函数清单 / 核心机制 / 注意事项 / 许可 |
 
@@ -637,7 +685,7 @@ playWord(word)
 
 **新增 `assets/db-indexes.json`** —— 集合与索引的**权威清单**（含每个索引的字段与升降序、唯一性）。`init_db/index.js` 里那份是控制台路径的等价副本。
 
-**另外发现**：开发者工具自带 CLI（`/Applications/wechatwebdevtools.app/Contents/MacOS/cli`）支持 `cloud functions deploy`，可**一条命令批量部署全部 15 个云函数**（`--remote-npm-install` 等价于「云端安装依赖」），省掉手点 15 次。不提供「调用云函数」，故初始化仍走 `init_cloud.py`。
+**另外发现**：开发者工具自带 CLI（`/Applications/wechatwebdevtools.app/Contents/MacOS/cli`）支持 `cloud functions deploy`，可**一条命令批量部署全部云函数**（`--remote-npm-install` 等价于「云端安装依赖」），省掉逐个数手点。不提供「调用云函数」，故初始化仍走 `init_cloud.py`。
 
 ⚠️ 补充实测（2026-09-29）：用 CLI 前**必须先在 IDE「设置 → 安全设置」打开「服务端口」**，否则命令**静默卡死**（跑满 3 分钟无任何输出后被系统杀掉，不报错、不提示）。另：**云函数管理没有 HTTP API**——`/tcb/getfunctionlist` 返回 `40066 invalid url`，所以云函数的列表与部署只能走 IDE 界面或该 CLI，是本项目唯一无法「本地一键」的环节。
 
@@ -689,3 +737,212 @@ playWord(word)
 
 **连带修正**：`docs/deploy.md` 第 6/7/8/9/10 节改为「本地一键（推荐）+ 控制台（等价备选）」；
 `ADMIN_TOKEN` 从「必配 5 个函数」降级为「只在走控制台路径时才需要」。
+
+### 11.9 第六轮：每日一句补音频（2026-09-29）
+
+**问题**：首页「每日一句」的喇叭点了没声音，也不报错。
+
+**根因**：M12 把每日一句做成纯前端静态语料（`utils/quotes.js`，12 句按日取模轮换），
+但它的喇叭走的是**例句音频链路**——而例句音频必须先由 `seed_audio` 预置进 `audio_cache`。
+这 12 句**从未进入任何音频生成流程**（`gen_examples.py` 只处理 100 个单词的例句），
+于是 `audio_cache` 查不到 → 返回 `NOT_PRESEEDED` → `playSentence` 的 `if (!src) return`
+**静默跳过**。表现为「没声音也没提示」。
+
+**佐证（三条独立证据）**：
+- `build/sentence_audio/manifest.json` 实测 100 条，与 12 句逐条比对 **0 命中**（近似匹配也 0）
+- 直连 `dict.youdao.com/dictvoice` 请求整句 → **HTTP 500 / 120 字节 JSON**（type 1、2 都一样），
+  印证「整句无第三方兜底」的判断
+- 云端 `audio_cache` 原始 200 条 = 100 单词 + 100 例句
+
+**修复**：新增第三条本地流水线（见 7.8），生成并上传 12 句音频。
+实测：Kokoro 合成 **12 句 / 216.3 KB / 平均 18 KB**（耗时 7s）→ 上传 12 个、0 失败（13.3s）
+→ `audio_cache` **200 → 212 条** → 按 `(text, type)` 复查 **12/12 命中**。
+真调 `audio_cache` 云函数（今日那句）返回 `{code:0, data:{fileID:"cloud://…/audio/2/s_d9vqeq.mp3"}}`。
+
+**新增文件**：
+- `scripts/quotes_to_examples.py` —— 从 `quotes.js` 现抽现转 `assets/examples/quotes-12.json`
+  （`quotes.js` 恒为唯一数据源，并断言条数与声明数一致）
+- `scripts/seed_quote_audio.py` —— 上传 + 写 `audio_cache`，含三道自检、`--apply` 门禁、`--force` 覆盖
+
+**⚠️ 顺手挖出的一个坑（此前排查云函数时一直被误判）：**
+云开发 HTTP API `POST /tcb/invokecloudfunction?access_token=X&name=fn` 的入参格式是
+**「事件字段平铺在 body 顶层」**，不是文档常写的 `{"env":…, "data":{…}}`：
+套在 `data` 里（无论传对象还是 JSON 字符串）函数都收不到字段（`audio_cache` 一律回
+`{"code":-1,"message":"missing text"}`），平铺才能拿到参数。
+之前用 `{env,data}` 探测 `stats`/`today_flow` 恰好能「正常返回」，是因为那两个函数**不需要入参**，
+于是把错误格式误判成了可用格式——**用无需入参的函数试格式，会得到假阳性**。
+
+**同类坑：取云存储临时链接的字段名也不是直觉写法。**
+`POST /tcb/batchdownloadfile` 的 body 要写成
+`{"env":"…","file_list":[{"fileid":"cloud://…","max_age":600}]}` ——
+参数名是 **`file_list`（数组、每项含 `fileid` + `max_age`）**。
+写成 `{"env":…,"fileids":[…]}` / `{"fileid":…}` 一律回 `47001 data format error`（不是「文件不存在」，
+所以别被这个错误码带去查文件）。用它验证过一次：12 句里的今日句实下 **19728 B、首字节 `ff f3`**（合法 MP3 帧同步）。
+
+### 11.10 第七轮：错题本「已掌握」（2026-09-29）
+
+**需求**：用户提出「错题本加一个删除按钮或已掌握」。
+
+**选型：做「已掌握」，不做「删除」** —— 错题本是学习清单，不是文件管理器：
+
+- 语义更准：「这个词我会了」而不是「这条记录我不要了」
+- **可复活**：之后再答错自动回到错题本。靠「新记录天然不带 `mastered` 字段」实现，零额外代码
+- **不删流水**：只在 `records` 上打标，`stats` 查询层过滤。若物理删记录，
+  将来按 `records` 统计正确率会被「洗高」——流水必须保持完整
+
+**后端**：新增云函数 `dismiss_wrong`（**共 18 个**），`stats` 的错题查询改为
+`{_openid, isCorrect:false, mastered: _.neq(true)}`。
+⚠️ MongoDB 的 `$ne` 会一并匹配「字段不存在」的文档 → **老数据不需要回填**。
+
+**前端** `pages/wrongbook/`：卡片右侧加「已掌握」胶囊按钮。三个必须踩准的点：
+
+1. **必须 `catchtap`**：卡片本体是 `bindtap` 播放发音（M10-1），不拦冒泡就变成
+   「点了只响一声、什么也没发生」。它完整坐落在卡片热区**之内**（嵌套，不是并列压盖），
+   已确认不会误触播放——这是 M10-1「父子热区」规则的**唯一例外**，理由写在 wxml 注释里
+2. **热区 88rpx**（与 `.speaker` 同口径 ≥44px），但视觉是小胶囊：外层管热区、内层管视觉，
+   避免 88rpx 高的大药丸抢走卡片视觉重心
+3. **不用 `wx.showToast`**：错题本是 tab 页、底部有原生 tabBar，toast 会被压住（M19-1 TOAST_COVER）
+   → 改为页内**顶部提示条**（4 秒自动收起），并给 `api.dismissWrong` 传 `silent:true` 把错误交给页面处理
+
+**交互**：`wx.showModal` 二次确认 → **乐观移除**（不等云函数往返）→ 失败回滚 + 顶部提示条；
+`_busy` 连点锁覆盖「确认框还开着」这段窗口，防止连弹 / 误伤别的词。
+
+**顺手修的**：`wrongbook.js` 原来只有 `onUnload` 停播，但 tab 页切走只触发 `onHide`
+（`index.js` 早已按这条规范处理过）→ 补上 `onHide`，否则切走之后喇叭还在响。
+
+**新增回归测试 `scripts/test_wrongbook.js`**（14 条，零依赖，node 直跑）：
+`check_miniprogram.js` 只审结构，一条页面 JS 行为都查不到；而「乐观更新 + 失败回滚 + 连点锁」
+恰好是最容易改回归、且真机上最难手动复现（造不出「云端失败」）的部分。
+做法：桩掉 `wx`/`api`/`audio`/`share`，用 `require.cache` 注入后**直跑真实页面 JS**。
+其中「乐观更新」这条用一个**挂起不返回**的 `dismissWrong` 桩来验：云端未回包时列表就该已经变了。
+
+> **有效性已负向验证**（避免「假绿」）：把 `catchtap` 改回 `bindtap` / 删掉 `onHide` /
+> 删掉失败回滚，三处故意改坏都被对应断言抓到，各自 FAIL 且退出码非 0。
+
+
+**仍待办**：`build/quote_audio/` 与 `build/sentence_audio/` 都是本地产物，未纳入版本控制（`build/` 已 gitignore）；
+换机器或换云环境后需重跑 ①②③。
+
+
+### 11.11 第八轮：错题本点词进复习（2026-09-29）
+
+**需求**：用户提出「错题本点单词也可以跳到学习单词的页面复习，可以返回错题本」。
+
+**纯前端，零云函数改动** —— 复用学习页现有的 `word_card` 链路，不需要重新部署任何云函数。
+
+**入口（`pages/wrongbook/`）**：
+- 整卡 `bindtap` 从 `play` 改为 `openReview` → `wx.navigateTo('/pages/learn/learn?review=<_id>')`
+  （learn 是非 tab 页，navigateTo 保留页面栈；返回时本页 `onShow` 会重拉 `stats`，所以
+  复习期间的变化回来就是最新的）
+- 喇叭随之改为独立的 `catchtap="play"`：**这一条修订了 M10-1**（原规则「整卡可点=发音、
+  喇叭不单独绑 tap」）。整卡行为换成跳转后，发音必须有自己的热区，于是本页的热区关系变成
+  「一个父热区 + 两个 `catchtap` 子热区（喇叭 / 已掌握）」，都嵌套在卡片内、都有 88rpx 热区，
+  用 `catchtap` 隔断冒泡 → 不误触
+- `_jumping` 连点锁（navigateTo 有延迟，连点会叠出两层学习页，返回一次还停在学习页）；
+  锁在 `onShow` 里解除 —— 回到本页即可再点，跳转失败（如页面栈满 10 层）也不会永久锁死
+
+**学习页新增第三种模式（`pages/learn/`，`review=<wordId>`）**：
+- 词源**只来自参数**：不读 `today_flow`、不调 `start_new_words`、不调 `start_extra_round`
+  —— 后两者会推进当日游标 / 写 `learnedIds`，否则**点一下错题本就把今日进度改了**（同加练的 C2 坑）
+- 单卡：头部「错题复习」、`1 / 1`、底栏按钮「复习完成」
+- `next()` 只做两件事：停播 + 退回错题本（`navigateBack`；无上一页时兜底 `switchTab` 到错题本
+  —— tab 页只能 `switchTab`）。**不调 `markLearned`**：复习 ≠ 已掌握，要不要标记由错题本上的按钮决定
+- 进词仍自动播单词发音（与主流程一致）
+- 底栏按钮文案从 wxml 的三重三元收敛成 `data.nextLabel`（四态在 `loadCard` 一处算）
+
+**回归测试**：
+- 新增 `scripts/test_learn.js`（29 条）：三种模式（`review` / `round=0` / `round>0`）各自的
+  词源、`markLearned` 参数、按钮文案、跳转目标，重点盯「**不该调什么**」——这类约束
+  `check_miniprogram.js` 一条都查不到
+- `scripts/test_wrongbook.js` 14 → 21 条：新增「点卡片带上词 id」「连点只跳一次」「返回后可再点」
+- **有效性已负向验证**：删掉 review 分支的 `return`（会去读 today_flow）、删掉 next 的 review 分支、
+  把返回改成跳练习页、删掉错题本连点锁、把喇叭改回 `bindtap` —— 5 处故意改坏各自触发对应断言 FAIL
+
+### 11.12 第九轮：加练计入「累计学习」（2026-09-29）
+
+**需求**：用户提出「再来一组也加入到累计学习」。
+
+**这是 D3 决策的反转** —— 加练上线时用户选了「不计入」（`totalLearned` 只统计主流程），现改为**计入**。
+口径严格对齐 `finish_checkin`：**结算时按整组一次性入账**，不是「学一个加一个」。
+
+**改动（仅 1 个云函数 + mock 层）**：
+- `finish_extra_round`：`users.totalLearned += wordIds.length`（与 `finish_checkin` 用
+  `plan.newWordIds.length` 对称），返回值 `totalLearned` 改为**入账后的新值**
+- ⚠️ **幂等分支绝不重复累加**：组 `stage==='done'` 时只回读当前值。这是本函数唯一的计数风险点 ——
+  前端重试/连点都会走到这条分支，一旦写错就是「加练一次、累计涨两倍」
+- `home_summary` 注释订正：`extraLearnedToday`（当日走过学习页的加练词数）与 `totalLearned`
+  （已结算入账）**口径不同**，前者含「学了还没做完小测」的在途组，所以 ≥ 入账量是正常的
+- mock 层 `totalLearned` 从各处硬编码 168 改为**模块级可变 `mockUser`**：`homeSummary`/`stats` 读它，
+  `finishExtraRound`/`finishCheckin` 累加。若不改，USE_MOCK 下「加练后累计 +N」看不到，
+  前端接线错了也发现不了（mock 与真机行为分叉）
+
+**「中途退出不入账」是刻意的**：与主流程一致 —— 学了一半不做小测就不结算；这些词因 `wordCursor`
+未推进，次日会被 `start_new_words` 当新词重新取到，届时由 `finish_checkin` 计入。**不会漏计，只是延后。**
+
+**测试**：
+- 新增 `scripts/test_finish_extra_round.js`（21 条）—— **本项目第一个云函数逻辑无头测试**。
+  桩掉 `wx-server-sdk`（本地没装，云端才装）+ 内存假 DB，直跑真实的 `index.js`：
+  首次结算 / 重复结算 / 三连结算 / 未全对拒绝 / 组不存在 / 空词组 / 三组累加，
+  并守住 `streak`、`checkins`、`plan.stage` **不被加练污染**
+  - ⚠️ 桩的坑：云函数**顶层**就执行了 `db.collection(...)`，所以假 DB 必须「每次查询时重读 store」，
+    否则换用例时 collection 句柄还攥着旧数组
+- `scripts/test_mock.js` 加练体检段：从「结算后 totalLearned **不变**」改为相对量断言
+  「增量 === 本组词数 + 重复结算不重复计 + 首页读数同步」
+- **两个脚本都做了负向验证**：mock 层 3 处（不累加 / 去掉幂等判断 / 首页写死）、
+  云函数 3 处（不写 `totalLearned` / 幂等分支失效 / 顺手改 `streak`）—— 全部被抓到
+
+### 11.13 第十轮：加练按钮「中途退出被锁死」（2026-09-29）
+
+**用户报障**：「再学一组，可以重复执行 —— 刚才可以再学一组，现在又不行了。」
+
+**诊断（直接查云端真实数据，不猜）**：`daily_plans` 当日那条
+`extraRounds = 3 组`（round 1/2 `done`，**round 3 停在 `learnedIds=1/5`**），
+`users.wordCursor=15`，游标之后 `audioReady` 词还剩 85 个。于是：
+
+- 云端 `today_flow` 算出的 `canStart = 已打卡 && (有未完成组 || 未达上限未取尽)` → **`true`**（第 3 组没做完）
+- 但前端 `buildExtra()` 里是 `if (ex.limitReached) return hide` —— **先判上限，直接隐藏**
+
+**根因：前端把「已建满 3 组」的中途退出者锁死了。** 建满第 3 组的那一刻起，首页按钮消失，
+用户再也回不到自己那组（round 3 永远停在 1/5）。而云端一直认为可以继续 → 前后端口径不一致。
+
+**修复（`miniprogram/pages/index/index.js` 的 `buildExtra`，纯前端）**：把判断顺序改成
+
+| 序 | 条件 | 表现 |
+|---|---|---|
+| 1 | 未打卡 | 隐藏 |
+| 2 | 无 `extra` 字段（旧版云端） | 乐观显示（原有约定，保留） |
+| 3 | **`pendingRound` 非空** | **显示 + 可点，文案「继续学一组」** ← 本次修复 |
+| 4 | `exhausted` | 显示 + 置灰 + 底栏「预置发音的词已学完…」 |
+| 5 | `limitReached` | 显示 + 置灰 + 底栏「今日加练已达上限，明天可继续」 |
+| 6 | 正常 | 显示 + 可点「再学一组」 |
+
+⚠️ 第 4/5 条**从「整个隐藏」改成「置灰 + 说明原因」**，是对 M13 原设计的**有意偏离**：
+按钮凭空消失正是本次报障的观感，把原因写在底栏比静默消失好排查。不想要可改回。
+
+**不需要部署云函数**：云端 `canStart` / `pendingRound` 本来就正确，`start_extra_round`
+也会幂等复用未完成的组 → 这次只是前端没读对。
+
+**新增 `scripts/test_index.js`（16 条）**：直跑真实 `pages/index/index.js` 的 `buildExtra`，
+覆盖上表 6 种状态 + 2 条源码面断言（那个坑不能回来、`pendingRound` 必须排在 `limitReached` 前）。
+**负向验证 3 处**：复现原 bug（插回 `if (limitReached) return hide`）/ 未打卡也显示 / 取尽不给原因 ——
+全部被抓到，文件已复原。
+⚠️ 写断言时踩到**假失败**：源码面断言的正则匹配到了**我自己写在注释里的反例**，
+必须先剥掉注释行再匹配（字符匹配类断言的老问题，本项目已踩过多次）。
+
+**同日追加（用户拍板两项）**：
+
+1. **每日上限取消 → 不限次数**。`today_flow` 与 `start_extra_round` 的 `MAX_ROUNDS_PER_DAY`
+   都置为 `Infinity`（常量与判断代码**保留原位**，将来要恢复上限只改常量）。
+   `limitReached` 字段保留、恒为 `false` —— 前端契约不变，不必一起改。
+   唯一的自然终点变成 `exhausted`（`audioReady` 词池取尽）。
+   ⚠️ mock 层的 `MAX_EXTRA_ROUNDS` 同步置 `Infinity`，否则 `USE_MOCK` 下与真机行为分叉。
+2. **恢复未完成组时跳过已学过的词**（`pages/learn/learn.js` 的 `round>0` 分支）：
+   按该组 `learnedIds` 过滤 `wordIds`，直接从下一个没学的词继续；进度条与「N / M」
+   也随之只反映**剩余**词数。`learnedIds` 由 `today_flow(markLearned, round)` 用
+   `addToSet` 累积，天然幂等，不会重复计数。
+   - 边界：**词都看完了但小测没做**（组仍 `pending`）→ 剩余为空，直接
+     `redirectTo /pages/practice/practice?phase=practice&round=N` 进小测，
+     不让用户对着空列表（`build_questions` 会按该组 `wordIds` 重建队列，无需额外处理）。
+
+**仍待办**：`finish_extra_round` 的新版（加练计入累计学习）尚未部署 —— 本次云端数据显示
+第 2 组已结算但 `totalLearned` 未增，正是「漏传」的表现。

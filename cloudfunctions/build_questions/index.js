@@ -70,7 +70,8 @@ function sanitize(queue) {
 
 exports.main = async (event = {}) => {
   const { OPENID } = cloud.getWXContext()
-  const { phase = 'practice' } = event
+  const { phase = 'practice', round = 0 } = event
+  const r = Number(round) || 0
   const today = dateStr(0)
 
   try {
@@ -78,12 +79,28 @@ exports.main = async (event = {}) => {
     const plan = planRes.data[0]
     if (!plan) return { code: -1, message: '请先初始化当日计划' }
 
-    const key = phase === 'review' ? 'reviewQueue' : 'practiceQueue'
-    if (Array.isArray(plan[key]) && plan[key].length) {
-      return { code: 0, data: { questions: sanitize(plan[key]), reused: true } }
+    // 队列路由（C4）：round>0 → 加练组内队列；round===0 → 主流程队列（现有行为不变）。
+    // 若不加 round 隔离，加练会直接覆盖 plan.practiceQueue，主流程被静默破坏。
+    let queuePath
+    let existing
+    let wordIds
+    if (r > 0) {
+      const groups = Array.isArray(plan.extraRounds) ? plan.extraRounds : []
+      const gi = groups.findIndex((g) => g.roundId === r)
+      if (gi < 0) return { code: -1, message: '加练组不存在' }
+      queuePath = `extraRounds.${gi}.practiceQueue`
+      existing = groups[gi].practiceQueue
+      wordIds = groups[gi].wordIds || []
+    } else {
+      queuePath = phase === 'review' ? 'reviewQueue' : 'practiceQueue'
+      existing = plan[queuePath]
+      wordIds = phase === 'review' ? plan.reviewWordIds || [] : plan.newWordIds || []
     }
 
-    const wordIds = phase === 'review' ? plan.reviewWordIds || [] : plan.newWordIds || []
+    if (Array.isArray(existing) && existing.length) {
+      return { code: 0, data: { questions: sanitize(existing), reused: true } }
+    }
+
     if (!wordIds.length) return { code: 0, data: { questions: [], reused: false } }
 
     const target = (await words.where({ _id: _.in(wordIds) }).get()).data
@@ -97,7 +114,7 @@ exports.main = async (event = {}) => {
     )
     const mixed = shuffle(queue)
 
-    await plans.doc(plan._id).update({ data: { [key]: mixed, updatedAt: new Date() } })
+    await plans.doc(plan._id).update({ data: { [queuePath]: mixed, updatedAt: new Date() } })
 
     return { code: 0, data: { questions: sanitize(mixed), reused: false } }
   } catch (e) {

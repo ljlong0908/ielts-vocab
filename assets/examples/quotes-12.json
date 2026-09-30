@@ -1,0 +1,98 @@
+[
+  {
+    "word": "quote-01",
+    "example": {
+      "en": "A different language is a different vision of life.",
+      "cn": "换一门语言，就是换一种看世界的方式。"
+    },
+    "author": "Federico Fellini"
+  },
+  {
+    "word": "quote-02",
+    "example": {
+      "en": "It does not matter how slowly you go as long as you do not stop.",
+      "cn": "走得慢不要紧，只要不停下。"
+    },
+    "author": "Confucius"
+  },
+  {
+    "word": "quote-03",
+    "example": {
+      "en": "It always seems impossible until it is done.",
+      "cn": "事情在做成之前，总显得不可能。"
+    },
+    "author": "Nelson Mandela"
+  },
+  {
+    "word": "quote-04",
+    "example": {
+      "en": "We are what we repeatedly do.",
+      "cn": "我们由自己反复做的事塑造。"
+    },
+    "author": "Aristotle"
+  },
+  {
+    "word": "quote-05",
+    "example": {
+      "en": "Success is the sum of small efforts, repeated day in and day out.",
+      "cn": "成功是日复一日微小努力的总和。"
+    },
+    "author": "Robert Collier"
+  },
+  {
+    "word": "quote-06",
+    "example": {
+      "en": "The best time to plant a tree was twenty years ago. The second best time is now.",
+      "cn": "种一棵树最好的时间是二十年前，其次是现在。"
+    },
+    "author": "Chinese Proverb"
+  },
+  {
+    "word": "quote-07",
+    "example": {
+      "en": "Great works are performed not by strength but by perseverance.",
+      "cn": "成就伟业靠的不是力量，而是坚持。"
+    },
+    "author": "Samuel Johnson"
+  },
+  {
+    "word": "quote-08",
+    "example": {
+      "en": "You do not have to see the whole staircase, just take the first step.",
+      "cn": "你不必看清整段楼梯，先迈出第一步就好。"
+    },
+    "author": "Martin Luther King Jr."
+  },
+  {
+    "word": "quote-09",
+    "example": {
+      "en": "Little by little, one travels far.",
+      "cn": "一步一步，也能走得很远。"
+    },
+    "author": "J. R. R. Tolkien"
+  },
+  {
+    "word": "quote-10",
+    "example": {
+      "en": "Learning is a treasure that will follow its owner everywhere.",
+      "cn": "学识是随身而行、永不褪色的财富。"
+    },
+    "author": "Chinese Proverb"
+  },
+  {
+    "word": "quote-11",
+    "example": {
+      "en": "The way to get started is to quit talking and begin doing.",
+      "cn": "开始的办法，就是少说、动手做。"
+    },
+    "author": "Walt Disney"
+  },
+  {
+    "word": "quote-12",
+    "example": {
+      "en": "The only limit to our realization of tomorrow is our doubts of today.",
+      "cn": "通往明天的唯一阻碍，是今天的犹疑。"
+    },
+    "author": "Franklin D. Roosevelt"
+  }
+]

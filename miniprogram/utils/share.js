@@ -2,14 +2,18 @@
  * 分享转发配置（统一入口）
  *
  * 设计约定：
- * 1. 只开启「转发给朋友 / 群」（onShareAppMessage），**不开启朋友圈**（onShareTimeline）。
- *    朋友圈打开的是「单页模式」：无登录态、不允许跳转，且云开发必须开启「未登录访问」
- *    才能读到数据。本项目所有数据都依赖 openid，单页模式下必然空白，而放开未登录
- *    访问会带来越权读写风险。故不启用。
- * 2. 所有页面的分享路径统一回首页（pages/index/index）。learn / practice / checkin
+ * 1. 「转发给朋友 / 群」所有页面都开（onShareAppMessage）。
+ * 2. 「分享到朋友圈」只在首页开（onShareTimeline）。朋友圈打开的是「单页模式」：
+ *    无登录态、存储隔离、不允许 wx 跳转，且云开发必须开启「未登录访问」才能读到
+ *    数据——本项目所有业务数据都依赖 openid，单页模式下必然读不到。因此首页对
+ *    单页模式做了专门降级（见 index.js scene 1154）：不拉云端数据、不出打卡 UI，
+ *    只展示品牌 + 本地静态「每日一句」，引导用户点右上角「前往小程序」进入正题。
+ *    ⚠️ 其他页面（learn/practice/checkin 等）强依赖云端流程，**不要**给它们加
+ *    onShareTimeline，否则分享出去就是空白/报错页。
+ * 3. 所有页面的分享路径统一回首页（pages/index/index）。learn / practice / checkin
  *    是强流程页，新用户从分享卡片直接进入会立刻创建当日学习计划，体验突兀；
  *    回首页最干净——未设置目标的新用户会被 index 自动引导到 onboarding。
- * 3. 分享文案只描述功能，不含「分享得奖励」「帮我点一下」等诱导性表述，避免触碰
+ * 4. 分享文案只描述功能，不含「分享得奖励」「帮我点一下」等诱导性表述，避免触碰
  *    《微信小程序平台运营规范》中关于诱导分享的条款。
  */
 
@@ -33,7 +37,7 @@ const SHARE_IMAGE = ''
 function toFriend(opts) {
   const o = opts || {}
   const res = {
-    title: o.title || `${BRAND}｜每天记住几个雅思词`,
+    title: o.title || `${BRAND}｜每天记住几个核心词`,
     path: o.path || HOME_PATH
   }
   const img = o.imageUrl || SHARE_IMAGE
@@ -41,5 +45,26 @@ function toFriend(opts) {
   return res
 }
 
-// HOME_PATH / BRAND 仅在本文件内部使用，不外暴露（外部只需 toFriend）
-module.exports = { toFriend }
+/**
+ * 生成「分享到朋友圈」的配置（仅首页使用）
+ *  - onShareTimeline 没有 path 参数（只能落在当前页），query 会拼在页面路径后
+ *  - 文案与好友转发区分：朋友圈是"晒"的场景，用更轻的语感，不催打卡
+ * @param {Object} [opts]
+ * @param {string} [opts.title]    分享标题，缺省用品牌默认文案
+ * @param {string} [opts.query]    附加参数（当前用不到，留扩展位）
+ * @param {string} [opts.imageUrl] 自定义配图，缺省用全局配置
+ * @returns {{title: string, query?: string, imageUrl?: string}}
+ */
+function toTimeline(opts) {
+  const o = opts || {}
+  const res = {
+    title: o.title || `${BRAND}｜一天一句好英文，顺手记住几个核心词`
+  }
+  if (o.query) res.query = o.query
+  const img = o.imageUrl || SHARE_IMAGE
+  if (img) res.imageUrl = img
+  return res
+}
+
+// HOME_PATH / BRAND 仅在本文件内部使用，不外暴露（外部只需 toFriend / toTimeline）
+module.exports = { toFriend, toTimeline }
