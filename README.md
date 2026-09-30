@@ -14,8 +14,10 @@
 |---|---|
 | **[docs/deploy.md](docs/deploy.md)** | **部署与上线步骤 —— 唯一权威操作清单**，从零到可用，含验收表 / 报错排查 / 提审检查 |
 | [docs/project-spec.md](docs/project-spec.md) | 项目结构与业务逻辑说明（**以源码为准**，供 AI 作为上下文） |
-| [docs/隐私保护指引.md](docs/隐私保护指引.md) | 隐私合规文案（提审用） |
-| [docs/intro.md](docs/intro.md) | 小程序简介文案（市场介绍 / 分享文案） |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | 贡献指南：本地环境、回归自测、代码约定 |
+| [.env.example](.env.example) | 本地环境变量模板（复制为 `.env` 后填写，`.env` 不入库） |
+| [docs/隐私保护指引.md](docs/隐私保护指引.md) | 隐私合规文案（**示例**，提审用） |
+| [docs/intro.md](docs/intro.md) | 小程序简介文案（**示例**，市场介绍 / 分享文案） |
 
 > 上手看本文件，动手部署直接翻 `docs/deploy.md`。
 
@@ -69,7 +71,7 @@ ielts-vocab/
 
 ## 快速开始
 
-完整步骤见 **[docs/deploy.md](docs/deploy.md)**，这里是骨架：
+完整步骤见 **[docs/deploy.md](docs/deploy.md)**，这里是骨架。本地工具链的凭证统一放项目根 `.env`（先 `cp .env.example .env`）：
 
 1. **导入项目** —— 开发者工具选**仓库根**（含 `project.config.json`），填入自己的 AppID
 2. **开通云开发** —— 复制环境 ID，填进 `miniprogram/config.js` 的 `ENV_ID`
@@ -190,6 +192,7 @@ ielts-vocab/
 ## 注意事项
 
 - [ ] **fork 后必须替换** `project.config.json` 的 `appid` 与 `miniprogram/config.js` 的 `ENV_ID`（二者非密钥，但用作者的会连到作者的云环境）
+- [ ] **品牌与提审文案同样要换**：「雅词本」名称与 `assets/brand/` 图标属作者品牌资产（MIT **不含商标授权**）；`docs/intro.md` / `docs/隐私保护指引.md` 是示例文案，发布前替换为你自己的产品名与主体信息
 - [ ] `enrich_word` 必须配 `DEEPSEEK_API_KEY`（且账户有余额），否则单词卡只显示词表基础字段
 - [ ] 数据初始化走本地脚本，都幂等可重复跑：`python scripts/init_cloud.py --apply`（集合 + 索引）→ `python scripts/seed_cloud.py --apply --reset`（词表 + 音频 + audioReady）
 - [ ] **集合权限只能手工配一次**（HTTP API 没有权限接口）：`words` = 所有用户可读 / 仅管理端可写，其余 = 仅创建者可读写
