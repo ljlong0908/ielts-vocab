@@ -34,33 +34,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gen_audio import SAMPLE_RATE, VOICES, encode_mp3, trim_silence  # noqa: E402
-
-
-def _int32(x):
-    x &= 0xFFFFFFFF
-    return x - 0x100000000 if x >= 0x80000000 else x
-
-
-def _base36(n):
-    digits = "0123456789abcdefghijklmnopqrstuvwxyz"
-    if n == 0:
-        return "0"
-    out = ""
-    while n:
-        n, r = divmod(n, 36)
-        out = digits[r] + out
-    return out
-
-
-def hash_text(text):
-    """与 cloudfunctions/seed_audio/index.js 的 hashText() 完全一致（JS int32 语义）。
-
-    本地与云端必须算出同一个值，否则文件名对不上，排查问题时会产生误导。
-    """
-    h = 0
-    for ch in text:
-        h = _int32(_int32(h << 5) - h + ord(ch))
-    return _base36(abs(h))
+from text_key import hash_text  # noqa: E402
 
 
 def sentence_slug(text):

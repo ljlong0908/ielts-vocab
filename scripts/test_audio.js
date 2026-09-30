@@ -13,14 +13,10 @@
  * 用法：node scripts/test_audio.js   （全绿退出码 0）
  */
 const path = require('path')
-const ROOT = path.resolve(__dirname, '..')
-const drain = () => new Promise((r) => setTimeout(r, 0))
+/** 共享骨架（ROOT / drain / 断言计数）见 scripts/_harness.js */
+const { ROOT, drain, tester } = require('./_harness')
 
-let pass = 0, fail = 0
-function t(desc, ok) {
-  console.log(`${ok ? 'PASS' : 'FAIL'}  ${desc}`)
-  ok ? pass++ : fail++
-}
+const { t, done } = tester()
 
 /* ---------- wx / config / mock 桩 ---------- */
 const AUDIO = require.resolve(path.join(ROOT, 'miniprogram/utils/audio.js'))
@@ -122,6 +118,5 @@ const audio = require(AUDIO)
   await drain()
   t('未预置例句：静默不播（行为不变）', played.filter((x) => x.startsWith('play:')).length === 0)
 
-  console.log(`\n${pass} passed, ${fail} failed`)
-  process.exit(fail ? 1 : 0)
+  done()
 })()

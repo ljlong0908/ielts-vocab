@@ -12,34 +12,11 @@
  *      而云端 `canStart` 明明是 true（有未完成组）。症状＝
  *      「刚才还能再学一组，现在不行了」，极容易被误判成「后端没部署」。
  *
- * 做法：桩掉 wx / api / audio / share，用 require.cache 注入，
- *      然后**直跑真实的 pages/index/index.js**，调它的 buildExtra 观察返回值。
+ * 共享骨架（wx 桩 / 断言 / 页面捕获）见 scripts/_harness.js。
  */
-const path = require('path')
+const { ROOT, tester, stub, installWx, loadPage } = require('./_harness')
 
-const ROOT = path.resolve(__dirname, '..')
-
-global.wx = {
-  getStorage: () => null,
-  setStorage() {},
-  getStorageSync: () => null,
-  setStorageSync() {},
-  showToast() {},
-  navigateTo() {},
-  switchTab() {},
-  reLaunch() {},
-  // 朋友圈单页模式检测用（index.onLoad 读 scene）；默认普通启动
-  getLaunchOptionsSync: () => ({ scene: 1001 }),
-  createInnerAudioContext: () => ({
-    stop() {}, play() {}, onError() {}, offEnded() {}, offError() {}
-  })
-}
-
-const stub = (rel, exports) => {
-  const p = require.resolve(path.join(ROOT, rel))
-  require.cache[p] = { id: p, filename: p, loaded: true, exports }
-}
-
+installWx()
 stub('miniprogram/utils/api.js', {
   homeSummary: async () => ({}),
   todayFlow: async () => ({}),
@@ -50,23 +27,14 @@ stub('miniprogram/utils/share.js', {
   toFriend: (o) => o || {},
   toTimeline: (o) => Object.assign({ title: '雅词本｜一天一句好英文，顺手记住几个核心词' }, o)
 })
-// 取回桩句柄，供后面替换实现/计数用
-const api = require(path.join(ROOT, 'miniprogram/utils/api.js'))
 
-let page = null
-global.Page = (cfg) => {
-  page = cfg
-}
-require(path.join(ROOT, 'miniprogram/pages/index/index.js'))
+const page = loadPage('miniprogram/pages/index/index.js')
+// 取回桩句柄，供后面替换实现/计数用
+const api = require(ROOT + '/miniprogram/utils/api.js')
+
+const { t, done } = tester()
 
 const build = (summary, flow) => page.buildExtra(summary, flow)
-
-let pass = 0
-let fail = 0
-const t = (label, ok) => {
-  console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}`)
-  ok ? pass++ : fail++
-}
 
 const DONE = { todayDone: true, dailyGoal: 5 }
 const UNDONE = { todayDone: false, dailyGoal: 5 }
@@ -138,7 +106,7 @@ const extra = (o) =>
 
 /* ---------- ⑦ 源码面：那个坑不能回来 ---------- */
 {
-  const src = require('fs').readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.js'), 'utf8')
+  const src = require('fs').readFileSync(ROOT + '/miniprogram/pages/index/index.js', 'utf8')
   // ⚠️ 必须**先剥掉注释行**再匹配：函数上方的说明里就写着反例 `if (limitReached) return hide`，
   //    不剥离的话这条断言会自己把自己判红（字符匹配类断言的通病，本项目踩过多次）
   const code = src
@@ -152,9 +120,6 @@ const extra = (o) =>
 
 /* ---------- ⑧ 朋友圈分享与单页模式降级（scene 1154） ---------- */
 {
-  const setData = (patch) => Object.assign(page.data, patch)
-  page.setData = setData
-
   // 分享配置
   const tl = page.onShareTimeline()
   t('朋友圈分享：onShareTimeline 有文案（title）', typeof tl.title === 'string' && tl.title.length > 0)
@@ -186,5 +151,4 @@ const extra = (o) =>
   t('普通启动 → 不置 singlePage', page.data.singlePage === false)
 }
 
-console.log(`\n${pass} passed, ${fail} failed`)
-process.exit(fail ? 1 : 0)
+done()

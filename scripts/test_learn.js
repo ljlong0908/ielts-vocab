@@ -12,53 +12,18 @@
  * 复习模式同理：一旦顺手调了 start_new_words，点一下错题本就会推进当日游标。
  * 这类「不该调什么」的约束，check_miniprogram.js 一条都查不到。
  *
- * 做法：桩掉 wx / api / audio / share + getCurrentPages，用 require.cache 注入，
- *      然后**直跑真实的 pages/learn/learn.js**。
+ * 共享骨架（wx 桩 / 断言 / 页面捕获）见 scripts/_harness.js。
  */
 const fs = require('fs')
-const path = require('path')
-
-const ROOT = path.resolve(__dirname, '..')
-const drain = () => new Promise((r) => setTimeout(r, 0))
+const { ROOT, drain, tester, stub, installWx, loadPage, snap, pick } = require('./_harness')
 
 /* ---------- 可配置的桩状态 ---------- */
-let calls = [] // api / audio 调用流水
-let navs = [] // 路由跳转记录
-let stackDepth = 2 // getCurrentPages().length：2 = 从错题本 navigateTo 进来
 let todayFlowData = { plan: { newWordIds: ['a1', 'a2'] } }
+let stackDepth = 2 // getCurrentPages().length：2 = 从错题本 navigateTo 进来
 
 global.getCurrentPages = () => new Array(stackDepth).fill({})
 
-global.wx = {
-  navigateBack() {
-    navs.push('navigateBack')
-  },
-  redirectTo({ url }) {
-    navs.push(url)
-  },
-  switchTab({ url }) {
-    navs.push('switchTab:' + url)
-  },
-  getStorage: ({ fail }) => fail && fail(),
-  setStorage() {},
-  showToast() {
-    navs.push('showToast') // learn 页无底栏，但也不该用 toast 做提示；出现即记录
-  },
-  createInnerAudioContext: () => ({
-    stop() {},
-    play() {
-      calls.push('ctx.play')
-    },
-    onError() {},
-    offEnded() {},
-    offError() {}
-  })
-}
-
-const stub = (rel, exports) => {
-  const p = require.resolve(path.join(ROOT, rel))
-  require.cache[p] = { id: p, filename: p, loaded: true, exports }
-}
+const { navs, calls } = installWx()
 
 stub('miniprogram/utils/api.js', {
   todayFlow: async () => {
@@ -88,38 +53,22 @@ stub('miniprogram/utils/audio.js', {
 })
 stub('miniprogram/utils/share.js', { toFriend: (o) => o || {} })
 
-let page = null
-global.Page = (cfg) => {
-  page = cfg
-}
-require(path.join(ROOT, 'miniprogram/pages/learn/learn.js'))
-
-page.setData = function (o) {
-  Object.assign(this.data, o)
-}
-const initialData = JSON.parse(JSON.stringify(page.data))
+const page = loadPage('miniprogram/pages/learn/learn.js')
+const reset = snap(page, ['reviewId', 'round'])
 const fresh = () => {
-  Object.keys(page.data).forEach((k) => delete page.data[k])
-  Object.assign(page.data, JSON.parse(JSON.stringify(initialData)))
-  delete page.reviewId
-  delete page.round
+  reset()
   page.wordIds = []
-  calls = []
-  navs = []
+  calls.length = 0
+  navs.length = 0
 }
-const cards = () => calls.filter((c) => c.startsWith('wordCard:'))
-const api = (p) => calls.filter((c) => c.startsWith(p))
+const cards = () => pick(calls, 'wordCard:')
+const api = (p) => pick(calls, p)
 
-let pass = 0
-let fail = 0
-const t = (label, ok) => {
-  console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}`)
-  ok ? pass++ : fail++
-}
+const { t, done } = tester()
 
 ;(async () => {
   /* ---------- 静态面 ---------- */
-  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/learn/learn.wxml'), 'utf8')
+  const wxml = fs.readFileSync(ROOT + '/miniprogram/pages/learn/learn.wxml', 'utf8')
   t('learn 头部有「错题复习」文案', wxml.includes('错题复习'))
   t('底栏按钮文案收敛到 nextLabel（四种模式在一处算）', /\{\{nextLabel\}\}/.test(wxml))
 
@@ -137,8 +86,8 @@ const t = (label, ok) => {
   t('review：进词仍自动播一次发音', api('playWord').length === 1 && calls.includes('playWord:w_w4'))
 
   // 出口行为
-  calls = []
-  navs = []
+  calls.length = 0
+  navs.length = 0
   await page.next.call(page)
   await drain()
   t('review：点「复习完成」返回上一页（错题本）', navs.length === 1 && navs[0] === 'navigateBack')
@@ -150,7 +99,6 @@ const t = (label, ok) => {
   fresh()
   await page.onLoad.call(page, { review: 'w4' })
   await drain()
-  navs = []
   page.next.call(page)
   page.next.call(page)
   await drain()
@@ -161,7 +109,6 @@ const t = (label, ok) => {
   fresh()
   await page.onLoad.call(page, { review: 'w7' })
   await drain()
-  navs = []
   await page.next.call(page)
   await drain()
   t('review：没有上一页时退回错题本 tab（tab 页只能 switchTab）', navs[0] === 'switchTab:/pages/wrongbook/wrongbook')
@@ -176,16 +123,16 @@ const t = (label, ok) => {
   t('主流程：不误入复习 / 加练模式', page.data.isReview === false && page.data.isExtra === false)
   t('主流程：首词按钮为「下一个」', page.data.nextLabel === '下一个' && page.data.isLast === false)
 
-  calls = []
-  navs = []
+  calls.length = 0
+  navs.length = 0
   await page.next.call(page)
   await drain()
   t('主流程：「下一个」仍写 markLearned（round=0）', calls.includes('markLearned:a1:0'))
   t('主流程：「下一个」不跳页，只翻卡', navs.length === 0 && page.data.index === 1)
   t('主流程：最后一词按钮为「开始练习」', page.data.nextLabel === '开始练习')
 
-  calls = []
-  navs = []
+  calls.length = 0
+  navs.length = 0
   await page.next.call(page)
   await drain()
   t('主流程：最后一词跳练习页（不带 round）', navs[0] === '/pages/practice/practice?phase=practice')
@@ -199,13 +146,13 @@ const t = (label, ok) => {
   t('加练：不调 start_new_words（不碰主流程 newWordIds）', !calls.includes('startNewWords'))
   t('加练：头部为「加练单词」', page.data.isExtra === true && page.data.isReview === false)
 
-  calls = []
+  calls.length = 0
   await page.next.call(page)
   await drain()
   t('加练：markLearned 带 round=2（否则会写进主流程进度）', calls.includes('markLearned:e1:2'))
   t('加练：最后一词按钮为「开始加练小测」', page.data.nextLabel === '开始加练小测')
 
-  navs = []
+  navs.length = 0
   await page.next.call(page)
   await drain()
   t('加练：最后一词跳练习页并带 round', navs[0] === '/pages/practice/practice?phase=practice&round=2')
@@ -229,13 +176,11 @@ const t = (label, ok) => {
     plan: { extraRounds: [{ roundId: 4, wordIds: ['e1', 'e2'], learnedIds: ['e1', 'e2'], stage: 'learning' }] }
   }
   fresh()
-  navs = []
   await page.onLoad.call(page, { round: '4' })
   await drain()
   t('加练续学：词全学完 → 直接跳小测（不显示空列表）',
     navs[0] === '/pages/practice/practice?phase=practice&round=4')
   t('加练续学：全学完时不取任何单词卡', !calls.some((c) => c.startsWith('wordCard:') && !c.includes('empty')))
 
-  console.log(`\n${pass} passed, ${fail} failed`)
-  process.exit(fail ? 1 : 0)
+  done()
 })()

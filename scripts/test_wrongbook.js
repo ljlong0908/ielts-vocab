@@ -8,60 +8,23 @@
  * 一条页面 JS 行为都查不到。「点『已掌握』→ 本地立刻少一个 → 云端失败要回滚」
  * 这类逻辑改起来极容易回归，且真机上要复现「云端失败」很难手动造。
  *
- * 做法：桩掉 wx / api / audio / share，用 require.cache 注入，然后**直跑真实的
- *      pages/wrongbook/wrongbook.js**，调它的 markMastered 观察行为。
+ * 共享骨架（wx 桩 / 断言 / 页面捕获）见 scripts/_harness.js。
  */
 const fs = require('fs')
-const path = require('path')
-
-const ROOT = path.resolve(__dirname, '..')
+const { ROOT, tester, stub, installWx, loadPage } = require('./_harness')
 
 /* ---------- 可配置的桩状态 ---------- */
 let modalConfirm = true // showModal 是否点「已掌握」
 let dismissFails = false // dismiss_wrong 是否失败
 let hold = null // 非 null 时 dismissWrong 会挂起不返回，用来验证「乐观更新」
-const calls = []
-const navs = [] // navigateTo / switchTab 的 url 记录
 
-const noopAudio = {
-  stop() {},
-  playWord() {
-    calls.push('audio.playWord')
-  },
-  playSentence() {}
-}
-
-global.wx = {
+const { navs, calls } = installWx({
   showModal({ success }) {
     calls.push('showModal')
     // 真实 showModal 是异步回调，这里也用异步，才能测出连点锁
     setTimeout(() => success({ confirm: modalConfirm }), 0)
-  },
-  showToast() {
-    calls.push('showToast') // 错题本是 tab 页，出现即违规（M19-1）
-  },
-  navigateTo({ url }) {
-    navs.push(url)
-    // 故意不回调 complete：模拟「跳转途中」，用来验证 _jumping 连点锁
-  },
-  switchTab({ url }) {
-    navs.push('switchTab:' + url)
-  },
-  getStorage: ({ fail }) => fail && fail(),
-  setStorage() {},
-  createInnerAudioContext: () => ({
-    stop() {},
-    play() {},
-    onError() {},
-    offEnded() {},
-    offError() {}
-  })
-}
-
-const stub = (rel, exports) => {
-  const p = require.resolve(path.join(ROOT, rel))
-  require.cache[p] = { id: p, filename: p, loaded: true, exports }
-}
+  }
+})
 
 stub('miniprogram/utils/api.js', {
   stats: async () => ({
@@ -78,31 +41,25 @@ stub('miniprogram/utils/api.js', {
     return { wordId, updated: 1 }
   }
 })
-stub('miniprogram/utils/audio.js', noopAudio)
+stub('miniprogram/utils/audio.js', {
+  stop() {},
+  playWord() {
+    calls.push('audio.playWord')
+  },
+  playSentence() {}
+})
 stub('miniprogram/utils/share.js', { toFriend: (o) => o || {} })
 
-let page = null
-global.Page = (cfg) => {
-  page = cfg
-}
-require(path.join(ROOT, 'miniprogram/pages/wrongbook/wrongbook.js'))
+const page = loadPage('miniprogram/pages/wrongbook/wrongbook.js')
 
-page.setData = function (o) {
-  Object.assign(this.data, o)
-}
 const ev = (id, word) => ({ currentTarget: { dataset: { id, word } } })
 const countDismiss = () => calls.filter((c) => c.startsWith('dismissWrong:')).length
 
-let pass = 0
-let fail = 0
-const t = (label, ok) => {
-  console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}`)
-  ok ? pass++ : fail++
-}
+const { t, done } = tester()
 
 ;(async () => {
   /* ---------- 静态面：热区关系必须一层父 + 两个 catchtap 子 ---------- */
-  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/wrongbook/wrongbook.wxml'), 'utf8')
+  const wxml = fs.readFileSync(ROOT + '/miniprogram/pages/wrongbook/wrongbook.wxml', 'utf8')
   t('「已掌握」用 catchtap 拦住冒泡（否则点它只会进复习页）', /catchtap="markMastered"/.test(wxml))
   t('整卡 bindtap=openReview（W2：点卡片进复习页）', /bindtap="openReview"/.test(wxml))
   t('喇叭改用 catchtap=play（自己有热区，且不冒泡触发跳转）', /catchtap="play"/.test(wxml))
@@ -178,6 +135,5 @@ const t = (label, ok) => {
   page.openReview.call(page, { currentTarget: { dataset: {} } })
   t('dataset 里没有 id 时不动（防御）', navs.length === 0)
 
-  console.log(`\n${pass} passed, ${fail} failed`)
-  process.exit(fail ? 1 : 0)
+  done()
 })()

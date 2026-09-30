@@ -36,6 +36,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from wxcloud import Cloud, CloudError, get_token, log, require_config, step  # noqa: E402
+from text_key import hash_text  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MANIFEST = os.path.join(ROOT, "build", "quote_audio", "manifest.json")
@@ -44,31 +45,6 @@ SERVER_DATE = "__SERVER_DATE__"
 
 
 # ------------------------------------------------- 与云端一致的两处算法
-
-def _int32(x):
-    x &= 0xFFFFFFFF
-    return x - 0x100000000 if x >= 0x80000000 else x
-
-
-def _base36(n):
-    digits = "0123456789abcdefghijklmnopqrstuvwxyz"
-    if n == 0:
-        return "0"
-    out = ""
-    while n:
-        n, r = divmod(n, 36)
-        out = digits[r] + out
-    return out
-
-
-def hash_text(text):
-    """与 cloudfunctions/seed_audio 的 hashText()、scripts/gen_sentence_audio.py 的
-    hash_text() 三处严格一致（JS int32 语义）。用来核对音频文件名对不对得上。"""
-    h = 0
-    for ch in text:
-        h = _int32(_int32(h << 5) - h + ord(ch))
-    return _base36(abs(h))
-
 
 # ------------------------------------------------- 本地清单
 

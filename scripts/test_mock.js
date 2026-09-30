@@ -51,7 +51,6 @@ const cases = [
     console.log(`${ok ? 'PASS' : 'FAIL'}  ${label.padEnd(28)} ${summary}`)
     ok ? pass++ : fail++
   }
-  console.log(`\n${pass} passed, ${fail} failed`)
 
   // ── 加练（M13/T1）行为体检：幂等复用 + 结算计入累计 ─────────────────
   // 契约 A：连点两次 start_extra_round 只创建一个组（第二次 reused=true 且 roundId 相同）
@@ -115,5 +114,8 @@ const cases = [
   const s = mock.audioSrc('a sentence', 2, 'sentence')
   console.log(`\n发音 mock: 单词→${w ? '有URL' : 'null'} | 例句→${s === null ? 'null(静默)' : '有URL'}`)
 
+  // ⚠️ 汇总必须在**所有**体检之后打印：这四处体检（加练 / extra 字段 / 句库 / 错题本）
+  //    此前在汇总行之后执行，失败时退出码是 1、屏幕上却写着「0 failed」，属于误导。
+  console.log(`\n${pass} passed, ${fail} failed`)
   process.exit(fail ? 1 : 0)
 })()

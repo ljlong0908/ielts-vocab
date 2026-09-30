@@ -21,11 +21,9 @@ const words = db.collection('words')
 //    若将来要恢复上限：改回 `rounds.length >= N` 即可，前端无需改动。
 const MAX_ROUNDS_PER_DAY = Infinity
 
-function dateStr(offset = 0) {
-  const d = new Date(Date.now() + 8 * 3600 * 1000 + offset * 86400000)
-  const p = (n) => String(n).padStart(2, '0')
-  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`
-}
+// 东八区「今天」：先 +8h 再取 UTC 日期；offset 单位＝天
+const dateStr = (offset = 0) =>
+  new Date(Date.now() + 28800000 + offset * 86400000).toISOString().slice(0, 10)
 
 async function getUser(openid) {
   const r = await users.where({ _openid: openid }).get()

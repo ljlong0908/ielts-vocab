@@ -24,11 +24,9 @@ const checkins = db.collection('checkins')
 //    若将来要恢复上限：把常量改回数字，并在创建组之前加回 `rounds.length >= MAX` 判断。
 const MAX_ROUNDS_PER_DAY = Infinity
 
-function dateStr(offset = 0) {
-  const d = new Date(Date.now() + 8 * 3600 * 1000 + offset * 86400000)
-  const p = (n) => String(n).padStart(2, '0')
-  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`
-}
+// 东八区「今天」：先 +8h 再取 UTC 日期；offset 单位＝天
+const dateStr = (offset = 0) =>
+  new Date(Date.now() + 28800000 + offset * 86400000).toISOString().slice(0, 10)
 
 exports.main = async () => {
   const { OPENID } = cloud.getWXContext()

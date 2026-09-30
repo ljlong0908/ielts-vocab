@@ -239,6 +239,7 @@ ielts-vocab/
 │   ├── gen_audio.py             # Kokoro 本地合成「单词」发音（默认只做美音）
 │   ├── gen_examples.py          # DeepSeek 离线生成例句（含 roots / etymology）
 │   ├── gen_sentence_audio.py    # Kokoro 本地合成「例句」发音
+│   ├── text_key.py              # 文本→文件名 hash（**必须与两个云函数的 hashText 同值**）
 │   ├── make_audition_page.py    # 本地预检 + 生成音频试听页
 │   ├── pack_audio.py            # 打包成 seed_audio 入参（base64 分批）
 │   ├── pack_words.py            # 打包成 seed_words 入参（分词表分批）
@@ -252,6 +253,8 @@ ielts-vocab/
 │   ├── gen_tab_icons.py         # 生成原生 tabBar 图标（纯 Python 光栅化）
 │   ├── install_spacy_model.py   # 装 en_core_web_sm（不在 PyPI，走 HF 镜像）
 │   ├── check_miniprogram.js     # 小程序结构自检（类名 / 底栏 / 图标 / wxml 配对 / 云函数三件套）
+│   ├── _harness.js              # 页面级测试共享骨架（断言 / wx 桩 / 页面捕获）
+│   ├── _fn_harness.js           # 云函数级测试共享骨架（内存假 DB + wx-server-sdk 桩）
 │   └── test_*.js                # 回归脚本 8 支（页面 / 云函数 / mock / 原型）
 ├── miniprogram/             # 小程序前端
 │   ├── app.js / app.json / app.wxss

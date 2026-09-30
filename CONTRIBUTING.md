@@ -38,6 +38,11 @@ node scripts/test_finish_extra_round.js  # 加练结算（同上）
 
 改了哪块就至少跑对应那一支；**动了云函数务必跑最后两支**。
 
+> 新增测试请复用两份共享骨架，别在测试文件里另抄一遍：
+> `scripts/_harness.js`（页面级：断言计数 / `stub()` / `installWx()` / `loadPage()`）、
+> `scripts/_fn_harness.js`（云函数级：内存假 DB + `wx-server-sdk` 桩 + `loadFn()`）。
+> 各写各的桩会让「同一件事在两个测试里行为不同」，失败信号互相矛盾。
+
 > ⚠️ `scripts/audit_mobile.js` 与 `scripts/test_prototype.js` **只审 `design/prototype.html`**，
 > 对 `miniprogram/` 零验证力 —— 别拿它们当小程序通过的证据。
 
