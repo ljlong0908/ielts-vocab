@@ -172,11 +172,22 @@ def deploy(names, env, *, remote_install=True, timeout=600):
     out = (r.stdout or "") + (r.stderr or "")
 
     # ⚠️ CLI 进程退出码不可信：实测批量里 8 个全失败仍 exit 0。
-    #    以输出里的 per-function 结果为准——✖ 行 = 该函数失败；
-    #    兜底再看结尾 success 表格里的 false。
+    #    以输出里的失败迹象为准，宁多勿漏：
+    #    ① per-function 结果行：✖ [fn]（带括号）或 ✖ fn（无括号也收）
+    #    ② 结尾 success 表格里的 false
+    #    ③ 整体失败：服务端口关闭（"IDE service port disabled" / "服务端口已关闭"）、
+    #       ✖ initialize 这类不带函数名的 ✖ 行 —— 命中即本次一个都没传成功，
+    #       全部计入 failed（绝不写 state，否则下次增量部署会静默跳过它）
     failed = set(re.findall(r"✖ \[(\w[\w-]*)\]", out))
     for m in re.finditer(r"\|\s+(\w[\w-]*)\s+\|\s+false\s+\|", out):
         failed.add(m.group(1))
+    global_fail = bool(
+        re.search(r"✖(?!\s*\[)", out)
+        or "service port disabled" in out.lower()
+        or "服务端口已关闭" in out
+    )
+    if global_fail:
+        failed |= set(names)
     return failed, out
 
 

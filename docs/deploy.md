@@ -514,6 +514,7 @@ python scripts/seed_quote_audio.py --apply
 | `init_cloud.py` 报 `502003 无权限操作数据库` | 环境 ID 不属于该 AppID | 核对 `miniprogram/config.js` 的 `ENV_ID` 与当前账号 |
 | `seed_cloud.py` 报上传 `HTTP 403 SignatureDoesNotMatch` | COS 直传的签名放错位置 | 正常不会遇到：签名必须在 `Authorization` **请求头**、且表单里要带 `key` 字段（见 `wxcloud.py` 的 `upload()`） |
 | `seed_cloud.py` 复查告警「云端词数与本地词表不一致」 | 库里有上一版词表的残留 | 加 `--reset` 重导（见第 6 / 10 节） |
+| 脚本查数据库**条数莫名少一截**（如 15 条只回 10 条） | HTTP `databasequery` 不带 `.limit()` 时**默认只回 10 条**（小程序 SDK 默认 100，两者不一样） | 所有 `.get()` 带显式 `.limit(n)`（参考 `backfill_queue_roots.py` / `seed_similar.py`） |
 
 ---
 

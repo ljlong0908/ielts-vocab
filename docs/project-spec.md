@@ -1567,3 +1567,12 @@ en_option 题干是中文释义，露词根等于给选项送答案。数据走 
 **⚠️ 部署提醒**：本轮要部署 `build_questions`（IDE 上传）。前端先发布而函数忘部署时，
 旧题照样能跑（roots 缺失只是不展示词根）——与 answerIndex 缺字段会卡死的性质不同，
 这条降级是安全的。
+
+**收尾（当天傍晚）**：用户实测截图发现加练组旧队列仍不显示词根。根因：旧版
+`build_questions` 生成的 daily_plans 队列题目没有 `roots` 字段，而复用分支
+（`existing` 非空即原样返回）会一直 Serve 旧队列。处置：新增
+`scripts/backfill_queue_roots.py` 按 wordId 从 words 回填 roots——**逐题点路径
+update（`practiceQueue.0.roots`）**，不整数组重写（`submit_answer` 是整数组读改写，
+重写会冲掉用户答题进度）；默认只处理今天（`build_questions` 只读今天的计划），
+`--all-dates` / `--force` 可选。今日计划 15 题已补齐（legislation 3 条）。
+⚠️ 仍须部署 `build_questions` 才对用户可见：旧版 `toClient` 根本不下发 roots。
