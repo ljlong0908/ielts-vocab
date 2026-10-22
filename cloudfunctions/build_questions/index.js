@@ -4,8 +4,10 @@
  * 题型：cn_option 中选项（题干英文 → 选项中文）
  *       en_option 英选中（题干中文 → 选项英文）
  *
- * 说明：题目连同 answerIndex 一起保存在 daily_plans 服务端字段中，
- *       下发给客户端的题目已剔除答案，判题由 submit_answer 在服务端完成。
+ * 说明：题目连同 answerIndex 一起保存在 daily_plans 服务端字段中，并**原样下发**。
+ *       前端据此在本地同步判对错（点下去立即出结果，不等云函数往返）；
+ *       submit_answer 退化为「后台落库」——records / user_words / plan.stage 仍由它写。
+ *       代价：答案对客户端逆向者可读（词汇练习类产品作弊动机极低，换零判题延迟值得）。
  */
 const cloud = require('wx-server-sdk')
 
@@ -47,6 +49,9 @@ function buildQuestion(w, type, pool, idx) {
     type,
     stem: isCn ? w.word : w.meaning,
     phonetic: isCn ? w.phoneticUS || w.phoneticUK || '' : '',
+    // 词根拆解（D15）：练习页题干区在单词下方展示，做题时给构词线索。
+    // words.roots 是 enrich 产物（[{part,type,meaning}]），未 enrich 的词没有 → 兜底空数组。
+    roots: w.roots || [],
     options,
     answerIndex: options.indexOf(correctText),
     passed: false,
@@ -54,15 +59,26 @@ function buildQuestion(w, type, pool, idx) {
   }
 }
 
-/** 剔除答案后再下发 */
-function sanitize(queue) {
+/**
+ * 下发形状（= 前端 practice.js 的契约）。
+ *   answerIndex —— 本地判题用：前端 `choice === answerIndex` 即可判对错，不必再等一次云函数
+ *   audioText   —— 答对后要读的英文：cn_option 是题干（英文词），en_option 是正确选项
+ *                  ⚠️ 判据必须用 type，不能用 `phonetic` 是否为空来推 ——
+ *                     没音标的 cn_option 会被推成中文选项，前端拿去查音频必然落空
+ *   roots       —— 词根拆解，仅 cn_option 题干区展示。旧题（D15 之前生成的队列）没有该
+ *                 字段，兜底 [] → 前端不渲染词根区（可选内容，不是核心 UI，允许缺失）
+ */
+function toClient(queue) {
   return queue.map((q) => ({
     id: q.id,
     wordId: q.wordId,
     type: q.type,
     stem: q.stem,
     phonetic: q.phonetic,
-    options: q.options
+    roots: Array.isArray(q.roots) ? q.roots : [],
+    options: q.options,
+    answerIndex: q.answerIndex,
+    audioText: q.type === 'cn_option' ? q.stem : q.options[q.answerIndex] || ''
   }))
 }
 
@@ -96,7 +112,7 @@ exports.main = async (event = {}) => {
     }
 
     if (Array.isArray(existing) && existing.length) {
-      return { code: 0, data: { questions: sanitize(existing), reused: true } }
+      return { code: 0, data: { questions: toClient(existing), reused: true } }
     }
 
     if (!wordIds.length) return { code: 0, data: { questions: [], reused: false } }
@@ -114,7 +130,7 @@ exports.main = async (event = {}) => {
 
     await plans.doc(plan._id).update({ data: { [queuePath]: mixed, updatedAt: new Date() } })
 
-    return { code: 0, data: { questions: sanitize(mixed), reused: false } }
+    return { code: 0, data: { questions: toClient(mixed), reused: false } }
   } catch (e) {
     return { code: -1, message: (e && e.message) || 'BUILD_QUESTIONS_FAILED' }
   }

@@ -12,22 +12,41 @@
  *      差异化行为（如 showModal 的回包）用 `installWx({ 覆盖项 })` 传入。
  */
 const path = require('path')
+// 用 timers 的 setTimeout 而不是全局的：部分测试会把 global.setTimeout 改短
+// （把 900ms 的自动翻页压成 20ms），看门狗不能跟着被压。
+const rawSetTimeout = require('timers').setTimeout
 
 const ROOT = path.resolve(__dirname, '..')
 
 /** 排空一轮事件循环（等 Promise / setTimeout(0) 的回调落地） */
 const drain = () => new Promise((r) => setTimeout(r, 0))
 
-/** 断言计数器：t() 记一条，done() 打汇总并按失败数决定退出码 */
-function tester() {
+/**
+ * 断言计数器：t() 记一条，done() 打汇总并按失败数决定退出码。
+ *
+ * 🐶 看门狗（别删）：断言串在一条 await 链上，任一处**卡在永不回包的 promise**时，
+ * node 的事件循环空了就会**静默退出、退出码 0** —— 后面所有断言一条都不跑，
+ * 而 CI 看到的是「通过」。这是最难发现的假绿（本项目实测踩过一次：
+ * 把判题改回「等云函数」后，测试挂在 await 上，输出戛然而止却报成功）。
+ * 跑完会 clearTimeout，正常路径没有额外开销。
+ */
+function tester(timeoutMs = 8000) {
   let pass = 0
   let fail = 0
+  let finished = false
+  const dog = rawSetTimeout(() => {
+    if (finished) return
+    console.log('FAIL  测试未跑完（有调用卡在未回包的 promise 上？）')
+    process.exit(1)
+  }, timeoutMs)
   return {
     t(label, ok) {
       console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}`)
       ok ? pass++ : fail++
     },
     done() {
+      finished = true
+      clearTimeout(dog)
       console.log(`\n${pass} passed, ${fail} failed`)
       process.exit(fail ? 1 : 0)
     }

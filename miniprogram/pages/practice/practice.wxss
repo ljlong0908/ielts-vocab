@@ -1,11 +1,50 @@
+/* ══════════════════════════════════════════════════════════════════
+   练习页布局：上「题」下「答」两区
+   ──────────────────────────────────────────────────────────────────
+   ① 最早整屏顶对齐 —— 4 个选项压在屏幕中上部（375×720 实测下沿 66%），
+      下半屏空着，拇指够不到。这不是热区尺寸问题（每项已 ~56px ≥ 44px 下限），
+      是「落点」问题，所以热区检查照不到。
+   ② 上一版把选项区 `flex:1` + 贴底 —— 选项是下去了，但**题干卡仍是内容高度**，
+      于是把所有剩余高度都堆在「题干卡 ↔ 第一项」之间：实测 **186px 死白**，
+      整页看起来像没写完（空白集中在一处 = 最难看的那种留白）。
+   ③ 现在让**题干区自己吃掉剩余高度**（`flex:1`，内容在其中垂直居中），
+      选项区回到自然高度、贴底。空白不再被「堆放」，而是变成题干卡这个
+      主视觉的呼吸空间 —— 上区是题、下区是答，两区各司其职。
+
+   为什么不做「整页居中 / 上下均分」：那样 header 会浮在半空、或底部留出一整条
+   空带（实测离屏底 145px），空白只是换了位置，依然不像设计过的页面。
+
+   同时保留两处「位置稳定」：题干长短变、反馈文案出现/消失，都不会让选项上下挪位
+   —— 手指不需要每次重新找目标（题干区撑满后，这一条比原来更稳）。
+   ══════════════════════════════════════════════════════════════════ */
+.page.practice {
+  display: flex;
+  flex-direction: column;
+  /* 无固定底栏，留安全区即可（练习页不是 tab 页，无 tabBar 高度问题） */
+  padding-bottom: calc(32rpx + env(safe-area-inset-bottom));
+}
+
 .head {
   margin-bottom: 24rpx;
+  flex-shrink: 0;
 }
 
 .q-type {
   font-size: 24rpx;
   color: var(--text-2);
-  margin-bottom: 16rpx;
+  margin-bottom: 12rpx;
+}
+
+/* 题干卡片 = 主视觉区：吃掉「头部以下、选项以上」的全部剩余高度，内容垂直居中。
+   这样剩余空白变成卡片的呼吸空间，而不是堆在卡片与选项之间的一条死白。
+   min-height 只作小屏兜底（题干长短不改变卡片高度 → 选项永远不挪位）。 */
+.q-card {
+  flex: 1 1 auto;
+  min-height: 240rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-bottom: 0;
 }
 
 .q-stem-row {
@@ -20,6 +59,12 @@
   line-height: 1.4;
 }
 
+/* 英选中的题干是中文释义：46rpx 下三四个字就折行、抢占题干卡片，
+   降到 40rpx 仍明显大于选项正文（32rpx），层级不丢 */
+.q-stem.zh {
+  font-size: 40rpx;
+}
+
 /* .speaker / .speaker-icon 的热区与喇叭图形由 app.wxss 提供，此处只覆盖视觉圆尺寸 */
 .speaker-icon {
   width: 60rpx;
@@ -32,19 +77,91 @@
   margin-top: 10rpx;
 }
 
+/* ── 词根拆解（D15）：题干区的第三层，单词/音标之下、选项之上 ──
+   视觉与学习页词根区对齐（同一套配色与字阶），但整体收紧一档：
+   题干区还要让位给 flex:1 的呼吸空间，行距/内边距都比 learn 页小。 */
+.q-roots {
+  margin-top: 20rpx;
+  text-align: left;
+}
+
+.q-root-item {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+  padding: 8rpx 0;
+  border-bottom: 1rpx solid #f1f2f4;
+}
+
+.q-root-item:last-child {
+  border-bottom: none;
+}
+
+.q-root-part {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--success-deep);
+}
+
+.q-root-type {
+  font-size: 22rpx;
+  color: var(--text-2);
+  background: #f5f6f7;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+}
+
+.q-root-meaning {
+  font-size: 26rpx;
+  color: var(--text);
+}
+
+/* ── 选项区：自然高度 + 贴底 ─────────────────────────────────
+   剩余高度归题干区（见 .q-card），这里不再 flex:1 —— 否则「撑满」只是把空白
+   从卡片外挪到卡片内，看起来一样空。 */
 .options {
-  margin-top: 8rpx;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  /* 贴底，而不是居中：下沿与屏幕底部距离恒定 → 拇指落点跟着屏幕走 */
+  justify-content: flex-end;
+  gap: 28rpx;
+  /* 下沿 40rpx(20px) 留白：真机下半区还有系统手势条，别把最后一项顶到屏幕边缘 */
+  padding: 24rpx 0 40rpx;
+  /* ⚠️ 刻意不写 min-height:0：默认的 min-height:auto 保证空间不足时选项区
+     不被压扁（小屏 + 长题干），溢出交给整页滚动，而不是让最后一两项被 feedback 盖住 */
 }
 
 .option {
   display: flex;
   align-items: center;
   gap: 20rpx;
+  min-height: 132rpx; /* 66px，远高于 44px 热区下限：整行都是热区 */
+  padding: 20rpx 28rpx;
+  box-sizing: border-box;
   background: var(--surface);
   border: 2rpx solid var(--line);
   border-radius: 16rpx;
-  padding: 28rpx 24rpx;
-  margin-bottom: 20rpx;
+}
+
+/* ── 已排除态（答错后、答对前被禁用的选项）───────────────────
+   原先这一态只有 JS 里的拦截，UI 上毫无变化：选项看起来照样能点，
+   点下去没反应 → 用户以为「卡住了」。
+   现在灰度化 + 字母位换成 ✕。规则刻意写在 ok/bad/answer 之前：
+   同权重下后者胜，所以「刚答错的那一项」仍保持红色（它同时是 off + bad），
+   只有改选之后失去 bad 的旧错项才退回灰色轮廓。 */
+.option.off {
+  background: #f7f8fa;
+  border-color: var(--line);
+}
+
+.option.off .opt-text {
+  color: var(--text-3);
+}
+
+.option.off .opt-key {
+  background: #eceef1;
+  color: var(--text-3);
 }
 
 .option.ok {
@@ -57,14 +174,15 @@
   background: var(--danger-soft);
 }
 
+/* 答错后标出的正确答案（M 交互：答错即揭示，要求重选） */
 .option.answer {
   border-color: var(--success);
   background: var(--success-soft);
 }
 
 .opt-key {
-  width: 44rpx;
-  height: 44rpx;
+  width: 48rpx;
+  height: 48rpx;
   border-radius: 50%;
   background: #f1f2f4;
   color: var(--text-2);
@@ -87,14 +205,27 @@
 }
 
 .opt-text {
-  font-size: 30rpx;
+  font-size: 32rpx;
   color: var(--text);
+  flex: 1;
+  word-break: break-word;
 }
 
+/* ── 按压反馈（M19-3：小程序 <view> 没有 :active，走原生 hover-class）──
+   旧版只有 opacity .68，在浅底白卡上几乎看不出「点到了」；
+   改成描边 + 浅底变化，配合 wx 属性 hover-start-time=0 做到按下即亮。 */
+.option.hover-opt {
+  background: #f2f7fd;
+  border-color: #bcd9f2;
+}
+
+/* 反馈文案固定占位：出现/消失不推挤选项（答对 900ms 后自动跳下一题，
+   答错则留着提示「请重新选择」） */
 .feedback {
   text-align: center;
   font-size: 26rpx;
-  margin-top: 12rpx;
+  min-height: 44rpx;
+  flex-shrink: 0;
 }
 
 .ok-text {
@@ -103,4 +234,14 @@
 
 .bad-text {
   color: var(--danger);
+}
+
+/* 加载 / 空态：在 flex 布局下居中，不占满顶部 */
+.page.practice .loading,
+.page.practice .empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }

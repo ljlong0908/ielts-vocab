@@ -22,7 +22,18 @@ stub('miniprogram/utils/api.js', {
   todayFlow: async () => ({}),
   startExtraRound: async () => ({ roundId: 1, wordIds: [], reused: false, exhausted: false })
 })
-stub('miniprogram/utils/audio.js', { stop() {}, playWord() {}, playSentence() {} })
+const audioCalls = []
+stub('miniprogram/utils/audio.js', {
+  stop() {
+    audioCalls.push('stop')
+  },
+  playWord() {},
+  playSentence(t) {
+    audioCalls.push('playSentence:' + t)
+  },
+  preloadWords: (ws) => audioCalls.push('preloadWords:' + (ws || []).join(',')),
+  preloadSentences: (ts) => audioCalls.push('preloadSentences:' + (ts || []).join(','))
+})
 stub('miniprogram/utils/share.js', {
   toFriend: (o) => o || {},
   toTimeline: (o) => Object.assign({ title: '雅词本｜一天一句好英文，顺手记住几个核心词' }, o)
@@ -139,9 +150,11 @@ const extra = (o) =>
   api.homeSummary = async () => { cloudCalls++; return {} }
   api.todayFlow = async () => { cloudCalls++; return {} }
   // load() 在首个 await 前的分支（quote 置入 / singlePage 早退）是同步执行完的，无需 await
+  audioCalls.length = 0
   page.load()
   t('单页模式 load() → 不打云端接口', cloudCalls === 0)
   t('  ↳ 结束 loading（走静态落地视图）', page.data.loading === false && !!page.data.quote)
+  t('  ↳ 也不预加载音频（无登录态，下了也播不了）', audioCalls.length === 0)
 
   // 普通启动 + 未引导 → 照旧 reLaunch onboarding（负向验证：上面 singlePage 路径已验证过反面）
   page.data.singlePage = false
@@ -149,6 +162,20 @@ const extra = (o) =>
   page.onLoad()
   t('普通启动未引导 → 仍 reLaunch 去 onboarding', relaunched === '/pages/onboarding/onboarding')
   t('普通启动 → 不置 singlePage', page.data.singlePage === false)
+}
+
+/* ---------- ⑨ 每日一句的音频预加载 ---------- */
+{
+  // 首页是「点喇叭听一句」的场景：没有预加载就要等一轮「云函数 → 换链接 → 下载」。
+  // 用户多半在页面刚出来那几秒就点，所以必须进页面就排上队。
+  audioCalls.length = 0
+  page.data.singlePage = false
+  page.data.quote = null
+  page.load() // 不 await：预加载排在首个 await 之前，同步就会发生
+  const q = page.data.quote
+  t('每日一句：进首页即预加载它那一整句音频',
+    !!q && audioCalls.includes('preloadSentences:' + q.text))
+  t('  ↳ 预加载不发声（不是自动播）', !audioCalls.some((c) => c.startsWith('playSentence')))
 }
 
 done()

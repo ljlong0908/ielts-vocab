@@ -4,6 +4,19 @@
   padding-bottom: 200rpx;
 }
 
+/* 底栏按钮行：「上一个」+ 主按钮并列。「上一个」按 index>0 条件渲染（见 wxml），
+   所以首词时主按钮天然满宽，不需要为「隐藏的按钮」留占位。
+   .btn / .ghost / .primary / .disabled / hover-press 都由 app.wxss 统一提供 */
+.btn-row {
+  display: flex;
+  gap: 20rpx;
+  align-items: center;
+}
+
+.btn-row .btn.primary {
+  flex: 1;
+}
+
 /* 分段进度：N 个词 = N 段。done 实心、cur 半透明、未到为灰线 */
 .seg-progress {
   display: flex;
@@ -141,4 +154,85 @@
   font-size: 28rpx;
   line-height: 1.8;
   color: var(--text);
+}
+
+/* 形似词（D12）：区块标题右侧的轻提示，说明这一块是干什么的 */
+.sec-sub {
+  font-size: 22rpx;
+  font-weight: 400;
+  color: var(--text-2);
+}
+
+/* 形似词折叠（D13）：标题行 = 「形似词 + N 个」|「副文案 + 箭头」，整行可点。
+   收起态只露计数（告诉用户有货、值不值得点开），展开态才露出说明文案。
+   箭头是 CSS 三角形：收起朝下、展开 rotate 180° 朝上，带过渡。 */
+.sec-title-main {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+}
+
+.sec-count {
+  font-size: 22rpx;
+  font-weight: 400;
+  color: var(--text-2);
+}
+
+.sec-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.sec-arrow {
+  width: 0;
+  height: 0;
+  border-left: 9rpx solid transparent;
+  border-right: 9rpx solid transparent;
+  border-top: 10rpx solid var(--text-2);
+  transition: transform 0.18s ease;
+}
+
+.sec-arrow.up {
+  transform: rotate(180deg);
+}
+
+/* 每行一个形似词：词 + 音标 + 喇叭一行，释义折到下一行。
+   分隔线沿用词根区块的 root-item 样式（最后一条不画线）。 */
+.similar-item {
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f1f2f4;
+}
+
+.similar-item:last-child {
+  border-bottom: none;
+}
+
+.similar-head {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.similar-word {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.similar-phonetic {
+  font-size: 24rpx;
+  color: var(--text-2);
+}
+
+/* 喇叭推到行尾：热区与主卡/例句的 .speaker 同一套（88rpx），
+   只缩视觉圆（.speaker-sm 在上面已定义） */
+.similar-head .speaker {
+  margin-left: auto;
+}
+
+.similar-meaning {
+  font-size: 26rpx;
+  color: var(--text-2);
+  margin-top: 4rpx;
 }

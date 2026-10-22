@@ -63,6 +63,10 @@ Page({
       this.setData({ loading: false })
       return
     }
+    // 每日一句是本地语料，先把它那一段音频排进预加载 —— 用户多半会点喇叭试听，
+    // 等接口回来的这段时间正好用来下载，点下去即响
+    const q = this.data.quote
+    if (q && q.text) audio.preloadSentences([q.text])
     try {
       const [summary, flow] = await Promise.all([api.homeSummary(), api.todayFlow()])
       const goal = summary.dailyGoal || 5
@@ -86,7 +90,11 @@ Page({
   buildCta(summary, flow) {
     if (summary.todayDone) return '今日已完成，明天见'
     const stage = flow && flow.plan ? flow.plan.stage : 'learning'
-    if (stage === 'review') return '先复习昨天的单词'
+    // 文案不带时间断言（2026-10-22 用户拍板）：复习池实际是在池未出池的词
+    // （status='reviewing'），正常日子≈昨日新词的子集，断档 N 天是 N 天前的词，
+    // 昨天没新词是历史到期词 —— 「昨日」（10-14 拍板）与「到期」（§12.14）都不准，
+    // 故只说「先复习一下」，不断档不断档都成立，也不需要用户理解调度机制。
+    if (stage === 'review') return '先复习一下'
     if (stage === 'learning') return '开始今日学习'
     if (stage === 'practice') return '去完成今日练习'
     if (stage === 'practice_done') return '完成今日打卡'

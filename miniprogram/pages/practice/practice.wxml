@@ -1,39 +1,57 @@
-<view class="page">
+<!-- 整页 = 上「题」下「答」两区：题干卡吃掉剩余高度（内容居中，成为主视觉），
+     选项区自然高度贴底。剩余空白归题干卡，不堆在题答之间。详见 practice.wxss 顶部注释。 -->
+<view class="page practice">
   <view wx:if="{{loading}}" class="loading">生成练习中</view>
   <view wx:elif="{{empty}}" class="empty">暂无题目</view>
 
   <block wx:else>
     <view class="between head">
-      <view class="tag">{{phase === 'review' ? '复习昨日单词' : (round > 0 ? '加练练习' : '今日练习')}}</view>
+      <!-- tag 不带时间断言：复习池实际是在池未出池的词（status='reviewing'），
+           正常日子≈昨日新词的子集，断档 N 天是 N 天前的词，昨天没新词是历史到期词——
+           「昨日」「到期」都不准，故只说「复习单词」（2026-10-22 用户拍板）。 -->
+      <view class="tag">{{phase === 'review' ? '复习单词' : (round > 0 ? '加练练习' : '今日练习')}}</view>
       <view class="hint">{{index + 1}} / {{questions.length}}</view>
     </view>
 
-    <view class="card">
+    <view class="card q-card">
       <view class="q-type">{{q.type === 'cn_option' ? '选出正确的中文释义' : '选出正确的英文单词'}}</view>
       <view class="q-stem-row">
-        <text class="q-stem">{{q.stem}}</text>
+        <text class="q-stem {{q.type === 'en_option' ? 'zh' : ''}}">{{q.stem}}</text>
         <view wx:if="{{q.phonetic}}" class="speaker" bindtap="playStem">
           <view class="speaker-icon"></view>
         </view>
       </view>
       <view wx:if="{{q.phonetic}}" class="phonetic">{{q.phonetic}}</view>
+      <!-- 词根拆解（D15）：题干区 = 单词 → 音标 → 词根 → 选项。
+           只在 cn_option（题干是英文单词）展示：en_option 题干是中文释义，
+           露词根等于给选项送答案；且词根对「看词选义」正是构词线索。
+           q.roots 兜底：D15 之前生成的旧题没有该字段，不渲染（可选内容非核心 UI）。 -->
+      <view wx:if="{{q.type === 'cn_option' && q.roots && q.roots.length}}" class="q-roots">
+        <view wx:for="{{q.roots}}" wx:key="part" class="q-root-item">
+          <text class="q-root-part">{{item.part}}</text>
+          <text class="q-root-type">{{item.type}}</text>
+          <text class="q-root-meaning">{{item.meaning}}</text>
+        </view>
+      </view>
     </view>
 
     <view class="options">
       <view
         wx:for="{{q.options}}"
         wx:key="*this"
-        class="option {{selected === index ? (correct ? 'ok' : 'bad') : ''}} {{revealed && index === answerIndex && !correct ? 'answer' : ''}}"
+        class="option {{disabled[index] ? 'off' : ''}} {{selected === index ? (correct ? 'ok' : 'bad') : ''}} {{revealed && index === answerIndex && !correct ? 'answer' : ''}}"
         data-index="{{index}}"
-        hover-class="hover-dim"
+        hover-class="hover-opt"
+        hover-start-time="0"
+        hover-stay-time="100"
         bindtap="choose"
       >
-        <view class="opt-key">{{optKeys[index]}}</view>
+        <view class="opt-key">{{disabled[index] ? '✕' : optKeys[index]}}</view>
         <view class="opt-text">{{item}}</view>
       </view>
     </view>
 
-    <view wx:if="{{revealed && !correct}}" class="feedback bad-text">答错了，正确答案已标出，请重新选择</view>
-    <view wx:if="{{revealed && correct}}" class="feedback ok-text">答对了</view>
+    <!-- 反馈文案始终占位（高度固定）：出现/消失不推挤上面的选项，手指不用挪 -->
+    <view class="feedback {{revealed ? (correct ? 'ok-text' : 'bad-text') : ''}}">{{revealed ? (correct ? '答对了' : '答错了，正确答案已标出，请重新选择') : ''}}</view>
   </block>
 </view>

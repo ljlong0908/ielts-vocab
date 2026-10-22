@@ -14,6 +14,10 @@
  *   HIT_CROWD      相邻可点元素垂直间距 < 2px（网格类留 2px 缝即算达标）
  *   H_OVERFLOW     横向溢出（scrollWidth > clientWidth）或元素出框
  *   OFFSCREEN_MAIN 主操作（.btn.primary）不在底部固定区 → 够不着
+ *   THUMB_LOW      选项组（.options）落点不在拇指区：中心 < 屏高 55% 或 下沿 < 屏高 75%
+ *   THUMB_GAP      选项组没贴底：下沿到选项区可用空间底部还空着 > 40px（居中/顶对齐）
+ *   GAP_DEAD       题干区与选项组之间出现断层死白 > 48px（剩余高度没被题干区认领）
+ *   OPTION_OFFSCREEN 选项组下沿超出视口
  *   TOAST_COVER    toast 落点被底部固定区遮住
  *   SCROLL_CUT     滚动到底仍有内容被裁
  *   FONT_TINY      字号 < 11px
@@ -375,6 +379,85 @@ const HARNESS = String.raw`
       rec.fill = { content: contentH, view: viewH, slack: viewH - contentH }
       if (contentH < viewH * 0.8) {
         push(rec.issues, 'P2', 'EMPTY_SPACE', '内容 ' + contentH + 'px / 可视 ' + viewH + 'px → 底部留白 ' + (viewH - contentH) + 'px')
+      }
+    }
+
+    // ⑩ 选项组落点是否在拇指可达区（练习页）
+    // 三条判据（都在「整屏顶对齐」或「按比例居中」的写法下失守）：
+    //   · 中心 ≥ 屏高 55% —— 整组落在下半区（实测：新版 61% / 居中 56~58% / 顶对齐 52%）
+    //   · 下沿 ≥ 屏高 75% —— 最后一项压进屏幕下四分之一（新版 80% / 居中 76~77% / 顶对齐 71%）
+    //   · 下沿空档 ≤ 40px —— 整组是否**贴底**（最锋利的一条，见下）
+    // 阈值来历：早期版本（顶对齐 + 小选项 + 无固定题干卡片）实测 49% / 66%，50/70 也拦得住；
+    // 但把阈值留在 50/70 时，「flex:0 不撑开 + flex-start」这种写法能拿到 52%/71% 溜过去 ——
+    // 所以按现有实测重新定线，三条一起卡。
+    // 必要性：选项组压在屏幕中上部时下半区空着 —— 单手（尤其右手持机）够不到。
+    // 这不是热区尺寸问题（每项 60px 已 ≥ 44px 下限），热区检查照不到，必须单独看「落点」。
+    var optWrap = screen.querySelector('.options')
+    if (optWrap) {
+      var optEls = [].slice.call(optWrap.querySelectorAll('.option')).filter(visible)
+      if (optEls.length) {
+        var ors = optEls.map(function (o) { return o.getBoundingClientRect() })
+        var oTop = Math.min.apply(null, ors.map(function (r) { return r.top }))
+        var oBot = Math.max.apply(null, ors.map(function (r) { return r.bottom }))
+        var relMid = ((oTop + oBot) / 2 - pr.top) / pr.height
+        var relBot = (oBot - pr.top) / pr.height
+        // 下沿空档 = 从选项组下沿到「选项区可用空间的底部」还有什么都没占的高度。
+        // 扣掉选项区自身 padding-bottom（那是刻意的下沿留白，不是空档），剩下的就是
+        // 被 justify-content 分配到组下方的自由空间：贴底 → ≈0（只有反馈文案那一行），
+        // 居中 → 自由空间的一半，顶对齐 → 全部。
+        // 实测：贴底 26px / 居中 61~69px / 顶对齐 96px（与留白参数无关，只反映对齐方式）
+        var slack = null
+        var scrollEl = screen.querySelector('.scroll')
+        if (scrollEl) {
+          var sr = scrollEl.getBoundingClientRect()
+          var scs = getComputedStyle(scrollEl)
+          var optsCS = getComputedStyle(optWrap)
+          var contentBottom = sr.bottom - parseFloat(scs.paddingBottom || 0)
+          slack = contentBottom - oBot - parseFloat(optsCS.paddingBottom || 0)
+        }
+        rec.options = {
+          count: optEls.length,
+          relMid: Math.round(relMid * 100),
+          relBottom: Math.round(relBot * 100),
+          top: px(oTop - pr.top),
+          bottom: px(oBot - pr.top),
+          viewH: px(pr.height),
+          gapBelow: slack == null ? null : px(slack),
+          minHit: Math.min.apply(null, ors.map(function (r) { return px(r.height) }))
+        }
+        if (relMid < 0.55) {
+          push(rec.issues, 'P1', 'THUMB_LOW',
+            '选项组中心在屏高 ' + Math.round(relMid * 100) + '% 处（< 55%）→ 整组压在屏中部及以上，单手握持时拇指够不到', rec.options)
+        }
+        if (relBot < 0.75) {
+          push(rec.issues, 'P1', 'THUMB_LOW',
+            '选项组下沿只到屏高 ' + Math.round(relBot * 100) + '%（< 75%）→ 最后一项离握持位太远', rec.options)
+        }
+        if (slack != null && slack > 40) {
+          push(rec.issues, 'P1', 'THUMB_GAP',
+            '选项组下沿还空着 ' + px(slack) + 'px（应 ≤40px，只留反馈文案那一行）→ 整组没有贴底：' +
+            '下沿与屏幕底部的距离会随屏高浮动（居中/顶对齐时屏越高越靠上，拇指越够不到）', rec.options)
+        }
+        if (oBot > pr.bottom + 1) {
+          push(rec.issues, 'P1', 'OPTION_OFFSCREEN', '最后一个选项下沿超出视口 ' + px(oBot - pr.bottom) + 'px', rec.options)
+        }
+
+        // ④ 题干区与选项组之间不能有「断层」死白。
+        // 成因很具体：题干卡只取内容高度、选项区 flex:1 贴底 ⇒ 所有剩余高度都堆在两者之间。
+        // 实测：375×720 空 156px、430×932 空 368px —— 屏越大越空，页面像没写完。
+        // 正确做法是让**题干区自己吃掉剩余高度**（.q-card flex:1），题答之间只留一个正常间距。
+        // 与 THUMB_GAP 互补：那条看「选项组下方」，这条看「题干与选项之间」——
+        // 只修一条会把空白从一处挪到另一处（本项目实测过：居中→贴底只是换了个位置堆）。
+        var qCard = screen.querySelector('.q-card')
+        if (qCard) {
+          var deadGap = oTop - qCard.getBoundingClientRect().bottom
+          rec.options.gapAbove = px(deadGap)
+          if (deadGap > 48) {
+            push(rec.issues, 'P1', 'GAP_DEAD',
+              '题干区与选项组之间空着 ' + px(deadGap) + 'px（应 ≤48px）→ 剩余高度堆成了断层死白，' +
+              '看起来像页面没写完。让题干区 flex:1 吃掉剩余高度即可（空白变成主视觉的呼吸空间）', rec.options)
+          }
+        }
       }
     }
 

@@ -234,19 +234,37 @@
   .learn-btn-row { display: flex; gap: 8px; }
   .learn-btn-row .btn { flex: 1; }
 
-  /* ============ practice ============ */
+  /* ============ practice ============
+     上「题」下「答」两区 —— 与 miniprogram/pages/practice 保持同一套规则。
+     沿革：① 整屏顶对齐 → 选项压在中上部（下沿 66%）；
+           ② 选项区 flex:1 贴底 → 选项下去了，但题干卡仍是内容高度，剩余高度全堆在
+              「题干卡 ↔ 第一项」之间（实测 156px@720、368px@932 —— 大屏越空）；
+           ③ 现在让**题干区自己吃掉剩余高度**（flex:1，内容垂直居中）、选项区回到
+              自然高度贴底。空白变成题干主视觉的呼吸空间，题答之间恒为 12px。 */
   .q-type { font-size: 12px; color: var(--text-2); margin-bottom: 8px; }   /* 题干类型是信息 → --text-2 */
   .q-stem-row { display: flex; align-items: center; gap: 10px; }
   .q-stem { font-size: 23px; font-weight: 500; line-height: 1.4; }
-  .options { margin-top: 4px; }
-  .option { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 14px 12px; margin-bottom: 10px; cursor: pointer; }
+  .q-stem.zh { font-size: 20px; }   /* 英选中题干是中文释义，23px 下几个字就折行 */
+  #s-practice .scroll { display: flex; flex-direction: column; }
+  #s-practice .head { flex-shrink: 0; margin-bottom: 12px; }
+  /* 题干卡 = 主视觉区：吃掉剩余高度，内容居中；min-height 只作小屏兜底
+     （题干长短不改变卡片高度 → 选项永远不挪位） */
+  #s-practice .q-card { flex: 1 1 auto; min-height: 120px; display: flex; flex-direction: column; justify-content: center; margin-bottom: 0; }
+  /* 选项区自然高度 + 贴底（flex-end），下沿 20px 留白：等价于小程序侧 24rpx 0 40rpx */
+  .options { flex: 0 0 auto; display: flex; flex-direction: column; justify-content: flex-end; gap: 14px; padding: 12px 0 20px; }
+  .option { display: flex; align-items: center; gap: 10px; min-height: 66px; box-sizing: border-box; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; cursor: pointer; }
+  /* 已排除态：原先只有点击拦截、界面毫无变化 → 看着能点其实点不动。写在 ok/bad/answer 之前，
+     同权重下后者胜 → 刚答错那一项仍是红的（off+bad），改选后旧错项才退回灰色轮廓 */
+  .option.off { background: #f7f8fa; border-color: var(--line); }
+  .option.off .opt-text { color: var(--text-3); }
   .option.ok, .option.answer { border-color: var(--success); background: var(--success-soft); }
   .option.bad { border-color: var(--danger); background: var(--danger-soft); }
-  .opt-key { width: 22px; height: 22px; border-radius: 50%; background: #f1f2f4; color: var(--text-2); font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .opt-key { width: 24px; height: 24px; border-radius: 50%; background: #f1f2f4; color: var(--text-2); font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .option.off .opt-key { background: #eceef1; color: var(--text-3); }
   .option.ok .opt-key, .option.answer .opt-key { background: var(--success-deep); color: #fff; }   /* 白字绿底：#1d9e75 3.39:1 → deep 4.93:1 */
   .option.bad .opt-key { background: var(--danger); color: #fff; }
-  .opt-text { font-size: 15px; }
-  .feedback { text-align: center; font-size: 13px; margin-top: 6px; min-height: 20px; }
+  .opt-text { font-size: 16px; flex: 1; word-break: break-word; }
+  .feedback { text-align: center; font-size: 13px; margin-top: 6px; min-height: 20px; flex-shrink: 0; }
   .ok-text { color: var(--success-deep); }   /* 反馈文字 13px：#1d9e75 白底 3.39:1 → deep 4.93:1 */
   .bad-text { color: var(--danger); }
 
@@ -524,7 +542,7 @@
             <view class="hint" id="pProgress" data-page-node-id="cxVizqiLDeUKl4PBcoPAFC">1 / 4</view>
           </view>
 
-          <view class="card" data-page-node-id="RHEDRmXvnsLsUB6oS2EuiJ">
+          <view class="card q-card" data-page-node-id="RHEDRmXvnsLsUB6oS2EuiJ">
             <view class="q-type" id="qType" data-page-node-id="GimTX7hpkeuVqrCxGEAV3z">选出正确的中文释义</view>
             <view class="q-stem-row" data-page-node-id="YjmVPrbxEojvIJVQG1d29H">
               <text class="q-stem" id="qStem" data-page-node-id="sYR5XVA43VXxENrPNJNYuZ">abandon</text>
@@ -1054,6 +1072,8 @@ function renderQuestion() {
   document.getElementById('qType').textContent =
     q.type === 'cn_option' ? '选出正确的中文释义' : '选出正确的英文单词'
   document.getElementById('qStem').textContent = q.stem
+  // 英选中的题干是中文释义 → 降一档字号（与真机 q-stem.zh 同步）
+  document.getElementById('qStem').className = 'q-stem' + (q.type === 'en_option' ? ' zh' : '')
   const ph = document.getElementById('qPhonetic')
   ph.textContent = q.phonetic
   ph.style.display = q.phonetic ? 'block' : 'none'
@@ -1094,9 +1114,18 @@ function choose(i, el) {
     document.getElementById('pNext').classList.remove('disabled')
   } else {
     wrongPicked[i] = true
+    // 与真机一致：当前所选标红（bad），其余已错项退回「已排除」灰度（字母位换成 ✕）。
+    // 旧版把每个错项永久留红，且看起来仍可点 → 真机上这些项其实点不动。
+    const opts = document.querySelectorAll('#qOptions .option')
+    opts.forEach((o, k) => {
+      o.classList.toggle('off', !!wrongPicked[k])
+      o.classList.remove('bad')
+      const key = o.querySelector('.opt-key')
+      if (key) key.textContent = wrongPicked[k] ? '✕' : OPT_KEYS[k]
+    })
     el.classList.add('bad')
     // 答错时揭示正确答案（真实逻辑：revealed 且非所选 → 标 answer）
-    document.querySelectorAll('#qOptions .option')[q.answer].classList.add('answer')
+    opts[q.answer].classList.add('answer')
     fb.textContent = '答错了，正确答案已标出，请重新选择'
     fb.className = 'feedback bad-text'
   }

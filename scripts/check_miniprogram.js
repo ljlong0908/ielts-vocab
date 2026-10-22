@@ -170,6 +170,42 @@ if (!fnBlock) {
   if (unused.length) console.log('  ℹ️ 仅本地脚本/管理侧调用（前端未引用）: ' + unused.join(', '))
 }
 
+/* ---------- ⑦ 练习页「上题下答」布局契约 ---------- */
+// 为什么单列一条：audit_mobile.js 的检测目标写死是 design/prototype.html（见文件头），
+// 小程序侧没有任何等价检查 —— 布局被改回旧写法不会有任何测试变红。
+// 三代写法的差别只在「剩余高度归谁」：
+//   ① 都归页面（顶对齐）      → 选项压在中上部，单手够不到
+//   ② 归选项区（选项 flex:1） → 选项下去了，但题干卡仍是内容高度，
+//      剩余高度全堆在两者之间 → 断层死白（375×720 实测 156px、430×932 实测 368px）
+//   ③ 归题干区（.q-card flex:1）→ 空白变成主视觉的呼吸空间，题答之间恒 12px  ← 当前
+if (readPage('practice').wxml) {
+  const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '') // 断言前剥注释：注释里常写反例
+  const pWxml = readPage('practice').wxml.replace(/<!--[\s\S]*?-->/g, '')
+  const pWxss = strip(readPage('practice').wxss)
+  const optsRule = (pWxss.match(/\.options\s*\{[^}]*\}/) || [''])[0]
+  const cardRule = (pWxss.match(/\.q-card\s*\{[^}]*\}/) || [''])[0]
+  const optRule = (pWxss.match(/\.option\s*\{[^}]*\}/) || [''])[0]
+  const cardGrows = /flex:\s*1/.test(cardRule)      // 题干区吃掉剩余高度
+  const optsSplits = /flex:\s*1/.test(optsRule)     // 选项区又来抢剩余高度 → 空白会被挪个位置
+  const anchored = /justify-content:\s*(flex-end|end)\b/.test(optsRule) // 选项组贴底
+  const minH = Number((optRule.match(/min-height:\s*(\d+)rpx/) || [0, 0])[1])
+  const hasOff = /\bclass="[^"]*\boff\b/.test(pWxml)
+  // 光有类名不算数：wxss 里没有 .option.off 的样式，界面上一样看不出「已排除」
+  const offStyled = /\.option\.off\s*\{[^}]*background/.test(pWxss)
+  console.log('\n练习页「上题下答」布局契约：')
+  console.log('  题干区吃掉剩余高度（.q-card flex:1）→ ' + (cardGrows ? '✓' : '✗'))
+  console.log('  剩余高度不两处争抢（.options 不带 flex:1）→ ' + (optsSplits ? '✗' : '✓'))
+  console.log('  选项组贴底（.options justify-content: flex-end）→ ' + (anchored ? '✓' : '✗'))
+  console.log('  .option min-height ' + minH + 'rpx（≥88rpx=44px 热区下限）→ ' + (minH >= 88 ? '✓' : '✗'))
+  console.log('  答错项的「已排除」视觉态（wxml off + wxss .option.off）→ ' + (hasOff && offStyled ? '✓' : '✗'))
+  if (!cardGrows) err.push('practice.wxss 的 .q-card 丢了 flex:1 → 题干区不再吃掉剩余高度，空白会全堆到题干与选项之间（断层死白，实测可达 368px）')
+  if (optsSplits) err.push('practice.wxss 的 .options 又写上 flex:1 → 剩余高度被两处争抢，选项被拉开、空白只是换了位置')
+  if (!anchored) err.push('practice.wxss 的 .options 不是贴底（缺 justify-content: flex-end）→ 选项组停在屏幕中部、且下沿随屏高浮动，单手够不到')
+  if (minH < 88) err.push('practice.wxss 的 .option min-height = ' + minH + 'rpx（< 88rpx=44px 热区下限）')
+  if (!hasOff) err.push('practice.wxml 的选项丢了 off 类 → 答错后的禁用项在界面上看不出来（用户以为点了没反应）')
+  if (!offStyled) err.push('practice.wxss 缺 .option.off 的样式 → 有类名但界面无变化，等同于没修')
+}
+
 /* ---------- 汇总 ---------- */
 console.log('')
 if (warn.length) {

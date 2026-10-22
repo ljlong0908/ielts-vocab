@@ -84,9 +84,19 @@ exports.main = async (event = {}) => {
     let plan = planRes.data[0]
 
     if (!plan) {
-      // 待复习 = 非已掌握 且 复习日 <= 今天
+      // 待复习 = 在复习池中（status='reviewing'）且 复习日 <= 今天。
+      // ⚠️ R6（2026-10-13）：正相匹配 'reviewing'，**不能**用 _.neq('mastered') ——
+      //    复习出池的终态 'reviewed'（答错/非一轮干净答对，见 submit_answer）也是
+      //    「非 mastered」，用 neq 会把它们捞回池里，「错词次日不再自动复习」被悄悄破坏。
+      //    进池只有 finish_checkin / finish_extra_round 一条路，所以池内 = 昨日新词。
+      // ⚠️ 仍用 lte(today) 而不是 ==today：断档N天回来时，之前注册没复习的词
+      //    要能补上（配合下面的 orderBy，最老的先复习）。
+      // ⚠️ orderBy 不能省：超量积压时（断档多日）无排序截断会让数据库自然序里
+      //    靠后的词永远排不进前 50 条 —— 天天取同一批，队尾饿死。
+      //    按 nextReviewDate 升序保证「最老先复习」，新注册的词排在其后。
       const pending = await userWords
-        .where({ _openid: OPENID, status: _.neq('mastered'), nextReviewDate: _.lte(today) })
+        .where({ _openid: OPENID, status: 'reviewing', nextReviewDate: _.lte(today) })
+        .orderBy('nextReviewDate', 'asc')
         .limit(50)
         .get()
       const reviewWordIds = pending.data.map((x) => x.wordId)

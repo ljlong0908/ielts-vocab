@@ -46,7 +46,9 @@ stub('miniprogram/utils/audio.js', {
   playWord() {
     calls.push('audio.playWord')
   },
-  playSentence() {}
+  playSentence() {},
+  preloadWords: (ws) => calls.push('preloadWords:' + (ws || []).join(',')),
+  preloadSentences: () => {}
 })
 stub('miniprogram/utils/share.js', { toFriend: (o) => o || {} })
 
@@ -72,6 +74,8 @@ const { t, done } = tester()
   /* ---------- 基线 ---------- */
   await page.onShow.call(page)
   t('onShow 拉到 3 个错题且已解除 loading', page.data.words.length === 3 && page.data.loading === false)
+  t('onShow 顺带把整表错词音频排进预加载（点喇叭 / 进复习都不要再等下载）',
+    calls.includes('preloadWords:acknowledge,accommodate,ambiguous'))
 
   /* ---------- 场景 1：确认 → 乐观移除 + 调云端 ---------- */
   calls.length = 0

@@ -22,9 +22,7 @@
   </block>
 
   <block wx:else>
-  <view wx:if="{{loading}}" class="loading">加载中</view>
-
-  <block wx:else>
+  <block>
     <view class="card hero">
       <view class="between">
         <view class="stat">

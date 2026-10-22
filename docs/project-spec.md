@@ -54,8 +54,8 @@
 ```
 
 **分层职责**：
-- **前端**：只做渲染、交互、云函数调用、音频播放；不持有任何密钥；不直接写数据库。
-- **云函数**：所有写操作、AI 调用、内容安全、并发锁、判题都在服务端完成。
+- **前端**：只做渲染、交互、云函数调用、音频播放；不持有任何密钥；不直接写数据库。**唯一例外的判断**是选择题对错（答案随题下发，本地比对即可 —— 见 §7.5），但记录与状态推进仍全部走云函数。
+- **云函数**：所有写操作、AI 调用、内容安全、并发锁都在服务端完成；选择题的**判题结果**虽由前端先得出，服务端在落库时仍会自判一次（不信客户端）。
 - **云数据库**：业务数据存储 + **AI 生成内容缓存**（`words.enriched`）。
 - **云存储**：音频缓存（跨用户共享）。
 
@@ -92,6 +92,8 @@ ielts-vocab/
 │   ├── fill_token.py             # 批量把 batch-*.json 的 __ADMIN_TOKEN__ 换成真实密钥
 │   ├── quotes_to_examples.py     # 「每日一句」quotes.js → assets/examples/quotes-12.json（供音频合成）
 │   ├── seed_quote_audio.py       # 「每日一句」音频上传云存储 + 写 audio_cache（走 HTTP API，幂等）
+│   ├── gen_similar.py            # 离线计算词表「形似词」（编辑距离）→ assets/word_lists/ielts-full-similar.json
+│   ├── seed_similar.py           # 把形似词写入云端 words.similar（走 HTTP API，幂等，默认 dry-run）
 │   └── requirements.txt
 ├── miniprogram/                  # 小程序前端根（miniprogramRoot）
 │   ├── app.js                    # 启动：仅 wx.cloud.init（不缓存用户态，由各页面按需拉取）
@@ -118,8 +120,8 @@ ielts-vocab/
     ├── today_flow/               # 当日流程状态编排（前端唯一状态来源）
     ├── start_new_words/          # 幂等生成当日新词队列（只取 audioReady=true 的词）
     ├── word_card/                # 单词卡（触发 AI 补全 + 返回缓存）
-    ├── build_questions/          # 生成双向题型题目（答案留服务端）
-    ├── submit_answer/            # 服务端判题 + 复习推进
+    ├── build_questions/          # 生成双向题型题目（答案随题下发，供前端本地判题）
+    ├── submit_answer/            # 后台落库（答题记录）+ 复习推进
     ├── finish_checkin/           # 打卡（幂等）+ 注册复习池（wordCursor 按 seq 推进）
     ├── stats/                    # 统计 + 错题
     ├── audio_cache/              # 音频读缓存：查 audio_cache 集合命中即返回 fileID
@@ -165,6 +167,7 @@ ielts-vocab/
 | `example` | object\|null | **AI** | `{ en, cn }` 例句 |
 | `roots` | array | **AI** | `[{ part, type, meaning }]`，type ∈ prefix/root/suffix |
 | `etymology` | string | **AI** | 词源演变简述 |
+| `similar` | array | **脚本** | `[{ word, phonetic, meaning }]` **形似词**（最多 3 条，按相似度降序）。由 `scripts/gen_similar.py` 离线编辑距离计算、`scripts/seed_similar.py` 播种；`word_card` 随整 doc 透传，学习页展示 + 点喇叭发音。详见 §11.11 |
 | `enriched` | boolean | 系统 | 扩展内容是否已补全（**缓存命中判据**） |
 | `enrichStatus` | string | 系统 | `pending` / `generating` / `ok` / `failed` |
 | `enrichLockAt` | date\|null | 系统 | 抢锁时间，用于超时释放 |
@@ -248,11 +251,11 @@ ielts-vocab/
 |---|---|---|---|---|
 | 1 | `user_profile` | `{ action?: 'get'\|'setGoal', dailyGoal? }` | 用户对象 | 登录：按 openid 查/建用户；`setGoal` 时写 `dailyGoal`（仅接受 5 或 10） |
 | 2 | `home_summary` | `{}` | `{dailyGoal,streak,totalLearned,learnedToday,extraLearnedToday,todayDone}` | 首页聚合。`todayDone` 判据 = 今日 checkins 存在；`extraLearnedToday` = 当日各加练组 `learnedIds` 之和 |
-| 3 | `today_flow` | `{}` 或 `{action:'markLearned', wordId, round?}` | `{plan,dailyGoal,streak,totalLearned,extra}` | **前端唯一状态来源**。首次进入创建当日 plan：有待复习→`review`，否则→`learning`；若今日已打卡则强制 `stage='done'`（只改内存，不落库）。`markLearned` 轻量累加 `learnedIds`；`round>0` 时改累加**该加练组**的 `learnedIds`。`extra` = `{canStart,exhausted,limitReached,pendingRound,roundsToday,extraLearnedToday,groupSize}`，供首页「再学一组」按钮决策；返回的 `plan.extraRounds` 已剥掉 `practiceQueue`（避免答案下发） |
+| 3 | `today_flow` | `{}` 或 `{action:'markLearned', wordId, round?}` | `{plan,dailyGoal,streak,totalLearned,extra}` | **前端唯一状态来源**。首次进入创建当日 plan：有待复习→`review`，否则→`learning`；待复习集合 = `status='reviewing'`（**正相匹配**，R6：出池终态 `reviewed` 必须排除，用 `_.neq('mastered')` 会把它捞回来）且 `nextReviewDate ≤ 今天`，按 `nextReviewDate` **升序**取（R4，超 50 条时最老先复习）；若今日已打卡则强制 `stage='done'`（只改内存，不落库）。`markLearned` 轻量累加 `learnedIds`；`round>0` 时改累加**该加练组**的 `learnedIds`。`extra` = `{canStart,exhausted,limitReached,pendingRound,roundsToday,extraLearnedToday,groupSize}`，供首页「再学一组」按钮决策；返回的 `plan.extraRounds` 已剥掉 `practiceQueue`（避免答案下发） |
 | 4 | `start_new_words` | `{}` | `{newWordIds,reused,exhausted}` | **幂等**生成当日新词：若 plan 已有 newWordIds 直接复用；否则按 `seq > wordCursor` **且 `audioReady === true`** 的顺序取 `dailyGoal` 个。✅ 没音频的词不会出（见 7.3） |
 | 5 | `word_card` | `{ wordId }` | 单词卡文档 + `enriching` | 读词；`enriched=false` 时**同步调用** `enrich_word` 再读一次；仍失败则返回基础字段 + `enriching:true` |
-| 6 | `build_questions` | `{ phase:'review'\|'practice', round? }` | `{questions,reused}` | 生成题目（**先查缓存复用**）。`round>0` 时读写 `extraRounds[round-1].practiceQueue`、词源取该组 `wordIds`（**C4**：不加 round 会覆盖 `plan.practiceQueue`）。题型 `i%2` 交替 cn_option/en_option，再 shuffle；干扰项从**非本批**词库随机取 3 个；答案存服务端，下发前 `sanitize` 剔除 |
-| 7 | `submit_answer` | `{ phase, questionIndex, choice, round? }` | `{correct,answerIndex,wordId,word,meaning,phaseDone}` | 服务端判题；写 `records`；推进 `user_words` 复习状态；`round===0` 时全对推进 `plan.stage`，`round>0` 时只更新组内队列与组 `stage`（**C3**：绝不写 `plan.stage`） |
+| 6 | `build_questions` | `{ phase:'review'\|'practice', round? }` | `{questions,reused}` | 生成题目（**先查缓存复用**）。`round>0` 时读写 `extraRounds[round-1].practiceQueue`、词源取该组 `wordIds`（**C4**：不加 round 会覆盖 `plan.practiceQueue`）。题型 `i%2` 交替 cn_option/en_option，再 shuffle；干扰项从**非本批**词库随机取 3 个。**答案随题下发**：每题带 `answerIndex` + `audioText`（`toClient()`，前端据此本地判题，见 7.5） |
+| 7 | `submit_answer` | `{ phase, questionIndex, choice, round? }` | `{correct,answerIndex,wordId,word,meaning,phaseDone}` | **降级为「后台落库」**：前端已本地判过对错，这里仍服务端判一次（不信前端）+ 写 `records` + 推进 `user_words` 复习状态 + `round===0` 全对推进 `plan.stage` / `round>0` 只更新组内队列与组 `stage`（**C3**：绝不写 `plan.stage`）。返回值前端主路径已不依赖。⚠️ **R2**：practice/加练阶段答错且 `user_words` 无该词记录时，落一条只带 `wrongCount:1` 的记录（不写调度字段 → 没打卡不进次日复习集合），让次日 clean 判定看得见昨天练习答的错。⚠️ **R6**：`user_words` 推进是**出池语义** —— review 阶段答对 clean → `mastered`；否则（本轮答错/历史有错/答错）→ `reviewed` + `nextReviewDate=''`，**任何阶段答错都不再写「次日报到」**（错词次日不再自动复习，出路是错题本「已掌握」） |
 | 8 | `finish_checkin` | `{}` | `{already,streak,learnedCount,totalLearned}` | **幂等**打卡。前置：practiceQueue 全部 passed。写 `checkins`、更新 `streak`/`totalLearned`、**`wordCursor` 取当日已学词的最大 `seq`**（`words.where({_id: _.in(newWordIds)}).orderBy('seq','desc')`）、新词入复习池（`nextReviewDate=次日`）、`stage='done'` |
 | 9 | `stats` | `{}` | `{streak,totalLearned,dailyGoal,totalCheckins,dates[],wrongWords[]}` | 打卡日历日期列表 + 错题（`records.isCorrect=false` **且未被标 `mastered`** 去重取最近 50）+ 词条 |
 | 10 | `audio_cache` | `{ text, type, kind? }` | `{fileID,cached}` | **两类文本两种策略**。① 单词（`kind` 缺省）：查 `audio_cache` 命中直接返回；未命中下载 dictvoice → 上传云存储 → 写索引 → 返回 fileID。② 例句（`kind:'sentence'`）：**只查库，未命中直接返回 `NOT_PRESEEDED`，不调第三方也不写云存储**（整句 dictvoice 必返回 null；且在此开放「下载+写存储」等于给任意长文本开滥用口子）。**入参校验**：单词 `^[A-Za-z][A-Za-z'\u2019\- ]{0,39}$`（≤40 字符）、例句 `^[A-Za-z][^\x00-\x1F\x7F\\`]{0,199}$`（≤200 字符，**排除集**写法，见 7.8），`type` 收敛为 1/2 |
@@ -263,7 +266,7 @@ ielts-vocab/
 | 15 | `init_db` | `{ _token, mode?: 'preview'\|'create', collections?: string[] }` | `{mode,total,created[],missing[],ready,collections{name:{exists,docs}},descriptions[],indexes[]}` | **数据表体检 / 初始化（幂等）**。云开发的集合必须先「存在」才能读写，否则抛 `Db not exist`；本函数用 `db.createCollection()` 建缺失集合（已存在的按 `already exist` / `-501001` 识别后跳过），`preview` 模式只体检、不写任何数据。**⚠️ 云开发 SDK 只能建集合、不能建索引**，故返回体 `indexes` 是必须在控制台手工创建的清单（含 `words` 的 `audioReady + seq` 出词关键索引）。**鉴权**：`_token === ADMIN_TOKEN`，未配置则拒绝一切调用。见 `docs/deploy.md` 第 5 节 |
 | 16 | `start_extra_round` | `{}` | `{roundId,wordIds,reused,exhausted}` | **加练发起**（M13/T1）。前置：当日 plan 存在 **且 已打卡**（D1=A）。幂等：末尾有未完成的组则原样复用（`reused:true`）。~~上限 3 组/日~~ **上限已取消（2026-09-29，不限次数）**，唯一终点是词库取尽。取 `seq > wordCursor` 且 `audioReady` 的词，排除当日 `newWordIds` 与已出过的加练词；取尽返 `exhausted:true` 且不建空组。**不推进 `wordCursor`**（学完才推） |
 | 17 | `finish_extra_round` | `{ roundId }` | `{already,roundId,learnedCount,totalLearned}` | **加练结算**。幂等（组 `stage==='done'` 直接返回，**绝不重复累加计数**）。前置：该组 `practiceQueue` 全 passed。推进 `wordCursor` 到本组 max(seq)、**`totalLearned += wordIds.length`**、加练词入复习池（`nextReviewDate=次日`）、组 `stage='done'`。**⛔ 不写 `checkins`、不改 `streak`/`plan.stage`** |
-| 18 | `dismiss_wrong` | `{ wordId }` | `{wordId,updated}` | **错题本「已掌握」**（用户追加，非原型项）。把该用户该词的**所有答错记录**打 `mastered:true`（`updated` = 命中条数），`stats` 随即不再下发该词。**⚠️ 不删流水**（见 §4.5 `records.mastered` 的取舍说明）；幂等——重复标记只是重写同一个值，无副作用，故不额外加「未标记」条件（少一个 `where().update()` 的 command 不确定项） |
+| 18 | `dismiss_wrong` | `{ wordId }` | `{wordId,updated,scheduleSynced}` | **错题本「已掌握」**（用户追加，非原型项）。把该用户该词的**所有答错记录**打 `mastered:true`（`updated` = 命中条数），`stats` 随即不再下发该词。**⚠️ 不删流水**（见 §4.5 `records.mastered` 的取舍说明）；幂等——重复标记只是重写同一个值，无副作用，故不额外加「未标记」条件（少一个 `where().update()` 的 command 不确定项）。**R1**：同时把 `user_words` 该词置 `mastered`（`nextReviewDate=''`）同步出复习池；无该词记录则不建（`scheduleSynced=false`，学了没打卡→次日重学自愈）。只影响「明天起」 |
 
 ---
 
@@ -271,10 +274,10 @@ ielts-vocab/
 
 | 页面 | 路径 | 数据来源（云函数） | 关键行为 |
 |---|---|---|---|
-| 首页 | `pages/index` | `home_summary` + `today_flow` | 计算进度百分比；按 `stage` 生成 CTA 文案与跳转目标；未 `onboarded` 则 redirect 到 onboarding；底栏另挂「再学一组」按钮（**仅当日已打卡后显示**，读 `today_flow.extra`）。显隐优先级：**有未完成组（`pendingRound`）→ 必显示且文案「继续学一组」（优先于上限判断）** ＞ `exhausted`/`limitReached` → 显示但置灰 + 底栏说明原因 ＞ 正常 → 可点。⚠️ **不得静默隐藏**（见 §12.13） |
+| 首页 | `pages/index` | `home_summary` + `today_flow` | 计算进度百分比；按 `stage` 生成 CTA 文案与跳转目标（`review` → 「先复习昨天的单词」→ 练习页 review 阶段；2026-10-14 用户拍板用「昨天」而非「到期」——断档场景虽不准，但符合用户对这条链路的认知，见 §12.17）；未 `onboarded` 则 redirect 到 onboarding；底栏另挂「再学一组」按钮（**仅当日已打卡后显示**，读 `today_flow.extra`）。显隐优先级：**有未完成组（`pendingRound`）→ 必显示且文案「继续学一组」（优先于上限判断）** ＞ `exhausted`/`limitReached` → 显示但置灰 + 底栏说明原因 ＞ 正常 → 可点。⚠️ **不得静默隐藏**（见 §12.13） |
 | 引导 | `pages/onboarding` | `user_profile(setGoal)` | 选 5/10 → 写目标 + `wx.setStorageSync('onboarded',true)` → reLaunch 首页 |
-| 单词卡 | `pages/learn` | `today_flow` / `start_new_words` / `word_card` / `today_flow(markLearned)` | 逐张卡片；**进词自动播单词发音**；**预取下一张**触发 AI 生成；`next()` 时 `markLearned`（带连点锁）；最后一张跳 `practice?phase=practice`；单词/例句发音。**`?round=N` 为加练模式**：词源取 `plan.extraRounds[N].wordIds` 并**跳过该组已学过的词**（按 `learnedIds`，剩余为空则直接跳小测）、「加练单词」标签、`markLearned` 带 round。**`?review=<wordId>` 为错题复习（W2）**：词源**只来自参数**，单卡、「错题复习」标签、按钮「复习完成」→ `navigateBack` 回错题本；**不读 `today_flow`、不调 `start_new_words`、不写 `markLearned`**（否则点一下错题本就会推进当日游标、污染今日进度） |
-| 练习 | `pages/practice` | `build_questions` / `submit_answer` / `finish_extra_round` | `phase` 由 URL 参数决定；答对自动进下一题（900ms），答错标错并**禁用该选项要求重选**；答对播放发音；review 全对跳 learn，practice 全对跳 checkin。**`?round=N` 为加练**：出题/判题带 round，全对后 `finish_extra_round` 再 `switchTab` 回首页 |
+| 单词卡 | `pages/learn` | `today_flow` / `start_new_words` / `word_card` / `today_flow(markLearned)` | 逐张卡片；**进词自动播单词发音**；**预取下一张**触发 AI 生成；`next()` 时 `markLearned`（带连点锁）；最后一张跳 `practice?phase=practice`；单词/例句发音。**「上一个」按钮**（2026-10-14）：`wx:if="{{index > 0}}"` 渲染（首词没有上一个，JS 里 `index<=0` 再兜一道），与 `next` 共用 `locked` 连点锁，走 `loadCard(index-1)` 命中缓存卡（不重发请求）；**不撤 `markLearned`** —— 走过的词就是学过了，云端 addToSet 幂等，撤了才会让今日进度造假。**`?round=N` 为加练模式**：词源取 `plan.extraRounds[N].wordIds` 并**跳过该组已学过的词**（按 `learnedIds`，剩余为空则直接跳小测）、「加练单词」标签、`markLearned` 带 round。**`?review=<wordId>` 为错题复习（W2）**：词源**只来自参数**，单卡、「错题复习」标签、按钮「复习完成」→ `navigateBack` 回错题本；**不读 `today_flow`、不调 `start_new_words`、不写 `markLearned`**（否则点一下错题本就会推进当日游标、污染今日进度） |
+| 练习 | `pages/practice` | `build_questions` / `submit_answer` / `finish_extra_round` | `phase` 由 URL 参数决定；**判题在本地同步完成**（答案随题下发，点下去立即出对错、立即发音，不再等云函数）；答对自动进下一题（900ms），答错标错并**禁用该选项要求重选**（禁选项有可见的「已排除」灰度 + ✕ 态）；`submit_answer` 只做后台串行落库，跳转前等它排空（见 §7.5）。**已 `passed` 的题直接呈已答对态并自动过**（R3：复习中途退出重进时 `build_questions` 复用整条 queue；只在呈现层跳过，`questionIndex` 是落库下标、队列顺序动不得）。review 全对跳 learn，practice 全对跳 checkin。**`?round=N` 为加练**：出题/落库带 round，全对后 `finish_extra_round` 再 `switchTab` 回首页。**选项区落点**：整页 flex 拉伸，选项吃掉题干以下的剩余高度并居中分布，落在屏幕下半区（拇指可达），见 §11.9 |
 | 打卡 | `pages/checkin` | `finish_checkin` | 进入即打卡（幂等）；展示 streak / 当日词数 / 累计 |
 | 统计 | `pages/stats` | `stats` | 本地生成当月日历格子，标记已打卡日 |
 | 错题本 | `pages/wrongbook` | `stats`（wrongWords） / `dismiss_wrong` | 展示错词。**点卡片 → 进学习页复习该词**（`/pages/learn/learn?review=<id>`，W2）；喇叭是独立的 `catchtap` 热区（只发音、不跳转）；**每项带「已掌握」按钮**（`catchtap` 拦冒泡）→ `wx.showModal` 二次确认 → **乐观移除**（不等云函数往返）+ 失败回滚、顶部提示条（本页有 tabBar，M19-1 禁用 `wx.showToast`） |
@@ -324,22 +327,66 @@ review ──(reviewQueue 全对)──▶ learning ──(学完 newWordIds)─
 - 词库取尽（`newWordIds` 为空）→ `exhausted:true`，且 `stage` 置 `done`。
 - ⚠️ 音频应**按 seq 从前往后连续生成**。跳着生成不会出错，但学习顺序会出现空洞。
 
-### 7.4 复习调度（简化版，预留升级位）
-- 待复习集合：`user_words` 中 `status != mastered` **且** `nextReviewDate <= today`，上限 50 条。
-- **答对时**（review 阶段）：
-  - `clean = !本次答错 && 历史 wrongCount === 0` → `status='mastered'`，`nextReviewDate=''`
-  - 否则 → `status='reviewing'`，`nextReviewDate = 明天`（继续留存复习）
-- **答错时**：`wrongCount+1`，`status='reviewing'`，`nextReviewDate = 明天`。
-- 新学词在打卡时注册进复习池：`status='reviewing'`，`nextReviewDate = 明天`，`round=1`。
+### 7.4 复习调度（R6：仅昨日新词，一轮一次性测验）
+- **状态机**（`user_words.status`，三态）：
+  - `reviewing`：在复习池中。**进池只有一条路** —— `finish_checkin` /
+    `finish_extra_round` 注册当日新词/加练词（`nextReviewDate = 明天`）。
+    所以池内 = 昨日新词（含加练词），没有第二条入池路径。
+  - `mastered`：毕业终态。review 阶段 clean（一轮一次答对 + 历史无错），
+    或用户在错题本点「已掌握」（`dismiss_wrong`）。
+  - `reviewed`：**出池终态**（R6）。过了复习轮但出过错 —— 次日不再自动复习。
+- **待复习集合**：`user_words` 中 `status = 'reviewing'`（**正相匹配**）**且**
+  `nextReviewDate <= today`，上限 50 条，**按 `nextReviewDate` 升序**取
+  （R4：无排序会按自然序截断，断档积压时队尾饿死）。
+  - ⚠️ 必须正相匹配，**不能**用 `_.neq('mastered')`：出池终态 `reviewed` 也是
+    「非 mastered」，用 neq 会把答错的词捞回池里，「错词次日不再自动复习」
+    被悄悄破坏（且不报错）。
+  - ⚠️ 用 `lte(today)` 而不是 `== today`：断档 N 天回来时，之前注册没来得及
+    复习的词要能补上（配合升序，最老的先复习）。
+- **答对时**（review 阶段）：`clean = !本次答错 && 历史 wrongCount === 0`
+  - clean → `status='mastered'`，`nextReviewDate=''`（毕业）
+  - 否则 → `status='reviewed'`，`nextReviewDate=''`（**出池**，不次日复习）
+- **答错时**（任何阶段，uw 存在）：`wrongCount+1`，`status='reviewed'`，
+  `nextReviewDate=''`。当天同一题仍要重选到对才能过（前端禁选 + `passed`
+  由答对时置位），先出池不影响当天流程。
+- **出池词的出路**：答错流水都在 `records` → 错题本照收；用户练熟后在错题本
+  点「已掌握」（`dismiss_wrong` 同步置 `mastered`）才算真正掌握 —— 这是
+  `reviewed` 转正 mastered 的**唯一入口**。
+- ⚠️ **「历史 wrongCount」包含昨天练习阶段答的错**（R2）：新词首次做题时 `user_words`
+  还没有记录（要等打卡才建），所以 `submit_answer` 在 practice/加练阶段答错且无记录时，
+  先落一条**只带 `wrongCount:1`** 的记录（不写 `status`/`nextReviewDate` —— 没打卡的词
+  走「次日重学」而非「次日复习」）；`finish_checkin` 的幂等分支补调度字段且**不覆盖
+  wrongCount**。少了这一步，昨天练习答错的词次日一轮答对就会被误判 mastered。
+  ⚠️ R6 之后该记录的后果是「出池而非毕业」：次日复习答对也因 `wrongCount>0`
+  非 clean → `reviewed`，要等用户在错题本点「已掌握」才 mastered。
+- ⚠️ **错题本「已掌握」会同步出复习池**（R1）：`dismiss_wrong` 打 `records` 标的同时把
+  `user_words` 该词置 `mastered`（`nextReviewDate=''`）—— 两套系统不通时，用户点了
+  「已掌握」次日复习照考。`user_words` 无该词记录时不建（学了没打卡→次日重学自愈）。
+  同步只影响「明天起」：当日 `reviewQueue` 是建 plan 时的快照。
 - > 未实现完整艾宾浩斯/FSRS，`round` 字段为 v2 预留。
 
-### 7.5 题型生成与服务端判题
+### 7.5 题型生成与判题（本地同步判题）
 - **两种题型**：`cn_option`（中选项：题干英文单词→选中文释义）/ `en_option`（英选中：题干中文释义→选英文单词）。
 - 同一批题目按 `i % 2` **交替**分配题型，再整体 shuffle 混合。
 - **干扰项**：从**不在本批**的词库中随机取 3 个（`_id nin wordIds` 的池，池不足 3 则放宽到全库）。
 - **题干**：cn_option 用 `w.word` 且带音标；en_option 用 `w.meaning`。
-- **答案不下发**：题目携带 `answerIndex` 存 `daily_plans`，`sanitize()` 后只下发 `{id,wordId,type,stem,phonetic,options}`。
-- **判题**：`submit_answer` 服务端比对 `choice === answerIndex`；答错**不移除题目**，前端禁用该选项要求重选，直到答对。
+- **答案随题下发**：题目带 `answerIndex` 存 `daily_plans`，`toClient()` 下发的形状为
+  `{id,wordId,type,stem,phonetic,roots,options,answerIndex,audioText}`（**复用分支同样带**，老队列里本来就有 `answerIndex`）。
+  - `audioText` = 答对后要读的英文：cn_option 是题干（英文词）、en_option 是正确选项。
+    ⚠️ **判据必须是 `type`**，不能用「`phonetic` 是否为空」来推 —— 没音标的 cn_option 会被推成中文释义，
+    前端拿去查音频必然落空（`test_build_questions.js` 钉住这条）。
+  - `roots` = 词根拆解（D15，2026-10-22）：练习页题干区在「单词 → 音标」之下展示，**仅 cn_option 用**
+    （en_option 题干是中文释义，露词根等于给选项送答案）。旧队列没有该字段 → 兜底 `[]`，前端不渲染（可选内容）。
+- **判题时机**：前端 `choose()` 本地比对 `choice === answerIndex` → **点下去立即出对错、立即发音**，不等云函数往返。
+  答错**不移除题目**，禁用该选项要求重选，直到答对。
+- **落库与判题解耦**：`submit_answer` 退化为**后台任务**（写 `records` / 推进复习状态 / 推进 `stage`），前端**不等它**。
+  由此产生三条硬约束（改这块必读，均有回归钉住）：
+  1. **串行提交**：`submit_answer` 是「读整个 queue → 改 → 写回整个 queue」，并发提交会互相覆盖（后写的把先写的 `passed/wrong` 抹掉）→ 前端用一条 Promise 链串住所有提交（`syncAnswer`）。
+  2. **跳转前 flush**：`finish_checkin` / `finish_extra_round` 的前置是「该 queue 全部 `passed`」，而 `passed` 是 `submit_answer` 写的 → `next()` 在终点分支先 `await flushSync()`。不加就会出现「题全答对了，打卡却提示没做完」。
+  3. **失败不静默**：落库失败先重试一次，仍失败则明确提示（判题已在本地完成，落库静默失败 = 正确率/错题本/复习调度的静默缺口）。
+- **降级路径**：题目不带 `answerIndex`（云函数未升级 —— 前端先发布了而忘了部署函数）时，前端回退到
+  「等服务端判题」的旧行为。不留这条路的话，每个选项都会被判错、逐个禁掉，用户直接卡死。
+  功能不受影响，只是慢。
 
 ### 7.6 打卡（`finish_checkin`）
 - 前置校验：`practiceQueue` 非空且 `every(q => q.passed)`。
@@ -440,30 +487,48 @@ word_card(wordId)
 - ⚠️ **改了 `quotes.js` 的句子就必须重跑 ①②③**——音频以整句文本为 key，改一个字旧音频即失效（与 `force:true` 重生例句同理）
 - `scripts/quotes_to_examples.py` 会断言「抽到的条数 == quotes.js 里 `text:` 的声明条数」，防正则漏收
 
-### 7.9 发音（离线预生成音频 + 前端 fileID 缓存）
+### 7.9 发音（离线预生成音频 + 本地文件缓存 + 预加载）
+
+**四层缓存，就近优先**（`utils/audio.js`）：
 ```
-playWord(word)
-  ① 前端 wx.storage 查 fileID ──命中──▶ 秒播（不联网、不调云函数）
-  ② 未命中 → callFunction(audio_cache)
-        └─ 查 audio_cache 集合 {text,type} ──命中──▶ 返回云存储 fileID → 存前端缓存 → 播放
-        └─ 未命中 → 下载 dictvoice → 上传云存储 → 写索引 → 返回 fileID   ← 仅词表外单词会走到这里
-  ③ 云函数失败 → 降级直播 dictvoice URL（不缓存）
+playWord / playSentence
+  ① L0 内存 memo（本次运行）              ──命中──▶ 秒播
+  ② L1 本地文件 USER_DATA_PATH/audio/*.mp3 ──命中──▶ 秒播（零网络）
+  ③ 未命中 → 立即用远端起播（不等落盘，首播不比旧版慢）
+        └─ 同时【后台】把远端写进 L1，下次即走 ②
+  ④ 远端来源：callFunction(audio_cache) → 云存储 fileID
+        └─ 查 audio_cache 集合 {text,type} ──命中──▶ 返回 fileID
+        └─ 未命中 → 下载 dictvoice → 上传云存储 → 写索引   ← 仅词表外单词会走到这里
+        └─ 云函数失败 → 单词降级直播 dictvoice URL；例句静默不播
 ```
+- **首播为什么不等落盘**：`wx.cloud.downloadFile` + `saveFile` 要一个完整往返，若先落盘再播，首播会比旧版更慢。改成「先用远端流出声、后台并行落盘」，首播与旧版持平，第二次起才是「本地秒播」的收益。
+- **预加载**（本次新增，消灭「翻页才转圈」）：`preloadWords(list)` / `preloadSentences(list)` 只落盘、不发声，走**统一队列**（并发 3、同批去重、并发请求合并 `pending`）。`USE_MOCK` 时整体旁路（mock 音频是远端直链，预加载等于白联网）。
+- **预加载接入点（4 处）**：
+  | 页面 | 时机 | 内容 |
+  |---|---|---|
+  | `learn` | 开页即按窗口预取**卡片**，卡片一到手就排音频 | 该词的词音频 + 例句整句音频（预取窗口 3 张，见下） |
+  | `practice` | 拿到 questions 后 | `cn_option` 预载 `stem`；`en_option` 预载 4 个英文选项（答对后的 `playWord(res.word)` 必在其中） |
+  | `index` | `load()` 里（早于云端接口等待） | 每日一句整句音频 |
+  | `wrongbook` | `onShow` 拿到错词表后 | 整表错词 |
+- **`learn` 的卡片预取窗口**（`PREFETCH_AHEAD = 3`）：`prefetch(i)` 幂等（同一个 promise 复用，`loadCard` 与预取窗口共用），命中时翻页同步出卡。开页即 `prefetchWindow(0)`，让第 2、3 张**并行**发出而不是等第 1 张一个完整往返 —— 这才是「点下一个就立刻出声」的关键。预取失败**不缓存**（否则那张卡永远白屏），翻到它时会重新请求。
+- **`warmup()`**：app 启动即空调一次 `audio_cache`（空 text 会被立刻拒绝，不写库、不外呼、无数据），把云函数**冷启动**从首次点喇叭挪到启动阶段 —— 那是「第一次点要等一下」的大头。
+- **本地缓存上限 50MB + LRU 淘汰**：官方「本地缓存文件 + 本地用户文件共计 200MB，超了写入直接失败且平台不自动清理」。实测单词 ~4KB、例句 ~22KB，50MB 足够装下数千个词。超限按 `t` 最旧删到 80% 水位，并清掉记录里的 `local` 指针与内存 memo。
+  ⚠️ **冷启动不逐个 `accessSync` 校验索引**：同步 JSBridge 调用 ×几百条 = 首次发声卡上百毫秒。脏行改为按需精确清理（读到记录发现文件不在 → `indexDrop`；淘汰时 unlink 失败 → 该行本就死了）。`test_audio.js` 的 L1 用「检查次数与索引长度无关」把这条钉死。
+- **缓存键与记录**：storage 键 `audio_cache_{type}_{text}`，值 `{ fileID, url, local, size, ts }`（旧记录只有 `fileID`，**天然向后兼容**）；`audio_cache` 集合跨用户共享。本地文件名 `{type}_{双哈希}.mp3` —— 双哈希是**本地专用**，与 `scripts/text_key.py` 的跨运行时 `hashText` 无关，改动不影响线上数据。
 - **主音源是云存储里的离线音频**，由本地 `scripts/gen_audio.py` 用 **Kokoro-82M（Apache-2.0）** 批量合成，**当前先只做美音**（type=2，voice=`af_heart`，lang_code=`a`）——因为前端 `config.TTS_LANG='en_US'` 映射出的就是 type 2，足够覆盖全部播放场景；英音（type=1）留到将来做「英美音切换」时用 `--types uk` 增量补。mp3 约 5KB/词。经 `seed_audio` 上传并写入 `audio_cache` 索引后，运行时**零第三方外呼**。
-- `audioReady` 机制保证学习流程里出现的词都已有音频，故第 ② 步的 dictvoice 分支实际不会触发；保留它主要为词表外单词兜底。
-- 音频全部自持后，可**移除** downloadFile 合法域名 `https://dict.youdao.com`。
-- 缓存键：前端 `audio_cache_{type}_{text}`，`text` 为单词或整句；`audio_cache` 集合跨用户共享。
+- `audioReady` 机制保证学习流程里出现的词都已有音频，故第 ④ 步的 dictvoice 分支实际不会触发；保留它主要为词表外单词兜底。
+- 音频全部自持后，可**移除** downloadFile 合法域名 `https://dict.youdao.com`（⚠️ 移除后 dictvoice 兜底链路会一起失效，且 `wx.downloadFile` 也被预加载用于兜底音频落盘）。
 - 云存储路径有两种，别混：**预置音频**是 `audio/{type}/{slug}.mp3`（单词）与 `audio/{type}/s_{hash}.mp3`（例句，见 7.8）；**dictvoice 兜底**落盘为 `audio/{type}_{hash}.mp3`。两者互不影响，排查时按来源看 `audio_cache.source`（`preseed` / `dictvoice`）。
-- `playSentence(text)`：播放**整句音频**（本地 Kokoro 预生成，见 7.8 例句流水线）。走 `resolveSrc(text, type, 'sentence')` → 以**整句文本**为 key 查 `audio_cache` → 命中即播。**无 dictvoice 兜底**（实测整句请求 dictvoice 返回 HTTP 500 / 120 字节 JSON，必失败）；云函数返回 `NOT_PRESEEDED` 时**静默不播** —— 补音频是渐进的，期间大量例句尚无音频，弹提示会持续打扰学习。早期的「逐词链式朗读」实现已废弃（听感生硬）。
-- `playWord(word)` 的调用方：① learn 页 —— **进入每个单词页自动播一次**（`loadCard()` 里 `setData` 之后调，首个词与「下一个」共用同一入口）+ 喇叭按钮手动重播；② 将来练习/复习页如需可复用。自动播放在 `setData` 之后触发，保证「词先出现、再出声」；连点由 `locked` 挡住，`playSrc` 内部先 `ctx.stop()` 也不会叠音。
+- `playSentence(text)`：播放**整句音频**（本地 Kokoro 预生成，见 7.8 例句流水线），以**整句文本**为 key 查 `audio_cache`。**无 dictvoice 兜底**（实测整句请求 dictvoice 返回 HTTP 500 / 120 字节 JSON，必失败）；云端返回 `NOT_PRESEEDED` 时**静默不播** —— 补音频是渐进的，期间大量例句尚无音频，弹提示会持续打扰学习。早期的「逐词链式朗读」实现已废弃（听感生硬）。
+- `playWord(word)` 的调用方：① learn 页 —— **进入每个单词页自动播一次**（`loadCard()` 里 `setData` 之后调，首个词与「下一个」共用同一入口）+ 喇叭按钮手动重播；② 练习页答对后的反馈音；③ 错题本喇叭。自动播放在 `setData` 之后触发，保证「词先出现、再出声」；连点由 `locked` 挡住，`playSrc` 内部先 `ctx.stop()` 也不会叠音。
 - `playSentence` 的**两个调用方**都要在这里对号：① learn 页单词卡的例句（见 7.8 例句流水线）② 首页「每日一句」（见 7.8 每日一句流水线，12 句已全部预置）。**任一路径新增句子而没补音频，症状都是「静默不播」**，排查先查 `audio_cache` 有无该整句文本。
 - ⚠️ **`cloud://` fileID 不能直填 `InnerAudioContext.src`（真机截断坑）**：开发者工具里正常，
   真机上会**播放中途截断**（实测：每日一句第一次播两个词就停，第二次点因内部缓存才完整）。
-  `resolveSrc` 最后一步用 `wx.cloud.getTempFileURL` 把 fileID 转成 https 临时链接再交给播放器，
+  ① 本地路径不经这一步；② 未命中本地时用 `wx.cloud.getTempFileURL` 转成 https 临时链接，
   内存缓存 100 分钟（临时链接有效期 2h），转换失败降级回 fileID（宁可冒截断风险也不哑掉）。
-  回归：`scripts/test_audio.js`（9 条，含转换/缓存/透传/降级四条路径）。
-- 停止：`stop()` 中断并清事件监听。
+- 停止：`stop()` 中断并清事件监听。tab 页（index / wrongbook）在 `onHide` 停播，普通页在 `onUnload` 停播。
 - 配置：`config.TTS_LANG` 映射 type（`en_US`→2，`en_GB`→1）。
+- 回归：`scripts/test_audio.js`（46 条：四层命中 / 跨启动恢复 / 文件被回收 / 队列并发与去重 / LRU 淘汰 / 冷启不扫索引 / 三条降级路径），另有各页面侧的预加载断言（见 11.6）。
 
 ### 7.10 日期与时区
 - 云函数统一 `dateStr(offset)`：`Date.now() + 8h` 后取 UTC 部分格式化 `YYYY-MM-DD`（即 **GMT+8** 自然日）。
@@ -498,7 +563,7 @@ playWord(word)
 | 词表导入语义 | `seed_words` = 按 `word` 去重**跳过**，**永不覆盖**已存在词条（只 `skipped++`）。要替换词库必须先 `reset_words` 清空。⚠️ 不可只删 `words`：`user_words` / `records` / `daily_plans` 均按 `wordId` 引用 `words._id`，只删词会留下孤儿数据；`users.wordCursor` 也必须归零 |
 | 词库重置范围 | `reset_words` 默认清 `words` + `user_words` + `records` + `daily_plans` + 归零 `wordCursor`；**保留** `audio_cache`（按 `text` 建索引，重导可复用）与 `checkins`（不含词引用，`resetStats:true` 时才清）。云存储 `audio/` 目录不删，同名文件重跑 `seed_audio` 覆盖即可 |
 | 数据库写操作 | 全部在云函数（管理端）；前端只读 `words`（可选直连） |
-| 答案安全 | 题目答案存服务端，下发前剔除 |
+| 答案下发 | 题目答案（`answerIndex`）**随题下发给前端**做本地同步判题（见 §7.5）。代价：客户端逆向者可读答案 —— 词汇练习类产品作弊动机极低，换「点选零延迟」值得。⚠️ 但**别把答案铺到更多地方**：`today_flow` 下发的 `plan.extraRounds` 仍会剥掉 `practiceQueue`，这条不要顺手改掉 |
 | 防重复 | `start_new_words` / `build_questions` / `finish_checkin` 均幂等 |
 | 集合权限 | `words` 建议「所有用户可读，仅管理端可写」，其余「仅创建者可读写」 |
 | 超时 | 20s：`user_profile`/`home_summary`/`today_flow`/`start_new_words`/`submit_answer`/`audio_cache`；30s：`word_card`/`enrich_word`/`build_questions`/`finish_checkin`/`stats`/`start_extra_round`/`finish_extra_round`；60s：`seed_words`/`seed_audio`/`reset_words`/`init_db`；**10s：`dismiss_wrong`**（一次数据库 update，无外部依赖）。均由各函数 `config.json` 声明，部署后可在控制台核对 |
@@ -532,8 +597,9 @@ playWord(word)
 |---|---|
 | 每日目标选项（5/10） | `miniprogram/config.js` `DAILY_GOAL_OPTIONS` + `user_profile` |
 | 出词顺序/策略 | `cloudfunctions/start_new_words/index.js`（`seq` + `wordCursor` + `audioReady`） |
-| 复习调度逻辑 | `cloudfunctions/submit_answer/index.js`（correct 分支） |
+| 复习调度逻辑 | `cloudfunctions/submit_answer/index.js`（R6 出池语义：clean→`mastered`，否则→`reviewed`+`nextReviewDate=''`；R2 起 else 分支还要给新词落 `wrongCount`）↔ `cloudfunctions/today_flow/index.js`（到期集合：`status='reviewing'` 正相匹配 + 升序）↔ `cloudfunctions/dismiss_wrong/index.js`（R1 同步出池；R6 起是 `reviewed` 转正 `mastered` 的唯一入口） |
 | 题型比例/干扰项 | `cloudfunctions/build_questions/index.js`（`i % 2`、`sample(pool,3)`） |
+| **判题时机 / 点选延迟** | `miniprogram/pages/practice/practice.js`（`choose` 本地判题 + `syncAnswer` 后台串行落库 + `flushSync`）↔ `cloudfunctions/build_questions/index.js`（`toClient` 下发 `answerIndex`/`audioText`）。改一边必改另一边，契约见 §7.5 |
 | AI Prompt / 模型 | `cloudfunctions/enrich_word/index.js`（`buildPrompt` / `callModel`） |
 | 发音音源（单词） | `scripts/gen_audio.py`（本地生成）→ `cloudfunctions/seed_audio`（上传+点亮）→ `miniprogram/utils/audio.js`（`resolveSrc` / `fallbackUrl`）/ `cloudfunctions/audio_cache`（读缓存） |
 | **数据表初始化 / 建索引** | `scripts/init_cloud.py`（本地走 HTTP API，建集合 + 建索引，清单在 `assets/db-indexes.json`）；控制台备选 `cloudfunctions/init_db`（建集合 + 返回索引清单） |
@@ -543,6 +609,7 @@ playWord(word)
 | 发音音源（每日一句） | `scripts/quotes_to_examples.py` → `gen_sentence_audio.py` → `scripts/seed_quote_audio.py`（上传 + 写 `audio_cache`，**不走 seed_audio 云函数**）；播放复用 `audio.js` 的 `playSentence` |
 | 每日一句语料 | `miniprogram/utils/quotes.js`（静态、按日取模轮换，零后端；`utils/mock.js` 的 `DAILY_LINES` 与此同源） |
 | 词表来源 / 筛选 / 归一 | `scripts/build_wordlist.py`（ECDICT → `assets/word_lists/ielts-full.json`；基础词排除 + 专名剔除 + 名词复数归一，规则全部固化为脚本常量） |
+| **形似词（易混词）** | `scripts/gen_similar.py`（编辑距离算法 → `ielts-full-similar.json`）→ `scripts/seed_similar.py`（写入 `words.similar`，幂等）→ `miniprogram/pages/learn/learn.wxml`（展示）/ `learn.js`（`warmCard` 预载 + `playSimilar`）。**云函数零改动**，详见 §11.11 |
 | 词表导入入参打包 | `scripts/pack_words.py` → `build/seed_words/batch-*.json` |
 | 音频入参打包 | `scripts/pack_audio.py` → `build/seed_audio/` 或 `build/seed_sentence/` |
 | 分享标题/路径/配图 | `miniprogram/utils/share.js`（`toFriend`），各页 `onShareAppMessage()` |
@@ -573,6 +640,10 @@ playWord(word)
 | **D9** | 错题本「错 N 次」badge | **暂不做** | 需 `user_words` 新增错误次数字段 |
 | **D10** | `app.json` 导航标题改不改 | **必须改**（合规，非可选项） | 已落地 |
 | **D11** | 引导页承诺行是否做成真入口 | **暂不做**，信息条整条保持不可点 | 要做需先确认「onboarding 未完成时允许进『我的』」这一状态合法 |
+| **D12** | 学习页展示「形似词」（2026-10-22） | **离线预计算写 `words.similar`，最多 3 条；点喇叭发音、不跳卡** | 云函数零改动（`word_card` 整 doc 透传）；算法/覆盖率/落点见 §11.11；约 8.5% 词库内无形似词 → 「暂缺」 |
+| **D13** | 形似词是否折叠（2026-10-22） | **默认收起**，点标题行切换；收起态露「N 个」计数 | 学习页五卡纵向堆叠，展开态约占屏 1/4；翻词不重置（用户收起就一路收起）；暂缺态不参与折叠（无可点暗示） |
+| **D14** | 复习链路文案（2026-10-22） | **去掉时间断言**：练习页「复习单词」/ 首页「先复习一下」 | 「昨日」（§12.17）与「到期」（§12.14）都不准——复习池是在池未出池的词，正常日子也只是昨日新词的子集；模糊表述是唯一永远正确的，见 §12.19 |
+| **D15** | 练习页题干区加词根拆解（2026-10-22） | **仅 cn_option 展示**（题干 = 单词 → 音标 → 词根 → 选项）；数据走 `build_questions.toClient()` 下发 `roots` | en_option 题干是中文释义，露词根=给选项送答案；旧队列无 `roots` → 兜底 `[]` 不渲染；需部署 build_questions，见 §12.20 |
 
 ### 11.2 M 清单（前端）落地结果
 
@@ -626,7 +697,7 @@ playWord(word)
 | **T3** | 底部 tab 栏 | ✅ 纯前端 | 见 M5 |
 | **T4** | 配套改动（索引 / 部署 / 文档同步） | ✅ | `assets/db-indexes.json` **无需改**（加练组内嵌，未新增索引）；`docs/deploy.md` 云函数数 15 → 18；`miniprogram/config.js` 的 `FN` 加两个常量；`utils/api.js` 加 `startExtraRound()` / `finishExtraRound()` |
 | **T5-0** | 打卡幂等 | ✅ **核实无需改**（结论留档） | `finish_checkin` 按 `_openid + date` 查重，命中直接返 `{already:true}` 且不累加。⚠️ 当时**错的是原型**（没复刻 `already` 语义，演示出一个真机不存在的「重复打卡」缺陷），已修 |
-| **T5-1** | `submit_answer` 缺幂等 | ⛔ **仍未做** | 现状 `records.add(...)` 无条件插入 → 连点 / 网络重试会在 `records` 落**多条同题记录**，污染正确率统计与 `nextReviewDate`。建议幂等键 `_openid + planId + questionId`，或在 `records` 上建唯一索引 |
+| **T5-1** | `submit_answer` 缺幂等 | ⛔ **仍未做**（风险已下降，见 §11.8） | 现状 `records.add(...)` 无条件插入 → 连点 / 网络重试会在 `records` 落**多条同题记录**，污染正确率统计与 `nextReviewDate`。**2026-10-12 起前端已显著收窄触发面**：判题改本地后不再有「等回包才好点下一下」的窗口，同题只有未被禁用的选项能提交，且所有提交串行化 + 失败重试一次（重试本身是幂等风险点 —— 第一次其实成功了但回包丢了就会重试出第二条）。**根因仍在云函数**，建议幂等键 `_openid + planId + questionId`，或在 `records` 上建唯一索引 |
 | **T5-2** | 每日目标修改的生效时点（文案与行为不一致） | ⛔ **仍未做** | 文案写「从下一个自然日生效」，但当天**还没开始学习**就改 → 当天立刻按新目标出词，**文案不成立**。选项 A 改文案（便宜）/ **B 把 `dailyGoal` 快照进 `plan`**（更准，顺带让历史计划的词数不再随目标漂移） |
 | **T6** | 错题本「已掌握」（用户追加，非原型项） | ✅ | 新增 `dismiss_wrong`（给 `records` 打 `mastered`）+ `stats` 查询排除 `mastered`。语义是**打标过滤而非删除**（防流水污染正确率 + 让「再答错自动复活」零成本），故**不做撤销、不做回收站**。取舍见 §4.5、踩坑见 §12.10 |
 
@@ -644,20 +715,239 @@ playWord(word)
 
 ### 11.6 本轮新增的回归脚本（改相关逻辑必跑）
 
+> 🐶 **看门狗**：`_harness.js` 的 `tester()` 带 8s 看门狗 —— 断言串在一条 await 链上，
+> 任一处**卡在永不回包的 promise**时 node 会**静默退出且退出码 0**（看起来像通过）。
+> 实测踩过一次（把判题改回「等云函数」，`test_practice` 挂在 await 上、输出戛然而止却报成功）。
+> 新增页面测试请一律用 `tester()`，别自己写断言计数器。
+
 | 脚本 | 覆盖 |
 |---|---|
-| `scripts/audit_mobile.js` | 移动端体验审核，口径 13 项（热区 ≥44px / 热区压盖 / 相邻间距 / 字号 / 对比度 WCAG AA / 行高 / 截断 / 横向溢出 / 主操作拇指区 / toast 遮挡 / 安全区 / 可达性 / 连点） |
-| `scripts/check_miniprogram.js` | 结构自检：类名 / 底栏三件套 / 图标 / wxml 配对 / **云函数三件套** / `config.FN` ↔ 目录一致性 |
-| `scripts/test_learn.js` | 学习页三模式：错题复习 / 今日新词 / 加练 |
-| `scripts/test_index.js` | 首页加练按钮显隐 + 朋友圈单页模式降级 |
-| `scripts/test_audio.js` | 音频链路：`cloud://` → 临时链接转换 / 缓存 / 透传 / 降级 |
-| `scripts/test_wrongbook.js` | 错题本：点词进复习 / 已掌握 / 失败回滚 |
+| `scripts/audit_mobile.js` | 移动端体验审核，口径 16 项（热区 ≥44px / 热区压盖 / 相邻间距 / **选项组落点 THUMB_LOW** / **选项组未贴底 THUMB_GAP** / **题答断层死白 GAP_DEAD** / 字号 / 对比度 WCAG AA / 行高 / 截断 / 横向溢出 / 主操作拇指区 / toast 遮挡 / 安全区 / 可达性 / 连点） |
+| `scripts/check_miniprogram.js` | 结构自检：类名 / 底栏三件套 / 图标 / wxml 配对 / **云函数三件套** / `config.FN` ↔ 目录一致性 / **练习页「上题下答」布局契约（⑦）** |
+| `scripts/test_learn.js` | 学习页三模式：错题复习 / 今日新词 / 加练；**卡片预取窗口 + 音频预加载** |
+| `scripts/test_index.js` | 首页加练按钮显隐 + 朋友圈单页模式降级 + **每日一句预加载** |
+| `scripts/test_practice.js` | 练习页：**本地同步判题（不等落库回包）+ 后台串行落库 + 跳转前 flush + 落库失败重试/提示** + 降级路径（题不带答案时回退服务端判题） + **两种题型的预加载字段选择** + 三种出口（打卡 / 学习页 / 加练结算） |
+| `scripts/test_build_questions.js` | 云函数契约（**判题契约的产生处**）：`answerIndex` / `audioText` 真的下发了、指向的是正确答案、`audioText` **绝不含中文**（判据是 `type` 不是 `phonetic`）、**复用分支同样带答案**、round 路由 |
+| `scripts/test_audio.js` | 音频链路：**本地文件缓存（首播/再播/跨启动/被回收）+ 预加载队列（并发/去重）+ LRU 淘汰** + `cloud://` → 临时链接转换 / 透传 / 降级 |
+| `scripts/test_wrongbook.js` | 错题本：点词进复习 / 已掌握 / 失败回滚 / **错词整表预加载** |
 | `scripts/test_finish_extra_round.js`、`test_start_extra_round.js` | 云函数逻辑无头测试（桩 `wx-server-sdk` + 内存假 DB，直跑真实 `index.js`） |
 | `scripts/test_mock.js` | mock 层（数据口径 + 每日一句体检） |
-| `scripts/test_prototype.js` | 原型业务流程回归 |
+| `scripts/test_prototype.js` | 原型业务流程回归（⚠️ 只审 `design/prototype.html`；**当前 33/4 为既有失败**，与真机改动无关，见下方警告） |
 
 > ⚠️ **原型 ≠ 真机**：`audit_mobile.js` 与 `test_prototype.js` **只审 `design/prototype.html`，对 `miniprogram/` 零验证力**。
 > 原型里有 4 处**演示性超纲改动**（练习页手动按钮 = D6、日历可点 = D8、错 N 次 badge = D9、打卡连点其实已幂等），照着还原会写出与真机不符的逻辑。**落地前必须回源码核一遍真实行为**——本项目已因此误判过一次（把原型的「重复打卡」当成真机缺陷报了出来）。
+
+### 11.7 发声延迟优化（2026-10-08，封版 v1.0 后的一轮）
+
+**用户报障**：「调用语音时有延迟，多次跳转到下一个页面后才出来读音」。
+
+**归因**（一条链路上有四种等待同时存在）：
+1. `audio_cache` 云函数**冷启动**（数百 ms ~ 秒级）；
+2. `getTempFileURL` 换链接；
+3. 音频文件**每次都要重新下载**（前端只缓存了 fileID，没缓存音频本身）；
+4. learn 页**只预取下一张卡**，且预取在「第 1 张卡回来之后」才发生 → 本质是串行。
+
+**决策与落地**：
+
+| # | 决策 | 理由 |
+|---|---|---|
+| P1 | 音频落到**本地文件**（`USER_DATA_PATH/audio/`），storage 只存指针 | 前端缓存 fileID 挡不住「每次都要下载」这一层 |
+| P2 | **先出声、后台落盘**，而不是「落盘完再播」 | 反过来会让首播比旧版更慢；实测首播持平、次播起才吃到收益 |
+| P3 | 新增 `preloadWords` / `preloadSentences`，**统一队列**（并发 3 + 同批去重 + `pending` 合并并发请求） | 4 个有声页面各排各的会互相抢带宽 |
+| P4 | learn 页 `PREFETCH_AHEAD = 3`，**开页即预取窗口** | 关键不是「取几张」而是**并行**：后 2 张要与第 1 张同时出发 |
+| P5 | `warmup()` 在 app 启动空调一次 `audio_cache`（空 text，不写库不外呼） | 冷启动是大头，挪到启动阶段最划算 |
+| P6 | 本地上限 **50MB + LRU** | 官方上限 200MB（本地缓存文件 + 本地用户文件合计）且**超了直接写失败、平台不自动清理** |
+| P7 | 例句**不**预加载「逐词」，只预加载整句 | 与 7.9 的整句音频一致；整句无音频时静默，与旧行为相同 |
+
+**踩到/绕开的三处**：
+- ⚠️ **不要在冷启动时 `accessSync` 全扫索引**：同步 JSBridge ×几百条会把「第一次点喇叭」卡住上百毫秒 —— 正是要消灭的等待。改为按需精确清理（记录侧 `exists` 失败 → `indexDrop`；淘汰时 unlink 失败 → 该行本就是脏的）。`test_audio.js` L1 用「检查次数与索引长度无关」钉死。
+- ⚠️ **测试桩里的下载必须异步回包**：`wx.downloadFile` / `cloud.downloadFile` 桩若同步 resolve，`m.local` 会在播放分支之前就绪，测出来的是本地路径而真机是远端流 —— P2 的断言会假红/假绿。已在 `test_audio.js` 里写明原因。
+- ⚠️ **预取失败不能缓存**：`cardCache[i]` 存的是 promise，失败后必须 `delete`，否则那张卡永远白屏。这条不走整页流程断言（失败与 `loadCard` 的先后落在微任务顺序里，会变成脆测试），直接对 `prefetch()` 下断言。
+
+**本次不需要部署任何云函数**（纯前端 + 不改 `audio_cache` 契约）。新增回归：`scripts/test_practice.js`（21 条）；`test_audio.js` 重写为 46 条；`test_learn` 47 条、`test_index` 27 条、`test_wrongbook` 22 条。全部断言做过**负向验证**（禁用本地优先 / 不认 storage 指针 / 取消后台落盘 / 放开并发 / 恢复索引扫描 / 练习页改拿 stem → 均能判红）。
+
+### 11.8 选择题改为「本地同步判题」（2026-10-12，封版 v1.0 后的一轮）
+
+**用户报障**：「选择题是在线比对正确和错误吗？改成答案同步返回，不需要时间去查数据库」。
+
+**归因**（原链路把「判对错」和「记流水」绑成了一件事）：点选项 → `submit_answer` → 云端**查 `daily_plans` 取题 → 查 `words` 取词 → 判题 → 写 3 张表 → 返回 `correct`**。
+也就是说**出对错必须等一次完整云函数往返**（冷启动时数百 ms~秒级），而答案本来就在服务端题目里、下发前被 `sanitize()` 剔掉了 —— 是白等的。
+
+**决策与落地**：
+
+| # | 决策 | 理由 |
+|---|---|---|
+| Q1 | `build_questions.toClient()` **随题下发** `answerIndex` | 判题所需信息在前端手里，往返没有存在价值 |
+| Q2 | 另下发 `audioText`（答对后要读的英文），**判据用 `type`** | 不能拿 `phonetic` 是否为空来推 —— 没音标的 cn_option 会推成中文释义（前端拿去查音频必落空）。顺手修掉了 `preloadAll` 里同源的旧判据 |
+| Q3 | `submit_answer` **不退场**，退化为后台落库；前端**不 await** | 正确率 / 错题本 / 复习调度 / `stage` 全靠它写，去掉等于砍掉半个后端 |
+| Q4 | 提交走**一条 Promise 链串行**（`syncAnswer`） | 它是「读整个 queue → 改 → 写回整个 queue」，并发提交互相覆盖（后写的抹掉先写的 `passed/wrong`） |
+| Q5 | 终点分支先 `await flushSync()` 再跳转 | `finish_checkin` 的前置是「queue 全 passed」，而 passed 由 `submit_answer` 写 —— 不等就是「题全答对了，打卡却提示没做完」 |
+| Q6 | 落库失败「重试一次 → 仍失败则明确提示」（每页只提示一次） | 判题已在本地完成，落库静默失败 = 数据静默缺口；每答一题弹一次会刷屏 |
+| Q7 | 保留**降级路径**：题目不带 `answerIndex` 时回退「等服务端判题」 | 前端先发布、云函数忘部署时，缺答案会把每个选项逐个判错并禁掉 → 用户**卡死**。宁可慢，不能死 |
+
+**踩到/绕开的两处**：
+- ⚠️ **测试卡在永不回包的 promise 上会「静默成功」**：node 事件循环空了就退出、**退出码 0**，后面的断言一条不跑，CI 看到的是通过。做负向验证时实测踩到（把判题改回等云函数 → `test_practice` 挂在 `await` 上、输出戛然而止却报成功）。已在 `_harness.js` 的 `tester()` 里加 **8s 看门狗**（用 `timers.setTimeout`，因为页面测试会把 `global.setTimeout` 压短）—— 这条对所有页面测试生效。
+- ⚠️ **`plan.practiceQueue` 与前端下发是两条路径**：答案现在故意下发给了练习页，但 `today_flow` 下发的 `plan.extraRounds` **仍要剥掉 `practiceQueue`**（§5 第 3 行）。别因为「反正答案已经下发了」就把这条剥离线删掉 —— 那会把每天的整份题连带答案铺给首页。
+
+**回归与负向验证**：
+- 新增 `scripts/test_build_questions.js`（**25 条**，云函数判题契约）；`test_practice.js` 从 21 条重写为 **37 条**。其余全绿：`test_learn` 47 / `test_index` 27 / `test_wrongbook` 22 / `test_audio` 46 / `test_mock` 23 / `test_finish_extra_round` 21 / `test_start_extra_round` 21 / `check_miniprogram` 通过。
+- **负向验证**：`practice.js` 9 条改坏点 + `build_questions` 6 条改坏点，全部能判红、0 漏网（判题恒真 / 不落库 / 不串行 / 取消 flush / 失败不提示 / 判据退回看 phonetic / 永远走降级 / 不重试 / 去掉在途锁 / 不下发答案 / 复用分支偷偷剔答案 / round 路由回主队列）。
+- ⚠️ `test_prototype.js` 当前 33 passed / **4 failed**，在 `v1.0` 基线（`git archive HEAD` 干净副本）上**同样 4 failed** —— 是原型页既有问题，与本次改动无关，别误判成回归。
+
+**⚠️ 本次必须部署 `build_questions`**（`python3 scripts/deploy_functions.py` 会自动识别）。不部署则前端静默走降级路径：行为正确、延迟照旧 —— 这种「改了个寂寞」的失败没有报错，只能靠 `test_build_questions.js` 和真机体感发现。
+
+### 11.9 选择题选项的「单手可达」改造（2026-10-12，同一轮）
+
+> ⚠️ **本节只解决了「落点」，其「选项区 `flex:1` + 贴底」的写法已在 §11.10 被取代**（那版把剩余高度全堆成题答之间的死白）。
+> 练习页布局的最终结论以 **§11.10** 为准；本节保留作为「为什么先想到贴底」的过程记录。
+
+**用户报障**：「选择题选项的 UI 做一下优化，现在单手操作不好点」。
+
+**归因（量化，不靠手感）**：把练习页放进 375×720 真机框量了一遍 —— 旧版**最低一项的下沿只到屏高 66%、整组中心在 49%**，而屏幕下半区约 240px 完全空着。整组选项落在「要伸手够」的中上部。关键在于**热区本身并不小**（每项 56px ≥ 44px 下限），所以 `audit_mobile` 原有的 `HIT_SMALL` 照不到它：这是**落点**问题，不是尺寸问题。
+
+**分两轮压到底**（同一轮里的迭代）：
+- **第一轮**（用户：「UI 做一下优化」）先把整组从屏上部**拉进下半区**：整页 flex 纵向拉伸 + `.options { flex:1; justify-content:center }` → 中心 58% / 下沿 77%。
+- **第二轮**（用户：「① 把选项再往下压」）改成**贴底** `.options { justify-content:flex-end }` → 中心 61% / 下沿 80%、**下沿空档 26px**。
+
+为什么最终按「**离屏幕底部的距离**」而不是「屏高比例」对齐：拇指舒适区取决于**手指到手机下沿的物理距离**，与屏幕多高无关。按比例居中时屏越高越够不着；贴底后下沿离屏底的距离**恒定**（= 反馈文案 + 安全区 + 20px 留白），不随屏高漂。代价是题干卡片与选项之间的留白变多 —— 有意为之，拇指舒适优先。
+
+**三处叠加的改动**（缺一个效果就打折，负向验证时必须按「完整旧版」构造，见下）：
+
+| 改动 | 位置 | 为什么 |
+|---|---|---|
+| 整页 flex 纵向拉伸；`.options` 用 `flex:1` 吃掉题干以下的剩余高度，选项在其中 `justify-content: flex-end`（**贴底**） | 两边 wxss / prototype css | 让选项整体落在屏幕下半区、且下沿离屏底距离恒定；小屏挤在下半区、大屏不再往下漂 |
+| `.option` `min-height: 120rpx`（60px）+ `gap: 24rpx` | 同上 | 单项更高，整组也更高，把下沿进一步压到屏高 80% |
+| 题干卡片固定 `min-height: 240rpx` | 同上 | 题干从一行英文到两行中文，卡片高度一变选项就整体挪位 —— 手指每次要重新找目标 |
+
+量化（375×720，数值在 `build/audit-mobile.json` 的 `pages[].options`；`gapBelow` = 选项组下沿到选项区可用空间底部的空档，贴底趋近 0）：
+
+| | 选项组中心 | 下沿 | 下沿空档 | 单项高 |
+|---|---|---|---|---|
+| 旧版（整屏顶对齐） | 屏高 49% | 66% | — | 56px |
+| 第一轮（居中） | 58% | 77% | — | 60px |
+| 第二轮（贴底） | 61% | 80% | 26px | 60px |
+| 第三代（贴底 + 题干撑满，见 §11.10） | 71% | 92% | 26px | 66px |
+
+**决策留档**：
+- **Q1（已推翻重定）先「居中」后改「贴底」**：第一轮用 `justify-content:center` 是为了避开「贴底会和反馈文案挤在一起」的顾虑；用户要求「再往下压」后改为 `flex-end`，顾虑用**下沿 padding `24rpx 0 40rpx`**（20px 留白 + 安全区）解决 —— 反馈文案仍恒占位、不被压住。落地以**贴底**为准。
+- **Q2 反馈文案改成恒占位**（`wx:if` → 三目 + `min-height`）：答对/答错文案出现时会推挤上面的选项，而答对后 900ms 自动跳转 —— 这一推挤恰好发生在手指准备落下的时刻。
+- **Q3 题干中文降一档字号**（`.q-stem.zh` 46rpx → 40rpx）：en_option 的题干是中文释义，46rpx 下三四个字就折行抢空间；降档后仍明显大于选项正文（32rpx），层级不丢。
+
+**顺手修掉一个真 bug：答错后的「已排除」项在界面上看不出来。**
+`choose()` 答错会把该选项记进 `disabled`，之后点它直接 `return` —— 但 wxml 的 class 从头到尾没用过 `disabled`，于是这个选项**外观与正常选项完全一样，点下去毫无反应**，而用户此刻的动作恰恰是「手指停在原位置再点一次」（本项目高频坑：静默失败）。现在加 `off` 态（灰度 + 字母位换 `✕`）；CSS 顺序刻意让 `.option.bad` 覆盖 `.option.off`，所以「刚答错的那一项」仍是红的（它同时是 off+bad），只有改选之后失去 `bad` 的旧错项退回灰轮廓。原型 `choose()` 同步（原来是所有错项永久留红）。同时把选项的按压反馈从全局 `hover-dim`（只降透明度）换成页面级 `.hover-opt`（浅蓝底 + 描边），并设 `hover-start-time="0"` / `hover-stay-time="100"` —— 按下立即亮、抬手很快复原。
+
+**给这次改动补了两道自动保护**（此前一道都没有：`audit_mobile` 只审原型、`check_miniprogram` 不碰样式语义）：
+1. `audit_mobile.js` 新增 **`THUMB_LOW`**（选项组中心 < 屏高 **55%** 或下沿 < **75%**）+ **`THUMB_GAP`**（下沿空档 > 40px ⇒ 没贴底）+ `OPTION_OFFSCREEN`，几何（中心/下沿/空档/单项高）写进 `build/audit-mobile.json` 便于长期观察
+2. `check_miniprogram.js` 新增 **⑦ 练习页选项落点契约**：`.options` 必须 `flex:1` **且 `justify-content: flex-end`（贴底，不只是撑满）**、`.option` 的 `min-height` ≥ 88rpx、答错态必须**既有 wxml 的 `off` 类、又有 wxss 的 `.option.off` 样式**（光有类名不算数 —— 那正是这次的 bug 形态）
+   > ⚠️ 这条契约在 §11.10 已被**改写**：`.options` 现在**不许**带 `flex:1`（剩余高度归题干区）。见 §11.10。
+
+> ⚠️ **阈值 55/75 是收紧过的**：最初定 50/70，而「顶对齐」变体实测中心 52% / 下沿 71% **刚好溜过**（假绿）。收紧到 55/75 后，当前贴底版（61/80）仍有 5–6pp 余量，同时能挡住居中版（58/77，虽过线但 `THUMB_GAP` 会兜住）。
+
+**负向验证**（脚本 `/tmp/mut_push_down.py`；按**规则块**定位改动、用内存里的原文还原，共 8 条改坏点，**全部判红、0 漏网**）：
+- 原型 3 条：`justify` 回退为居中 / 完整旧版（居中 + 下沿 4px）/ 整屏顶对齐 → 判红（后者中心 49% / 下沿 66%；居中版下沿空档 26→61px 被 `THUMB_GAP` 兜住）
+- 小程序 5 条：`.options` 回退为居中 / 干脆不写 `justify-content` / 丢掉 `flex:1` / `min-height` 降到 80rpx / 删掉 `.option.off` 样式 → 全部判红
+- 过程记录（两个坑）：① 第一次只把「选项区不撑开」单独改回去 → 中心仍有 52%、下沿 71%，**没判红**。这不是假绿，而是说明落点改善是**三处叠加**的结果，单去一处仍在下半区 —— 负向验证必须按「完整旧版 / 完整居中版」构造。② 源码注释里也写了 `justify-content: flex-end`（正文讲决策），直接 `replace(...,1)` 会改到注释而规则没动 → 假「漏网」；故一律**按规则块定位**。️另外**别拿 `git checkout` 当还原手段**（会连同未提交改动一起抹掉，本轮踩过一次，靠会话中读到的原文重建）。
+
+**回归**：`test_practice` 37 / `test_learn` 47 / `test_index` 27 / `test_wrongbook` 22 / `test_audio` 46 / `test_mock` 23 / `test_build_questions` 25 / 两个 extra_round 各 21 / `check_miniprogram` 通过；`audit_mobile` **P0/P1/P2 全 0**（仅 10 条 `FONT_SMALL` INFO）。**本次不需要部署任何云函数**（纯前端 wxml/wxss + 原型 + 脚本）。
+复核方式：真机框逐版对比图见 `build/practice-options-thumb.png`（居中版 vs 贴底版，375×720 iframe 实测；更早的 px 对比见 `build/practice-options-ux.png`）。两图都在 `build/`（已 gitignore）。
+
+### 11.10 练习页「上题下答」布局 —— 空白分配（2026-10-12，承接 §11.9，**结论以本节为准**）
+
+**用户报障**：「① 把选项再往下压 这个要走一下 UI 优化，不是直接往下放就行了，要有整体的布局规划，现在选项上方留了太多的空白，**先是整体的美观，再是用户体验**」。
+
+**归因（量化，先看实拍再动手）**：§11.9 的「选项区 `flex:1` + 贴底」只解决了**落点**，却把**所有剩余高度**都堆到了「题干卡 ↔ 第一项」之间 —— 题干卡仍是内容高度（154px），选项区吃掉全部剩余高度。实测题答之间的空档：
+
+| 视口 | 空档 | 说明 |
+|---|---|---|
+| 375×667 | **103px** | 小屏还不明显 |
+| 375×720 | **156px** | 已是一整片死白 |
+| 430×932 | **368px** | **屏越大越空** —— 这正是用户看到的问题 |
+
+**关键认识**：这不是「留白多少」的问题，是**空白被堆在一处**。留白本身不丑，集中成一坨才丑。所以修法不是调参数，是**决定剩余高度归谁**。
+
+**三代写法（差别只在「剩余高度归谁」，这是本页布局的唯一变量）**：
+
+| 代 | 剩余高度归 | 落点 | 题答空档 | 结论 |
+|---|---|---|---|---|
+| ① 顶对齐 | 页面（不分配） | 下沿 66%（上半屏） | — | ❌ 单手够不到 |
+| ② 选项区 `flex:1` + 贴底 | 选项区内部 | 下沿 92%／中心 71% | 103 / 156 / 368 | ❌ 落点对了，空白成灾 |
+| ③ **题干区 `.q-card{flex:1}`** | **题干主视觉** | **下沿 92%／中心 71%** | **12 / 12 / 12** | ✅ 落点保持，空白变成呼吸空间 |
+
+第③代的具体写法（三处，缺一不可）：
+
+| 改动 | 位置 | 为什么 |
+|---|---|---|
+| `.q-card { flex: 1 1 auto }`（`min-height:240rpx` 只作小屏兜底） | `practice.wxss` / prototype | 题干区吃掉剩余高度 → 题答之间**恒定 12px**，不再随屏高堆积 |
+| `.options { flex: 0 0 auto }`（保留 `justify-content: flex-end`） | 同上 | 选项区回到自然高度 + 贴底；**不能**再来抢剩余高度，否则空白只是换个位置 |
+| `.option min-height: 132rpx`（66px）+ `gap: 28rpx` | 同上 | 下半区有分量，与题干主视觉形成节奏 |
+
+**决策留档**：
+- **Q1 剩余高度只给一处（题干区）**：`flex:1` 两处都写会「均分」——实测题答空档 32px、卡片变小，是小一号的旧毛病。契约里因此专门加了「`.options` 不许带 `flex:1`」这一条。
+- **Q2 不做「整页内容垂直居中」/「上下均分」**：把 header 也拽到半空（实测卡片顶到 133px），或底部留一整条 145px 空带 —— 空白只是换了位置，依然不像设计过的页面。
+- **Q3 不给题干卡加深色/彩色底**：试过 `--primary-soft` 大色块，**反而放大了空的感觉**（一大片蓝里挤着一行字）；白卡 + 大量留白读起来是「答题卡」，更像有意为之。
+- **Q4 不放大题干字号**：字号体系（`tokens.html`）最大 h1=34rpx，题干 46rpx 已是**有意超纲的主视觉**；再往上就是自造档。
+
+**新增两道自动保护**（此前 `THUMB_GAP` 只看「选项组下方」，看不到「题干与选项之间」——**只修一条会把空白从一处挪到另一处**，本轮就是这个形态）：
+1. `audit_mobile.js` 新增 **`GAP_DEAD`**：题干区与选项组之间空档 > 48px 判红（几何 `gapAbove` 写进 `build/audit-mobile.json`）；口径 15 → **16 项**
+2. `check_miniprogram.js` ⑦ 契约改写为「上题下答」三条：`.q-card` 必须有 `flex:1`、`.options` **不许**有 `flex:1`、`.options` 必须 `justify-content: flex-end`；并保留 `.option min-height ≥ 88rpx` 与答错态 `off` 双保险
+
+**负向验证**（脚本 `/tmp/mut_layout.py`，按**规则块**定位、内存原文还原，**8/8 判红、0 漏网**）：
+- 原型 3 条：退回上一版（卡内容高 + 选项 `flex:1`）→ `GAP_DEAD` 52px；只剩题干卡不撑 → `THUMB_LOW`+`THUMB_GAP`（空白落回屏底）；选项压扁到热区下限以下 → `HIT_SMALL`
+- 小程序 5 条：题干卡丢 `flex:1` / 选项区加回 `flex:1` / 选项改居中 / `min-height` 降到 80rpx / 删 `.option.off` 样式 → 全部判红
+- **两条有价值的「测不出来」**（不是假绿，是真实边界）：① 题干区撑满后，`.options` 的 `justify-content` 已变成**空操作**（选项区没有自由空间了），原型侧观测不到它 —— 所以这条只由源码级契约守住；② 只压 `.option` 的 `min-height` 到 44px 也不会判红，因为选项的**天然高度**（正文 24px + 内边距 20px）本就在 44px 上。
+
+**回归**：page 测试全绿（practice 37 / learn 47 / index 27 / wrongbook 22 / audio 46 / mock 23 / build_questions 25 / 两个 extra_round 各 21）；`check_miniprogram` 通过；`audit_mobile` **P0/P1/P2 全 0**（仅 10 条 `FONT_SMALL` INFO），`s-practice` 几何 = 中心 59%／下沿 80%／`gapAbove` 12px／`gapBelow` 26px／单项 66px。**本次不需要部署任何云函数**（纯前端 wxml/wxss + 原型 + 脚本）。
+对照图：`build/practice-layout-qa.png`（375×720 与 430×932 各一组前后对比，本地生成，`build/` 已 gitignore）。
+
+### 11.11 形似词（2026-10-22，封版 v1.0 后的一轮）
+
+**需求**：「库里的单词在学习的时候，把形似词也列出几个最多 3 个，单词/读音/翻译」。
+
+**最终形态**：学习页「词根拆解」卡片之后新增「形似词」卡片，最多 3 行，每行 = 单词 + 音标 + 小喇叭 + 释义；点喇叭播该词发音（与主词同一链路）。**不跳卡**（D12）。**默认折叠**（D13）：学习页五个卡片纵向堆叠，展开态约占屏 1/4，故默认只露标题行 + 「N 个」计数，点标题行整行切换展开/收起（CSS 三角箭头旋转过渡），翻词不重置。楼层顺序：主卡 → 词根拆解 → **形似词** → 例句 → 单词演变（形似词初版在主卡之后，当天按用户要求把词根拆解提到它上面——先纵向拆解本词，再横向对比形似词，最后落到例句）。
+
+**数据方案选型（为什么是离线预计算）**：
+
+| 方案 | 判定 | 理由 |
+|---|---|---|
+| **离线预计算写 `words.similar`** | ✅ 采用 | 2987 词本地全量约 17s，一次算永久用；零运行时成本；确定性可复现；可人工抽检 |
+| enrich_word AI 生成 | ❌ | 有幻觉风险（可能给出不在词表里的词，用户学不到）；2987 词成本不可控 |
+| word_card 运行时计算 | ❌ | 每次翻页全表扫描 2987 词，冷启动延迟直接转嫁给发声体验 |
+
+**算法**（规则固化为 `gen_similar.py` 常量，改参数即改行为）：
+
+| 参数 | 取值 | 理由 |
+|---|---|---|
+| 候选范围 | 全库除自身；长度差 ≤ 3 | 形似词必须也在库里才构成学习闭环；长词要容纳 accommodate/accommodation 类形态变体 |
+| 编辑距离上限 | 词长 <5 → 2；5–9 → 3；≥10 → 4（带状 Levenshtein，超限早退） | 短词差一个字母已差异明显；长词需更大容忍度 |
+| 排序键 | (距离 ↑, 公共前缀 ↓, seq ↑) | 越像排越前；seq 唯一 → **全序确定，重跑结果一致** |
+| 数量 | ≤ 3 | 需求既定 |
+
+**覆盖率与质量**（2987 词全量）：无形似词 254（8.5%）→ 展示「暂缺」；1 个 231、2 个 192、满 3 个 2310。样本：`council→counsel/couch/conceal`、`stationary→stationery/sanitary/sectional`、`inevitable→invisible`、`transition→transaction/transit/transistor`、`expel→excel/expend/repel`。
+
+**落点**：
+
+| 文件 | 改动 |
+|---|---|
+| `scripts/gen_similar.py` | **新增**：算法 + 自检（无自身/无重复/≤3/候选在库内/音标非空，不过即退出不产出）→ `assets/word_lists/ielts-full-similar.json` |
+| `scripts/seed_similar.py` | **新增**：HTTP API 逐词 `doc(_id).update({similar})`，4 并发；幂等（缺字段才写，`--force` 覆盖）；默认 dry-run。**已执行：2987/2987，零失败** |
+| `cloudfunctions/word_card` | **零改动** —— 本来就整 doc 下发，新字段自动透传；本轮**不部署任何云函数** |
+| `pages/learn/learn.wxml` | 「词根拆解」card 之后插入「形似词」card（当天按用户要求从主卡之后下移，见 §12.18 收尾）；`wx:if="{{card.similar && card.similar.length}}"` 兜底老数据 |
+| `pages/learn/learn.wxss` | 新增 `.similar-item/.similar-head/.similar-word/.similar-phonetic/.similar-meaning/.sec-sub` |
+| `pages/learn/learn.js` | `warmCard` 把形似词发音一起预载；新增 `playSimilar(e)` |
+| `utils/mock.js` | 6 个 mock 词覆盖四态：满 3 / 2 条 / 1 条 / 空数组；w5 故意不带字段（老数据降级） |
+
+**边界与降级**：
+- 老数据 / 将来经 `seed_words` 云函数导入的新词没有 `similar` 字段 → wxml `&&` 兜底走「暂缺」，页面不炸（test_learn 有专项断言）
+- 形似词发音复用 `audio.playWord`：库内 100 词有预置音频，其余走 `audio_cache` 的 dictvoice 兜底（首次下载即入云缓存，跨用户共享）；云存储增量 ≤ 2987 词 ≈ 12MB，免费额度内
+- 零用户态耦合：不读不写 `today_flow`/`plan`/`user_words`，与 W2 错题复习同级，无 `markLearned` 污染风险
+- 质量边界：词表本身没有的基础词对（adapt/adopt、affect/effect 不在库）不会出现——符合「库里的单词」范围
+
+**明确不做（留档，防将来说「加一下很简单」）**：
+- **点形似词跳卡**：要给 learn 页加第四种模式，而历史上最贵的 bug 正是 learn 页模式混淆（加练/复习词源写错）；只听不看够用
+- **练习页干扰项优先取形似词**（`build_questions` 的 `sample(pool,3)`）：价值明确但要动判题链路，留 P2
+- **全词库 Kokoro 预生成**（统一音质）：dictvoice 兜底已保证任何词能响，留 P2
+
+**回归**：`test_learn.js` 72 全绿（新增 10 条形似词断言，含负向：缺 `data-word` 不播、无字段不炸、空数组不多发预载）；`check_miniprogram.js` 通过（新类全部有定义）；其余 page 测试全绿（index 27 / practice 42 / wrongbook 22 / audio 46 / mock 23 / app_update 11）。⚠️ `test_prototype.js` 4 条失败为**存量问题**（prototype.html 最后修改 10-12，打卡 streak 数字与断言不一致），与本轮无关。**真机验收**：开发者工具逐页比对学习页（形似词三态 + 点喇叭），本脚本链对真机零验证力。
 
 ## 12. 整理记录（考古用，日常不必读）
 
@@ -1060,3 +1350,220 @@ playWord(word)
 
 **仍待办**：`finish_extra_round` 的新版（加练计入累计学习）尚未部署 —— 本次云端数据显示
 第 2 组已结算但 `totalLearned` 未增，正是「漏传」的表现。
+
+### 12.14 第十一轮：复习链路审查修复（2026-10-13）
+
+**起因**：用户问「复习昨日新学的单词」逻辑是否正确 → 对
+`finish_checkin → today_flow → build_questions → submit_answer` 全链路做了一轮审查
+（另核对错题本 `stats` / `dismiss_wrong` 两条支线）。
+
+**主链路确认正确**（无需改动，留档防回退）：昨日新词次日准时进复习集合（`nextReviewDate=次日`）、
+mastered 双保险不再出现、复习答对就地结算、状态机不断链（review→learning 后
+`startNewWords` 自动补词）、昨日未打卡不丢词（`wordCursor` 不推进→重学同批）、
+加练词同链路进复习、答错重选对的 clean 判定。
+
+**修复 5 项（用户拍板「全修」）**：
+
+| # | 问题 | 根因 | 修法 |
+|---|---|---|---|
+| R1 | 错题本点了「已掌握」，次日复习照考 | `dismiss_wrong` 只打 `records` 标，而复习集合查 `user_words`，两套系统不通 | 打标同时把 `user_words` 该词置 `mastered` + `nextReviewDate=''`；记录不存在**不建**（学了没打卡→次日重学自愈）。只影响「明天起」——当日 reviewQueue 是建 plan 时的快照 |
+| R2 | 昨日练习答错的词，次日一轮答对即「掌握」 | `submit_answer` practice 阶段有 `if (uw)` 守卫，新词首次做题时 `user_words` 还没有记录；`finish_checkin` 又统一按 `wrongCount:0` 注册 → clean 判定看不见昨天练习答的错 | 新词首次答错（非 review 阶段）落一条**只带 `wrongCount:1`** 的记录，不写 `status`/`nextReviewDate`（`$lte` 不匹配字段缺失，没打卡不会提前进复习集合）；`finish_checkin` 幂等分支补调度字段且**不覆盖 wrongCount**（已在代码注释钉住该隐式契约） |
+| R3 | 复习中途退出重进，已答对甚至已 mastered 的题重出 | `build_questions` 复用整条 queue（含 `passed:true`），前端不过滤 | `practice.js` 新增 `applyQuestion()`：载入/翻到已 `passed` 的题直接呈已答对态并 900ms 自动过。**只在呈现层跳过**——`questionIndex` 是 `submit_answer` 落库下标，队列顺序动不得 |
+| R4 | 到期词超 50 条时队尾饿死 | `today_flow` 到期查询 `limit(50)` 无排序，按数据库自然序截断，天天取同一批 | 加 `.orderBy('nextReviewDate','asc')`，最老先复习 |
+| R5 | 文案「先复习昨天的单词」不准 | 断档 N 天复习的是 N 天前的词；昨天无新词时是历史到期词 | 首页 CTA 改「先复习到期的单词」，练习页 tag 改「复习到期单词」（纯前端）。**⚠️ 2026-10-14 用户拍板改回「昨天/昨日」措辞，见 §12.17 —— 本条已被推翻，仅留档** |
+
+**R6 未纳入（设计语义，非缺陷）**：复习集合实际 = 昨日新词 + 昨日复习答错的历史词（滚动）。
+这是 §7.4 的核心设计；若要严格限定「仅昨日新词」，答错的词将失去次日复习位，需用户另行拍板。
+→ **已于 §12.15 落地：用户拍板「仅昨日新词、错词次日不再自动复习」，§7.4 已重写。**
+
+**测试**：新增 `scripts/test_submit_answer.js`（36 条，含「昨日答错→打卡→次日复习」跨函数联动）、
+`scripts/test_dismiss_wrong.js`（17 条）、`scripts/test_today_flow.js`（22 条，R4 排序 + C2 路由）；
+`test_practice.js` 37→42 条（R3）。`_fn_harness.js` 补两处：`orderBy` 字符串字段按字典序
+（日期串相减得 NaN 会静默吞掉排序断言）、`applyUpdate` 认 `_.addToSet`/`_.inc` 命令对象
+（早期直接把命令对象赋进字段，读起来像「写成功了」）。
+**负向验证 4 处**（R1–R4 逐一改坏看红，均已复原）。全量回归 11 个测试文件 326 条全绿。
+
+**需部署**：`today_flow` / `dismiss_wrong` / `submit_answer`（`finish_checkin` 仅注释、无需部署；
+R3/R5 纯前端）。
+
+### 12.15 第十二轮：R6 复习出池 + 发版自动更新（2026-10-13）
+
+**起因**：§12.14 审查后，用户对 R6 拍板「**仅昨日新词、错词次日不再自动复习**」，
+并要求「小程序发完版，自动更新」。
+
+**R6：复习集合严格限定为昨日新词（改设计，§7.4 已重写）**
+
+| 改动 | 文件 | 说明 |
+|---|---|---|
+| 新增 `user_words.status` 第三态 **`reviewed`**（出池终态） | `submit_answer` | review 阶段答对 clean → `mastered`；否则（本轮答错 / 历史有错 / 答错）→ `reviewed` + `nextReviewDate=''`。**任何阶段答错都不再写「次日报到」** |
+| 到期查询改**正相匹配** | `today_flow` | `status: 'reviewing'` 取代 `_.neq('mastered')` —— 出池终态也是「非 mastered」，用 neq 会把答错的词捞回池，「错词次日不再自动复习」被悄悄破坏且不报错 |
+| 入池路径收敛为一条 | — | 进 `reviewing` 只有 `finish_checkin` / `finish_extra_round` 注册（`nextReviewDate=次日`）→ **池内 = 昨日新词（含加练词）** |
+| 出池词的出路 | `dismiss_wrong` | 答错流水在 `records` → 错题本照收；**「已掌握」是 `reviewed` 转正 `mastered` 的唯一入口**（R1 的同步逻辑不变，只是从此多承担这一职责） |
+
+三个有意保留的判断：
+- `nextReviewDate ≤ today`（而非 `== today`）不变：断档 N 天回来时，之前注册没来得及
+  复习的词要能补上；配合升序，最老先复习（R4 仍然有效）。
+- 复习是**一轮一次性测验**：当天答错仍要重选到对才能过题（前端禁选 + `passed`
+  由答对时置位），出池只影响「明天还考不考」，不影响当天流程。
+- R2 的半条记录（只带 `wrongCount`）后果从「留次日报到」变为「出池而非毕业」：
+  昨天练习答错的词，次日复习答对也非 clean → `reviewed`，要等错题本点「已掌握」。
+
+**发版后自动更新（`miniprogram/app.js`）**
+- `onLaunch` 接 `wx.getUpdateManager()`：`onCheckForUpdate`（打日志）/
+  `onUpdateReady`（`showModal` 不可取消 → 确认后 `applyUpdate()`）/
+  `onUpdateFailed`（静默，下次冷启动微信自己重试）。
+- 三个取舍（代码注释已钉）：① 只在 `onLaunch` 绑一次——`getUpdateManager()` 返回
+  **全局唯一**实例，onShow 重复绑会叠加监听连弹多次；② 用弹窗而不是直接
+  `applyUpdate()`——直接重启会硬切串行落库链（syncAnswer 在途的那条
+  `submit_answer` 会丢），弹窗让用户自己挑时机；③ 低版本基础库无该 API 时静默返回
+  （走微信默认行为：下次冷启动生效）。
+- 新增 `scripts/test_app_update.js`（11 条：三回调绑定 / 弹窗契约 / applyUpdate /
+  失败静默 / 低版本兜底）。
+
+**测试**：`test_submit_answer` 36→**37**、`test_today_flow` 22→**23**（补 R6 出池排除）、
+`test_dismiss_wrong` 17→**20**（补 `reviewed` 转正用例）、`test_practice` 42 不变、
+新增 `test_app_update` **11**。**负向验证 5 处**（R6 三处 + 更新两处：改坏后 4 处断言红、
+1 处进程崩溃退出码 1，均非静默）。全量回归 **12 个文件 342 条全绿**，
+`check_miniprogram.js` 通过。
+
+**需部署**：`today_flow` / `dismiss_wrong` / `submit_answer`（R6 改了这三个；
+`finish_checkin` 自 §12.14 起仍未再动、无需部署）。自动更新在小程序**发布新版本**后
+由微信客户端触发，不需要额外部署动作（上传代码即生效）。
+
+### 12.16 第十三轮：学习页「上一个」按钮（2026-10-14）
+
+**起因**：用户要求「每日学习单词要加一个上一个的按钮，可以返回上一个单词学习。注意单词数量边界」。
+
+**实现**（纯前端，`pages/learn/*`，不部署）：
+
+| 文件 | 改动 |
+|---|---|
+| `learn.js` | 新增 `prev()`：`locked` 锁 + `index<=0` 边界兜底 + `loadCard(index-1)` |
+| `learn.wxml` | 底栏改按钮行：`wx:if="{{index > 0}}"` 的 ghost「上一个」+ 原主按钮（复用 `app.wxss` 现成 `.btn.ghost`） |
+| `learn.wxss` | 新增 `.btn-row`（flex + gap），主按钮 `flex:1` 保持满宽 |
+
+**边界处理（用户特意叮嘱，三层）**：
+1. **第 1 个词**：WXML `wx:if` 不渲染按钮 + JS `index<=0` 兜底（双保险，防将来有人把 wx:if 改成常显）；
+2. **错题复习（W2）单卡**：index 恒 0，按钮不出现，`prev()` 守卫同样拦住；
+3. **加练续学**：词表已滤掉学过的词，「上一个」只在剩余词内回看，不会把用户带回已跳过的词。
+
+**两个刻意的选择**：
+- **不撤 `markLearned`**：走过的词就是学过了，回看只是呈现层。云端 `markLearned` 是 `_.addToSet`（幂等），重复标记无副作用；若为了「回看清进度」撤标记，用户一路退到第一个词，今日进度就空了。
+- **与 `next` 共用 `locked` 连点锁**（M18）：回看途中连点不会连退两张。
+
+**顺带确认无坑的点**：回看命中 `cardCache`（不发新请求、不等网络）、`isLast`/`nextLabel` 随 `loadCard` 重算（从末词回看按钮自动变回「下一个」）、分段进度 `buildSegs` 跟着回退、进词自动播该词发音。
+
+**测试**：`test_learn.js` 47→**59**（12 条新断言：首词边界 / 回看行为 / 缓存命中 / 文案与分段进度 / 发音 / 不撤 markLearned / locked / review 单卡 / wxml 静态契约）。**负向验证 4 处**（回看方向、首词守卫、locked 锁、wx:if 条件：改坏后 3 处断言红、1 处进程崩 rc=1）。全量回归 **12 个文件 354 条全绿**，`check_miniprogram.js` 通过（`.btn-row`/`.ghost` 类名均有定义）。
+
+### 12.17 第十四轮：复习文案改回「昨日」措辞（2026-10-14）
+
+**起因**：§12.14 的 R5 把首页 CTA 改成「先复习到期的单词」，用户看到后明确
+「这个应该是昨日的单词」——对用户而言，这条链路的心理模型就是「复习昨天学的单词」。
+
+**改动**（纯前端，不部署）：
+
+| 位置 | 改后 | 改前 |
+|---|---|---|
+| 首页 CTA（`index.js` `buildCta`） | 「先复习昨天的单词」 | 「先复习到期的单词」 |
+| 练习页 tag（`practice.wxml`） | 「复习昨日单词」 | 「复习到期单词」 |
+
+**取舍留档**：「到期」在两种断档场景下其实更准确（断档 N 天复习的是 N 天前的词；
+昨天没新词时是历史到期词），但用户认知优先——说「到期」需要用户理解调度机制，
+说「昨天」一句话就懂。判据以用户拍板为准，R5 的准确性论证在 §12.14 留档，
+将来若要做「断档归来」引导文案再翻出来。
+
+**后续（2026-10-22，D14）**：用户实测后改主意——「复习昨日单词，这个文案修改一下，
+目前不是」。确实不是：复习池 = 在池未出池的词（`status='reviewing'`），正常日子也只是
+昨日新词的**子集**（昨日已出池的不在內）。用户拍板去掉时间断言：
+
+| 位置 | 终态 | 曾用 |
+|---|---|---|
+| 练习页 tag（`practice.wxml`） | 「复习单词」 | 「复习到期单词」（§12.14）→「复习昨日单词」（§12.17）→ 终态 |
+| 首页 CTA（`index.js` `buildCta`） | 「先复习一下」 | 「先复习到期的单词」→「先复习昨天的单词」→ 终态 |
+| `README.md` / `docs/intro.md` | 同步去掉「昨日」 | — |
+
+文案三易的教训：**「昨日」和「到期」都不准确，是因为都在猜机制**；去掉时间断言的
+模糊表述反而是唯一永远正确的——当准确表述需要用户理解调度机制时，不做断言优于猜一个。
+`test_practice.js` 加了防回退断言（含负向验证：改回「复习昨日单词」应变红）。
+
+### 12.18 第十五轮：形似词（2026-10-22）
+
+**起因**：用户需求「库里的单词在学习的时候，把形似词也列出几个最多 3 个，单词/读音/翻译」。
+
+**改动**（决策与算法见 §11.11 / D12，此处只记过程）：
+
+- 新增 `scripts/gen_similar.py`：带状 Levenshtein（距离上限按词长 2/3/4 分档，长度差 ≤3），
+  排序 (距离, -公共前缀, seq)。调试时第一版 banded 实现**带外格子填 0 不填 sentinel**，
+  导致 `min()` 捡到未计算的 0，把 accommodate↔administrator 这种远词误判成近距离——
+  样本抽查（council→counsel 正确）没抓到，是靠「长度差 ≤2 却出现远词」发现的。已修并加注释。
+- 新增 `scripts/seed_similar.py`：逐词 update（每个词的 similar 不同，没法批量同一 data），
+  4 并发 5 分钟写完 2987 条，零失败。幂等口径：缺字段才写，`--force` 覆盖。
+- 学习页新增「形似词」card：点喇叭发音，**不做跳卡**——
+  learn 页模式混淆是历史上最贵的 bug 类（§12.13/§12.14），不为展示价值加第四种模式。
+- mock 覆盖四态（满 3 / 2 条 / 1 条 / 空数组）+ w5 故意不带字段，专测老数据降级。
+- 测试踩坑一处：`api('preloadWords')` 的 `includes` 是**数组成员精确匹配**，
+  两个形似词是同一次调用拼成 `preloadWords:simA,simB` 一条记录，按子串断言会假绿——
+  已改为整串精确匹配并注释。
+- **收尾（当天）**：按用户要求调整楼层，把「词根拆解」整块移到「形似词」上方。
+  最终顺序：主卡 → 词根拆解 → 形似词 → 例句 → 单词演变。
+  形似词初版在主卡之后（D12-2 原结论「紧贴单词本身对比感最强」），用户实测后认为
+  应先纵向拆解本词、再横向对比形似词——原结论被推翻，仅移动 wxml 两个 card 块的顺序，
+  零逻辑/零样式/零数据改动。§11.11 与 D12 已同步刷新。
+- **再收尾（当天）**：按用户要求给形似词加折叠（D13）。默认收起省高度（展开态约占屏 1/4），
+  收起态标题行右侧露「N 个」计数 + CSS 三角箭头，点整行切换；翻词不重置；暂缺态不参与折叠。
+  实现：wxml 标题行绑 `toggleSimilar` + 内容区 `wx:if` 加 `&& similarOpen`，
+  wxss 加 `.sec-title-main/.sec-count/.sec-toggle/.sec-arrow(.up)`（rotate 180° + transition），
+  js data 加 `similarOpen: false`。
+- **断言缺陷（值得记）**：「内容区 wx:if 带 similarOpen」的静态断言第一版写成
+  `/wx:if="\{\{card.similar && card.similar.length && similarOpen\}\}"/`，
+  负向验证时把 block 的条件改坏却**没变红**——正则误匹配了同区块 sec-sub 那行的同类表达式。
+  已改为绑定 `<block` 前缀并复验变红。教训：同类表达式在同一区块出现多次时，
+  静态断言必须锚到足够具体的上下文（标签名/前缀），否则就是假绿。
+- **重大事故与恢复（当天，D14 期间）**：负向验证「复习单词」断言后用
+  `git checkout -- practice.wxml` 还原，而**该文件自 v1.0 封版后从未 commit**
+  （「上题下答」三代演进全是未提交改动），一记 checkout 把三代演进全部冲掉：
+  `page practice` class 丢失（wxss 的 `.page.practice` 选择器静默失效）、
+  off 类丢失（check 第⑦条挂）、布局注释丢失。`git diff HEAD` 为空才暴露。
+  恢复路径：从历史会话 transcript（`~/.workbuddy/projects/.../5714f8b9*.jsonl`）
+  提取 10-12 对 practice.wxml 的全文 Write + 两次注释 Edit + 10-15 两次 tag Edit，
+  按序重放重建，check_miniprogram 五项契约复绿。
+  **规程（已入 MEMORY.md 铁律）**：负向验证的还原**一律先 `cp` 到 /tmp 再改回**；
+  `git checkout -- <file>` 只允许在 `git status` 确认该文件无未提交改动时使用。
+
+### 12.19 第十六轮：复习文案去掉时间断言（2026-10-22，D14）
+
+**起因**：用户「复习昨日单词，这个文案修改一下，目前不是」。
+
+**改动**（纯文案，零逻辑，不部署云函数）：
+
+| 位置 | 改后 | 改前 |
+|---|---|---|
+| 练习页 tag（`practice.wxml`） | 「复习单词」 | 「复习昨日单词」 |
+| 首页 CTA（`index.js` `buildCta`） | 「先复习一下」 | 「先复习昨天的单词」 |
+| `README.md` / `docs/intro.md` | 去掉「昨日」 | 同左 |
+
+`test_practice.js` +1 断言（tag 无时间断言，负向验证：改回「复习昨日单词」变红 ✓）。
+`git checkout` 事故与恢复见 §12.18 末条。全量回归 13 文件全绿。
+### 12.20 第十七轮：练习页题干区加词根（2026-10-22，D15）
+
+**起因**：用户「练习页面，上面是单词下面是词根，然后是选项」。
+
+**决策**（AskUserQuestion 拍板）：词根仅加在 **cn_option**（题干是英文单词）的题干区——
+en_option 题干是中文释义，露词根等于给选项送答案。数据走 `build_questions.toClient()`
+下发 `roots`（用户二选一选的「改云函数」而非前端补拉：后者每套题多 5~10 次 word_card 往返）。
+
+**改动**：
+- `cloudfunctions/build_questions/index.js`：`buildQuestion` 带 `roots: w.roots || []`（随题存进
+  daily_plans，新题自带）；`toClient` 下发 `roots: Array.isArray(q.roots) ? q.roots : []`
+  —— **复用分支的旧队列没有该字段，兜底 []**，前端不渲染（可选内容，允许缺失）。
+- `practice.wxml`：题干区三层化 = 单词/音标 → `q-roots`（`wx:if="{{q.type === 'cn_option' && q.roots && q.roots.length}}"`）→ 选项。
+- `practice.wxss`：`.q-roots/.q-root-item/.q-root-part/.q-root-type/.q-root-meaning`，
+  视觉与 learn 页词根对齐但收紧一档（题干区还要给 flex:1 留呼吸空间）。
+- `mock.js`：QUESTIONS 覆盖三态——cn_option 带词根 / en_option 不带 / 空数组（旧题态）。
+- 测试：`test_build_questions.js` +3（下发 roots、原样透传、复用分支兜底 []）；
+  `test_practice.js` +3 静态（词根块位置、仅 cn_option、wx:key）。负向验证 2 处
+  （toClient 删 roots 字段 → 红；wxml 删 type 守卫 → 红）。全量 13 文件 396 断言全绿。
+
+**⚠️ 部署提醒**：本轮要部署 `build_questions`（IDE 上传）。前端先发布而函数忘部署时，
+旧题照样能跑（roots 缺失只是不展示词根）——与 answerIndex 缺字段会卡死的性质不同，
+这条降级是安全的。

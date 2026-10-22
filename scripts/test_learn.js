@@ -20,6 +20,19 @@ const { ROOT, drain, tester, stub, installWx, loadPage, snap, pick } = require('
 /* ---------- 可配置的桩状态 ---------- */
 let todayFlowData = { plan: { newWordIds: ['a1', 'a2'] } }
 let stackDepth = 2 // getCurrentPages().length：2 = 从错题本 navigateTo 进来
+/** 这些 wordId 取卡会失败（验证「预取失败不缓存 → 下次会重试」） */
+const failIds = new Set()
+/** 这些 wordId 取卡会挂起，直到 holds[id]() 被调用（验证预取是并行的） */
+const holdIds = new Set()
+const holds = {}
+/** 形似词数据（D12）：按 id 注入；没有的 id = 老数据「无该字段」的降级路径 */
+const similarFor = {
+  s1: [
+    { word: 'simA', phonetic: '/a/', meaning: '释义A' },
+    { word: 'simB', phonetic: '/b/', meaning: '释义B' }
+  ],
+  s2: [] // 空数组：库内无形似词 → 「暂缺」态
+}
 
 global.getCurrentPages = () => new Array(stackDepth).fill({})
 
@@ -40,7 +53,12 @@ stub('miniprogram/utils/api.js', {
   },
   wordCard: async (id) => {
     calls.push('wordCard:' + id)
-    return { _id: id, word: 'w_' + id, example: null }
+    if (failIds.has(id)) throw new Error('CARD_FAIL')
+    if (holdIds.has(id)) await new Promise((r) => (holds[id] = r))
+    const card = { _id: id, word: 'w_' + id, example: { en: 'Sentence for ' + id + '.' } }
+    // similarFor 里有的才带 similar 字段；没有的 id 模拟「老数据没有该字段」
+    if (similarFor[id]) card.similar = similarFor[id]
+    return card
   },
   markLearned: async (id, round) => {
     calls.push('markLearned:' + id + ':' + round)
@@ -49,18 +67,22 @@ stub('miniprogram/utils/api.js', {
 stub('miniprogram/utils/audio.js', {
   playWord: (w) => calls.push('playWord:' + w),
   playSentence: () => calls.push('playSentence'),
-  stop: () => calls.push('audio.stop')
+  stop: () => calls.push('audio.stop'),
+  preloadWords: (ws) => calls.push('preloadWords:' + (ws || []).join(',')),
+  preloadSentences: (ts) => calls.push('preloadSentences:' + (ts || []).join(','))
 })
 stub('miniprogram/utils/share.js', { toFriend: (o) => o || {} })
 
 const page = loadPage('miniprogram/pages/learn/learn.js')
-const reset = snap(page, ['reviewId', 'round'])
+const reset = snap(page, ['reviewId', 'round', 'cardCache'])
 const fresh = () => {
   reset()
   page.wordIds = []
+  failIds.clear()
   calls.length = 0
   navs.length = 0
 }
+
 const cards = () => pick(calls, 'wordCard:')
 const api = (p) => pick(calls, p)
 
@@ -71,6 +93,34 @@ const { t, done } = tester()
   const wxml = fs.readFileSync(ROOT + '/miniprogram/pages/learn/learn.wxml', 'utf8')
   t('learn 头部有「错题复习」文案', wxml.includes('错题复习'))
   t('底栏按钮文案收敛到 nextLabel（四种模式在一处算）', /\{\{nextLabel\}\}/.test(wxml))
+  t('wxml：「上一个」按钮存在且绑 prev', /bindtap="prev"/.test(wxml))
+  t('wxml：「上一个」按 index>0 条件渲染（首词不显示，边界前置）',
+    /wx:if="\{\{index > 0\}\}"[\s\S]*?bindtap="prev"/.test(wxml))
+
+  /* ---------- 静态面：形似词（D12，2026-10-22） ---------- */
+  t('wxml：有「形似词」区块', /<text>形似词<\/text>/.test(wxml))
+  t('wxml：形似词区块在主卡之后、例句之前（D12-2 位置决策）',
+    wxml.indexOf('<text>形似词</text>') < wxml.indexOf('<text>例句</text>'))
+  t('wxml：每行形似词绑 playSimilar 且带 data-word',
+    /bindtap="playSimilar"[\s\S]*?data-word="\{\{item.word\}\}"/.test(wxml) ||
+    /data-word="\{\{item.word\}\}"[\s\S]*?bindtap="playSimilar"/.test(wxml))
+  t('wxml：similar 用 && 兜底再取 length（老数据无该字段不能炸页面）',
+    /wx:if="\{\{card\.similar && card\.similar\.length\}\}"/.test(wxml))
+
+  /* ---------- 静态面：形似词折叠（D13，2026-10-22） ---------- */
+  t('wxml：形似词在词根拆解之后（D13 楼层调整后的顺序）',
+    wxml.indexOf('<text>词根拆解</text>') < wxml.indexOf('<text>形似词</text>'))
+  t('wxml：标题行整行可点，绑 toggleSimilar',
+    /class="sec-title sec-head"[^>]*bindtap="toggleSimilar"/.test(wxml))
+  t('wxml：内容区 block wx:if 带 similarOpen（默认收起不渲染，省高度）',
+    /<block wx:if="\{\{card\.similar && card\.similar\.length && similarOpen\}\}"/.test(wxml))
+  t('wxml：空态走 wx:elif 暂缺（有值收起时两个分支都不渲染，不是 bug）',
+    /wx:elif="\{\{!card\.similar \|\| !card\.similar\.length\}\}"/.test(wxml))
+  t('wxml：箭头/计数只在 similar 有长度时渲染（暂缺态无可点暗示）',
+    /wx:if="\{\{card\.similar && card\.similar\.length\}\}"[^>]*class="sec-arrow/.test(wxml))
+  t('wxss：sec-arrow 有定义（check ② 会抓漏类名）',
+    fs.existsSync(ROOT + '/miniprogram/pages/learn/learn.wxss') &&
+      /\.sec-arrow\s*\{/.test(fs.readFileSync(ROOT + '/miniprogram/pages/learn/learn.wxss', 'utf8')))
 
   /* ---------- 模式一：review 错题复习（W2） ---------- */
   fresh()
@@ -181,6 +231,192 @@ const { t, done } = tester()
   t('加练续学：词全学完 → 直接跳小测（不显示空列表）',
     navs[0] === '/pages/practice/practice?phase=practice&round=4')
   t('加练续学：全学完时不取任何单词卡', !calls.some((c) => c.startsWith('wordCard:') && !c.includes('empty')))
+
+  /* ---------- 「上一个」按钮（2026-10-14 用户要求；重点在单词数量边界） ---------- */
+  todayFlowData = { plan: { newWordIds: ['b1', 'b2', 'b3'] } }
+  fresh()
+  await page.onLoad.call(page, {})
+  await drain()
+
+  // 边界①：第 1 个词没有上一个 —— 按钮不渲染（wxml 静态已断言），JS 再兜一道
+  calls.length = 0
+  await page.prev.call(page)
+  await drain()
+  t('上一个：第 1 个词点「上一个」什么都不发生（单词数量边界）',
+    page.data.index === 0 && page.data.card._id === 'b1' && cards().length === 0 && calls.length === 0)
+
+  // 正常回看：b1 → b2 → 回 b1
+  await page.next.call(page)
+  await drain()
+  t('上一个：先前进到第 2 个词', page.data.index === 1 && page.data.card._id === 'b2')
+  calls.length = 0
+  await page.prev.call(page)
+  await drain()
+  t('上一个：回到上一个词', page.data.index === 0 && page.data.card._id === 'b1')
+  t('上一个：回看用已缓存卡片，不发新请求（走过的词就在本机）', cards().length === 0)
+  t('上一个：底栏按钮回到「下一个」', page.data.nextLabel === '下一个')
+  t('上一个：分段进度跟着回退（第 1 段回 cur、第 2 段清空）',
+    page.data.segs[0].cls === 'cur' && page.data.segs[1].cls === '')
+  t('上一个：回看仍自动播该词发音', calls.includes('playWord:w_b1'))
+  t('上一个：不撤 markLearned（走过的词就是学过了；addToSet 幂等，撤了才会让今日进度造假）',
+    !calls.some((c) => c.startsWith('markLearned')))
+
+  // 边界②：与 next 共用 M18 连点锁，回看途中连点不会连退两张
+  await page.next.call(page)
+  await drain()
+  page.setData({ locked: true })
+  page.prev.call(page)
+  await drain()
+  t('上一个：locked 时点不动（与 next 共用 M18 连点锁）', page.data.index === 1)
+  page.setData({ locked: false })
+
+  // 边界③：错题复习（W2）只有一张卡，index 恒 0，没有「上一个」
+  fresh()
+  await page.onLoad.call(page, { review: 'w4' })
+  await drain()
+  calls.length = 0
+  await page.prev.call(page)
+  await drain()
+  t('review：单卡没有「上一个」（index 恒 0，JS 兜底拦住）',
+    page.data.index === 0 && page.data.card._id === 'w4' && calls.length === 0)
+
+  /* ---------- 预取 + 预加载（发声延迟优化的核心，不得回归） ---------- */
+  // 目标：翻页与发音都不该现等网络。卡片要过云函数（可能还带 AI 补全），
+  // 音频要再过一道 audio_cache —— 只提前一张就来不及，整组空跑又浪费。
+  todayFlowData = { plan: { newWordIds: ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'] } }
+  fresh()
+  await page.onLoad.call(page, {})
+  await drain()
+  t('预取：只取窗口内 4 张，不为整组 6 个词空跑请求',
+    cards().join(',') === 'wordCard:p1,wordCard:p2,wordCard:p3,wordCard:p4')
+  t('预取：预取与 loadCard 共用同一 promise（同一张卡只请求一次）',
+    cards().filter((c) => c === 'wordCard:p1').length === 1)
+  t('预取：卡片到手立刻排入「词 + 例句」音频预加载',
+    api('preloadWords').includes('preloadWords:w_p1') &&
+      api('preloadSentences').includes('preloadSentences:Sentence for p1.'))
+
+  calls.length = 0
+  await page.next.call(page)
+  await drain()
+  t('预取：翻页时下一张已在手，不为它发请求', !cards().includes('wordCard:p2'))
+  t('预取：窗口随之前移，只补取更远的那张', cards().join(',') === 'wordCard:p5')
+  t('预取：翻页照旧自动播词', calls.includes('playWord:w_p2'))
+
+  // 预取失败不能把这一张「毒」掉：失败不入缓存，下次预取必须重新请求。
+  // 这条直接对 prefetch 下断言（不走整页流程）——失败与 loadCard 的先后
+  // 落在微任务顺序里，靠整页流程断言会变成一条时快时慢的脆测试。
+  calls.length = 0
+  failIds.add('x1')
+  page.cardCache = {}
+  page.wordIds = ['x1']
+  await page.prefetch.call(page, 0)
+  t('预取失败：失败结果不留在缓存里（否则这张卡永远白屏）', page.cardCache[0] === undefined)
+  await page.prefetch.call(page, 0)
+  t('预取失败：下次预取会重新请求', cards().filter((c) => c === 'wordCard:x1').length === 2)
+
+  // W2 错题复习：从错题本点进来是「即点即看」，更不能等下载
+  fresh()
+  await page.onLoad.call(page, { review: 'r9' })
+  await drain()
+  t('review：单卡同样预载词音频', api('preloadWords').includes('preloadWords:w_r9'))
+
+  // 预取的真正价值是**并行**：把第 1 张卡的请求扣住不回包，
+  // 后 2 张仍必须已经在路上。否则就是串行（第 2 张要等第 1 张一个完整往返），
+  // 用户看到的正是「点下一个之后才转圈」。
+  holdIds.add('hp1')
+  todayFlowData = { plan: { newWordIds: ['hp1', 'hp2', 'hp3', 'hp4', 'hp5'] } }
+  fresh()
+  page.onLoad.call(page, {}) // 故意不 await：第 1 张卡此时被扣住
+  await drain()
+  t('预取：第 1 张卡还没回来，后 2 张已经在路上（并行而非串行）',
+    cards().join(',') === 'wordCard:hp1,wordCard:hp2,wordCard:hp3')
+  t('预取：也只为窗口内这几张并行，没整组铺开',
+    !cards().includes('wordCard:hp4') && !cards().includes('wordCard:hp5'))
+  holdIds.clear()
+  Object.keys(holds).forEach((k) => {
+    holds[k]()
+    delete holds[k]
+  })
+  await drain()
+
+  /* ---------- 形似词（D12，2026-10-22）：预加载 + 点播 + 降级 ---------- */
+  // 数据来自 words.similar（gen_similar.py 离线算，seed_similar.py 播种），
+  // 云函数零改动；前端只负责展示、预载与播放，不读不写任何用户态。
+
+  // ① 有形似词：卡片到手就把形似词发音一起排进预加载（点喇叭不等网络）
+  // 注意：形似词是**一次** preloadWords 调用（数组拼接成一条记录），
+  // 断言要按整串精确匹配 —— api() 的 includes 是数组成员比较，不是子串。
+  todayFlowData = { plan: { newWordIds: ['s1'] } }
+  fresh()
+  await page.onLoad.call(page, {})
+  await drain()
+  t('形似词：预加载带上形似词发音（simA/simB 一次调用）',
+    api('preloadWords').includes('preloadWords:simA,simB'))
+  t('形似词：主词发音仍照旧预载（不被形似词挤掉）',
+    api('preloadWords').includes('preloadWords:w_s1'))
+
+  // ② 点形似词喇叭 → 播该词发音（与主词同链路：四层缓存 + dictvoice 兜底）
+  calls.length = 0
+  await page.playSimilar.call(page, { currentTarget: { dataset: { word: 'simA' } } })
+  await drain()
+  t('形似词：点喇叭播放该形似词发音', calls.includes('playWord:simA'))
+
+  // ③ 负向：wxml 漏传 data-word 时不播（防御将来有人改坏模板）
+  calls.length = 0
+  await page.playSimilar.call(page, { currentTarget: { dataset: {} } })
+  await drain()
+  t('形似词：缺 data-word 时不播（负向验证）',
+    !calls.some((c) => c.startsWith('playWord')))
+
+  // ④ 空数组：库内无形似词 → 展示层「暂缺」，预加载不多发
+  todayFlowData = { plan: { newWordIds: ['s2'] } }
+  fresh()
+  await page.onLoad.call(page, {})
+  await drain()
+  t('形似词：similar 为空数组时页面照常出卡', page.data.card && page.data.card._id === 's2')
+  t('形似词：空数组不多发预加载（只有主词一次）',
+    api('preloadWords').join(',') === 'preloadWords:w_s2')
+
+  // ⑤ 无字段：老数据 / 将来 seed_words 导入的新词没有 similar → 不能炸
+  todayFlowData = { plan: { newWordIds: ['s3'] } }
+  fresh()
+  await page.onLoad.call(page, {})
+  await drain()
+  t('形似词：没有 similar 字段时页面照常出卡（老数据降级）',
+    page.data.card && page.data.card._id === 's3' && page.data.cardLoading === false)
+  t('形似词：无字段时预加载只有主词一次（&& 兜底生效）',
+    api('preloadWords').join(',') === 'preloadWords:w_s3')
+  t('形似词：无字段时例句预加载不受影响（回归）',
+    api('preloadSentences').includes('preloadSentences:Sentence for s3.'))
+
+  /* ---------- 形似词折叠（D13，2026-10-22）：默认收起 + 切换 ---------- */
+  // ⑤ 折叠态：默认收起；toggleSimilar 来回切
+  fresh()
+  await page.onLoad.call(page, {})
+  await drain()
+  t('折叠：默认收起（similarOpen=false，省高度）', page.data.similarOpen === false)
+  page.toggleSimilar()
+  t('折叠：点一次标题行 → 展开', page.data.similarOpen === true)
+  page.toggleSimilar()
+  t('折叠：再点一次 → 收起', page.data.similarOpen === false)
+  // 翻词不重置：模拟 next 后 similarOpen 保持用户选择
+  page.toggleSimilar()
+  await page.next.call(page)
+  await drain()
+  t('折叠：翻词不重置（用户收起就一路收起）', page.data.similarOpen === true)
+  // ⑥ 空态/无字段时点了也不炸（状态可切，但 wxml 两道 wx:if 保证无列表可展）
+  fresh()
+  await page.onLoad.call(page, { review: 's2' })
+  await drain()
+  page.toggleSimilar() // 不抛异常即通过（真炸了这里测试直接红）
+  t('折叠：空数组词页面 toggleSimilar 不炸、卡片数据完好',
+    page.data.card && page.data.card._id === 's2')
+  fresh()
+  await page.onLoad.call(page, { review: 's3' })
+  await drain()
+  page.toggleSimilar()
+  t('折叠：无字段词页面 toggleSimilar 不炸、卡片数据完好（老数据降级）',
+    page.data.card && page.data.card._id === 's3')
 
   done()
 })()

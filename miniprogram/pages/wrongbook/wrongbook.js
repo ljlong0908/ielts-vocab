@@ -22,7 +22,11 @@ Page({
     this._jumping = false
     try {
       const r = await api.stats()
-      this.setData({ loading: false, words: r.wrongWords || [] })
+      const words = r.wrongWords || []
+      this.setData({ loading: false, words })
+      // 错词表一次也就几个词，整表预载：点喇叭、点进复习页都不会再有等待。
+      // 预加载是排队 + 限并发的，不会把首屏请求挤掉。
+      audio.preloadWords(words.map((w) => w.word))
     } catch (e) {
       this.setData({ loading: false })
     }

@@ -10,14 +10,26 @@
  *      ③ 不做物理删除 → 误点也能人工恢复（mastered 置 false 即可）
  *
  * 入参：{ wordId }
- * 返回：{ code: 0, data: { wordId, updated } }
+ * 返回：{ code: 0, data: { wordId, updated, scheduleSynced } }
  *   updated = 被标记的记录条数（同一个词可能答错多次，会有多条）
+ *   scheduleSynced = 是否同步了复习调度（user_words 置 mastered）
+ *
+ * ⚠️ 复习调度同步（2026-10-13，R1）：只打 records 标不够 —— 次日复习集合查的是
+ *    `user_words`（status='reviewing' 且 nextReviewDate≤今天，见 today_flow），
+ *    两套系统不通时，用户在错题本点了「已掌握」，次日复习照考这个词。
+ *    所以这里同时把 user_words 该词置 mastered（nextReviewDate 清空）。
+ *    ⚠️ R6 之后这里是「出池词（'reviewed'）转正」的唯一入口：复习答错的词次日
+ *    不再自动复习，用户只有在这里点「已掌握」才会把它变成 mastered。
+ *    user_words 没有该词记录时**不建**：那说明它学了但没打卡，次日会重学，
+ *    重学后一轮答对即 mastered，可自愈；硬建一条反而会让没学完的词提前进复习。
+ *    同步只影响「明天起」—— 当日 reviewQueue 是建 plan 时的快照，今天仍会考它。
  */
 const cloud = require('wx-server-sdk')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const records = db.collection('records')
+const userWords = db.collection('user_words')
 
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
@@ -32,7 +44,25 @@ exports.main = async (event) => {
       .where({ _openid: OPENID, wordId, isCorrect: false })
       .update({ data: { mastered: true, masteredAt: new Date() } })
 
-    return { code: 0, data: { wordId, updated: (r.stats && r.stats.updated) || 0 } }
+    // 复习调度同步：错题本说「会了」，次日复习集合就不要再包含它。
+    // 记录不存在则跳过（见头注释的说明），不作为失败。
+    const uwRes = await userWords.where({ _openid: OPENID, wordId }).get()
+    let scheduleSynced = false
+    if (uwRes.data.length) {
+      await userWords.doc(uwRes.data[0]._id).update({
+        data: { status: 'mastered', nextReviewDate: '', updatedAt: new Date() }
+      })
+      scheduleSynced = true
+    }
+
+    return {
+      code: 0,
+      data: {
+        wordId,
+        updated: (r.stats && r.stats.updated) || 0,
+        scheduleSynced
+      }
+    }
   } catch (e) {
     return { code: -1, message: (e && e.message) || 'DISMISS_FAILED' }
   }

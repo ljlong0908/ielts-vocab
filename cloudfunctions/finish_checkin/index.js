@@ -85,6 +85,9 @@ exports.main = async () => {
     })
 
     // 新词进入复习池（幂等）
+    // ⚠️ 已存在记录的 update 分支**绝不能覆盖 wrongCount** —— 那是 submit_answer
+    //    在 practice 阶段答错时累积的「历史错误数」（R2，2026-10-13），
+    //    次日复习的 clean 判定（一轮答对是否直接 mastered）靠它。只补调度字段。
     for (const wid of newWordIds) {
       const ex = await userWords.where({ _openid: OPENID, wordId: wid }).get()
       if (ex.data.length) {

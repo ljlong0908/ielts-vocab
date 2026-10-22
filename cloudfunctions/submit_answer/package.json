@@ -1,7 +1,7 @@
 {
   "name": "submit_answer",
   "version": "1.0.0",
-  "description": "服务端判题与复习状态推进",
+  "description": "答题后台落库与复习状态推进（前端已本地判题）",
   "main": "index.js",
   "dependencies": {
     "wx-server-sdk": "~2.6.3"

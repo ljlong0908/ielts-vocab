@@ -16,8 +16,9 @@
  *   'done'     —— 今日已完成
  *   'empty'    —— 词库已学完
  *
- * ⚠️ 题目答案不随 buildQuestions 下发（与云函数一致，答案留服务端），
- *    由内部 ANSWERS 数组在 submitAnswer 时判题。
+ * ⚠️ 题目**带着答案**下发（与云函数 build_questions 一致）：前端本地同步判对错，
+ *    submitAnswer 退化为后台落库。mock 必须跟着下发 answerIndex，
+ *    否则 USE_MOCK 下调 UI 会走「降级路径」，与真机行为分叉。
  */
 
 const config = require('../config')
@@ -45,6 +46,11 @@ const WORDS = [
       { part: 'bandon', type: '词根', meaning: '控制；命令' }
     ],
     etymology: '源自古法语 abandoner，由 a-（去）+ bandon（控制权）构成，字面义为"交出控制权"，引申为放弃。',
+    // 形似词（D12）：2 条 —— 覆盖「非满 3」态
+    similar: [
+      { word: 'abandonment', phonetic: '/əˈbændənmənt/', meaning: 'n. 抛弃；放任' },
+      { word: 'abandoned', phonetic: '/əˈbændənd/', meaning: 'adj. 被抛弃的；恣意放任的' }
+    ],
     enriched: true,
     enrichStatus: 'done'
   },
@@ -61,6 +67,12 @@ const WORDS = [
       { part: 'tract', type: '词根', meaning: '拉；抽' }
     ],
     etymology: '源自拉丁语 abstractus，abs-（脱离）+ trahere（拉），本义为"从中抽出"，引申为抽象。',
+    // 形似词：3 条拿满（abstract / attract / distract / subtract 是经典混对）
+    similar: [
+      { word: 'attract', phonetic: '/əˈtrækt/', meaning: 'vt. 吸引；引起' },
+      { word: 'distract', phonetic: '/dɪˈstrækt/', meaning: 'vt. 转移；分心' },
+      { word: 'subtract', phonetic: '/səbˈtrækt/', meaning: 'vt. 减去；扣掉' }
+    ],
     enriched: true,
     enrichStatus: 'done'
   },
@@ -77,6 +89,10 @@ const WORDS = [
       { part: '-ic', type: '后缀', meaning: '…的' }
     ],
     etymology: '源自古希腊 Akademos 园，柏拉图在此讲学，后泛指学术机构与学术研究。',
+    similar: [
+      { word: 'academy', phonetic: '/əˈkædəmi/', meaning: 'n. 学院；研究院' },
+      { word: 'academia', phonetic: '/ˌækəˈdiːmiə/', meaning: 'n. 学术界；学术生活' }
+    ],
     enriched: true,
     enrichStatus: 'done'
   },
@@ -93,6 +109,8 @@ const WORDS = [
       { part: 'knowledge', type: '词根', meaning: '认知' }
     ],
     etymology: 'ac-（向）+ knowledge（知识），意为"使之进入认知"，即承认、确认。',
+    // 形似词：空数组 —— 覆盖「暂缺」态（约 8.5% 的词库内无形似词）
+    similar: [],
     enriched: true,
     enrichStatus: 'done'
   },
@@ -103,7 +121,8 @@ const WORDS = [
     phoneticUK: '/əˈkɒmədeɪt/',
     pos: 'v.',
     meaning: '容纳；适应',
-    // 边界态①：扩展内容暂缺（例句 / 词根 / 词源都没有）
+    // 边界态①：扩展内容暂缺（例句 / 词根 / 词源都没有）。
+    // similar 字段也**故意不带** —— 覆盖「老数据 / 新导入词没有该字段」的降级路径。
     example: null,
     roots: [],
     etymology: '',
@@ -117,7 +136,10 @@ const WORDS = [
     phoneticUK: '/æmˈbɪɡjuəs/',
     pos: 'adj.',
     meaning: '模棱两可的',
-    // 边界态②：扩展内容生成中
+    // 边界态②：扩展内容生成中。形似词给 1 条，覆盖「只有 1 个」态
+    similar: [
+      { word: 'ambitious', phonetic: '/æmˈbɪʃəs/', meaning: 'adj. 有雄心的；有野心的' }
+    ],
     example: null,
     roots: [],
     etymology: '',
@@ -132,37 +154,64 @@ const WORD_MAP = WORDS.reduce((m, w) => {
 }, {})
 
 /* ------------------------------------------------------------------ */
-/* 题目：cn_option / en_option 交替。答案留服务端，不下发              */
+/* 题目：cn_option / en_option 交替。答案随题目下发（前端本地判题）      */
+/* answerIndex / audioText 的含义见 cloudfunctions/build_questions.toClient */
 /* ------------------------------------------------------------------ */
 
 const QUESTIONS = [
   {
+    id: 'w1_0',
+    wordId: 'w1',
     type: 'cn_option',
     stem: 'abandon',
     phonetic: '/əˈbændən/',
-    options: ['放弃；抛弃', '抽象的', '学术的', '模棱两可的']
+    // D15：cn_option 带词根（题干区单词下方展示）
+    roots: [
+      { part: 'ab-', type: '前缀', meaning: '离开' },
+      { part: 'bandon', type: '词根', meaning: '控制；命令' }
+    ],
+    options: ['放弃；抛弃', '抽象的', '学术的', '模棱两可的'],
+    answerIndex: 0,
+    audioText: 'abandon'
   },
   {
+    id: 'w3_1',
+    wordId: 'w3',
     type: 'en_option',
     stem: '学术的；学院的',
-    options: ['abstract', 'academic', 'abandon', 'acknowledge']
+    phonetic: '',
+    options: ['abstract', 'academic', 'abandon', 'acknowledge'],
+    answerIndex: 1,
+    audioText: 'academic'
+    // en_option 刻意不带 roots：验证题干区不展示词根（露词根=给选项送答案）
   },
   {
+    id: 'w4_2',
+    wordId: 'w4',
     type: 'cn_option',
     stem: 'acknowledge',
     phonetic: '/əkˈnɒlɪdʒ/',
-    options: ['适应', '承认；答谢', '放弃', '抽象的']
+    roots: [
+      { part: 'ac-', type: '前缀', meaning: '向' },
+      { part: 'knowledge', type: '词根', meaning: '认知' }
+    ],
+    options: ['适应', '承认；答谢', '放弃', '抽象的'],
+    answerIndex: 1,
+    audioText: 'acknowledge'
   },
   {
+    id: 'w2_3',
+    wordId: 'w2',
     type: 'cn_option',
     stem: 'abstract',
     phonetic: '/ˈæbstrækt/',
-    options: ['学术的', '抽象的；摘要', '承认', '模棱两可的']
+    // 边界态：旧题（D15 前生成的队列）没有 roots 字段 → 不渲染词根区
+    roots: [],
+    options: ['学术的', '抽象的；摘要', '承认', '模棱两可的'],
+    answerIndex: 1,
+    audioText: 'abstract'
   }
 ]
-
-// 各题正确选项 index（仅 mock 内部使用，submitAnswer 判题用）
-const ANSWERS = [0, 1, 1, 1]
 
 /* ------------------------------------------------------------------ */
 /* 工具：生成本月打卡日                                                  */
@@ -445,8 +494,9 @@ function wordCard(data) {
   const id = data && data.wordId
   const w = WORD_MAP[id]
   if (!w) {
-    // 未命中：返回一个极简卡，避免页面崩
-    return { _id: id, word: id, phoneticUS: '', phoneticUK: '', pos: '', meaning: '', example: null, roots: [], etymology: '', enriched: false, enrichStatus: 'failed' }
+    // 未命中：返回一个极简卡，避免页面崩。
+    // similar 给空数组：未命中的词没有形似词数据，页面走「暂缺」。
+    return { _id: id, word: id, phoneticUS: '', phoneticUK: '', pos: '', meaning: '', example: null, roots: [], etymology: '', similar: [], enriched: false, enrichStatus: 'failed' }
   }
   // 生成中态：给页面 enriching=true 的字段
   if (w.enrichStatus === 'generating') {
@@ -459,14 +509,13 @@ function buildQuestions() {
   return { questions: QUESTIONS }
 }
 
+/* 落库用的判题（前端已本地判过一次，这里与云端 submit_answer 一样再判一次并回同样字段） */
 function submitAnswer(data) {
   const idx = data && typeof data.questionIndex === 'number' ? data.questionIndex : 0
   const choice = data && typeof data.choice === 'number' ? data.choice : -1
-  const answer = ANSWERS[idx] != null ? ANSWERS[idx] : 0
-  const correct = choice === answer
   const q = QUESTIONS[idx] || {}
-  const word = q.type === 'cn_option' ? q.stem : (q.options ? q.options[answer] : '')
-  return { correct: correct, answerIndex: answer, word: word }
+  const answer = typeof q.answerIndex === 'number' ? q.answerIndex : 0
+  return { correct: choice === answer, answerIndex: answer, word: q.audioText || '' }
 }
 
 function finishCheckin() {
