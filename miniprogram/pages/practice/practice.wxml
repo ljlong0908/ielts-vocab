@@ -1,8 +1,7 @@
 <!-- 整页 = 上「题」下「答」两区：题干卡吃掉剩余高度（内容居中，成为主视觉），
      选项区自然高度贴底。剩余空白归题干卡，不堆在题答之间。详见 practice.wxss 顶部注释。 -->
 <view class="page practice">
-  <view wx:if="{{loading}}" class="loading">生成练习中</view>
-  <view wx:elif="{{empty}}" class="empty">暂无题目</view>
+  <view wx:if="{{empty}}" class="empty">暂无题目</view>
 
   <block wx:else>
     <view class="between head">

@@ -236,8 +236,7 @@
   color: var(--danger);
 }
 
-/* 加载 / 空态：在 flex 布局下居中，不占满顶部 */
-.page.practice .loading,
+/* 空态：在 flex 布局下居中，不占满顶部 */
 .page.practice .empty {
   flex: 1;
   display: flex;

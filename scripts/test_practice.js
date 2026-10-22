@@ -130,6 +130,12 @@ const legacyQ = () => ({
     /wx:if="\{\{q\.type === 'cn_option' && q\.roots && q\.roots\.length\}\}"/.test(wxml))
   t('词根行用 wx:key="part"（与 learn 页词根一致，防重复 key 静默错位）',
     /wx:for="\{\{q\.roots\}\}" wx:key="part"/.test(wxml))
+  // 加载提示只保留 wx.showLoading 弹层（D16 同类去重，当天漏了练习页）：
+  // api.buildQuestions 的 loadingText「生成练习」是全屏 mask 弹层，页面级
+  // 「生成练习中」文字与之重复；弹层关闭与 setData 只差一个微任务，无感知空档。
+  // 防手滑把页面级加载文字加回来。
+  t('练习页无页面级加载文字（弹层已全屏 mask，重复提示删掉）',
+    !/class="loading"/.test(wxml))
 
   /* ---------- 预加载：中选英读 stem ---------- */
   fresh()
