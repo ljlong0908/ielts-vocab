@@ -4,11 +4,11 @@
        所以这里自绘一条顶部提示，4 秒后自动收起。 -->
   <view wx:if="{{errTip}}" class="wb-tip">{{errTip}}</view>
 
-  <view wx:if="{{loading}}" class="loading">加载中</view>
+  <!-- 不放页面级「加载中」：stats() 已走 api 层全局 wx.showLoading('加载中')，
+       同义提示只保留一处（2026-10-26 去重）。loading 字段仍门控内容区显隐。 -->
+  <view wx:if="{{!loading && words.length === 0}}" class="empty">还没有错题，继续保持</view>
 
-  <view wx:elif="{{words.length === 0}}" class="empty">还没有错题，继续保持</view>
-
-  <block wx:else>
+  <block wx:if="{{!loading && words.length}}">
     <!-- W2（用户追加）：整卡点击 = 进学习页复习这个词。
          ⚠️ 这一条**修订了 M10-1**：原规则是「整卡可点 = 发音、喇叭不单独绑 tap」，
             改为「整卡 = 进复习」之后，发音必须有自己的热区，于是本页的热区关系变成

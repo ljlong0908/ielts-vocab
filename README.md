@@ -1,5 +1,7 @@
 # 雅词本 · 核心词汇微信小程序
 
+<img align="right" width="170" src="assets/brand/miniprogram-code.png" alt="雅词本小程序码：微信扫码直接体验">
+
 > **一个不花服务器钱、个人主体也能上线的背单词小程序。**
 > 发音 100% 自持（本地 Kokoro 预生成 → 云存储，运行时零外呼），AI 内容按需生成 + 缓存，
 > 18 个云函数 + 全套幂等部署脚本，开箱可跑。
@@ -109,10 +111,12 @@
 
 ## 演示
 
+**最快的一手体验：微信扫描页面右上角的小程序码**，真机直接走完整闭环，不需要部署、不需要账号。
+
 8 个页面（引导 / 首页 / 学习 / 练习 / 打卡 / 统计 / 错题本 / 我的）**全部还原在
 [`design/prototype.html`](design/prototype.html)** —— 浏览器直接打开，点着走完整个闭环，**不需要部署、不需要账号**。
 
-> 仓库暂未附真机截图与演示 GIF（见[路线图](#路线图)）。原型是当前最快的一手体验方式。
+> 仓库暂未附真机截图与演示 GIF（见[路线图](#路线图)）。不想扫码的，原型是当前最快的桌面端体验方式。
 
 ---
 
@@ -342,7 +346,7 @@ MIT 许可**可商用**。但要注意：「雅词本」名称与 `assets/brand/
 
 | 项 | 说明 |
 |---|---|
-| **品牌** | 「雅词本」名称与 `assets/brand/` 下的头像/图标为作者品牌资产，MIT 许可**不含商标授权**。二次开发请更换名称与图标。（`assets/` 在 `miniprogramRoot` 之外，不会打进小程序包） |
+| **品牌** | 「雅词本」名称与 `assets/brand/` 下的头像/图标/**小程序码**为作者品牌资产，MIT 许可**不含商标授权**。二次开发请更换名称与图标，并把 README 中的小程序码换成你自己小程序的。（`assets/` 在 `miniprogramRoot` 之外，不会打进小程序包） |
 | **词表** | 由 `scripts/build_wordlist.py` 从 **ECDICT（MIT License, Copyright (c) 2025 Linwei）** 抽取，可商用，需保留版权声明；许可证副本见 `assets/word_lists/ECDICT-LICENSE.txt` |
 | **发音音频** | 由 **Kokoro-82M（Apache-2.0）** 本地生成，可自由商用。改用其他引擎前请先确认其对生成音频的授权——XTTS v2 / F5-TTS 的权重为非商用许可，`edge-tts` 属非官方客户端（与 `dictvoice` 同一灰色性质） |
 | **兜底发音接口** | 代码示例保留了有道 `dictvoice` 作为词表外兜底，该接口并非有道对第三方开放的商用接口。商用请替换为合规 TTS 服务 |
@@ -360,7 +364,7 @@ MIT 许可**可商用**。但要注意：「雅词本」名称与 `assets/brand/
 ## 注意事项（fork 前自检）
 
 - [ ] **fork 后必须替换** `project.config.json` 的 `appid` 与 `miniprogram/config.js` 的 `ENV_ID`（二者非密钥，但用作者的会连到作者的云环境）
-- [ ] **品牌与提审文案同样要换**：「雅词本」名称与 `assets/brand/` 图标属作者品牌资产（MIT **不含商标授权**）；`docs/intro.md` / `docs/隐私保护指引.md` 是示例文案，发布前替换为你自己的产品名与主体信息
+- [ ] **品牌与提审文案同样要换**：「雅词本」名称与 `assets/brand/` 图标属作者品牌资产（MIT **不含商标授权**）；README 右上角的**小程序码**指向作者的正式发布版小程序，fork 后请换成你自己的（`assets/brand/miniprogram-code.png` + README 引用）；`docs/intro.md` / `docs/隐私保护指引.md` 是示例文案，发布前替换为你自己的产品名与主体信息
 - [ ] `enrich_word` 必须配 `DEEPSEEK_API_KEY`（且账户有余额），否则单词卡只显示词表基础字段
 - [ ] 数据初始化走本地脚本，都幂等可重复跑：`python scripts/init_cloud.py --apply`（集合 + 索引）→ `python scripts/seed_cloud.py --apply --reset`（词表 + 音频 + audioReady）
 - [ ] **集合权限只能手工配一次**（HTTP API 没有权限接口）：`words` = 所有用户可读 / 仅管理端可写，其余 = 仅创建者可读写

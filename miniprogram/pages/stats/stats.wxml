@@ -1,7 +1,7 @@
 <view class="page">
-  <view wx:if="{{loading}}" class="loading">加载中</view>
-
-  <block wx:else>
+  <!-- 不放页面级「加载中」：stats() 已走 api 层全局 wx.showLoading('加载中')，
+       同义提示只保留一处（2026-10-26 去重）。loading 字段仍门控内容区显隐。 -->
+  <block wx:if="{{!loading}}">
     <view class="metrics">
       <view class="metric">
         <view class="metric-num">{{streak}}</view>

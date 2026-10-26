@@ -52,10 +52,11 @@ function call(name, data = {}, options = {}) {
 module.exports = {
   call,
 
-  /** 获取/创建用户；action='setGoal' 时写入每日目标 */
+  /** 获取/创建用户；action='setGoal' 时写入每日目标。
+   *  走全局 loading（2026-10-26 去重：页面级「加载中」已删，同义提示只留全局一处） */
   getProfile(dailyGoal) {
     const data = dailyGoal ? { action: 'setGoal', dailyGoal } : { action: 'get' }
-    return call(config.FN.USER_PROFILE, data, { loading: false })
+    return call(config.FN.USER_PROFILE, data)
   },
 
   /** 首页汇总数据 */
@@ -111,9 +112,10 @@ module.exports = {
     return call(config.FN.FINISH_CHECKIN, {}, { loadingText: '打卡中' })
   },
 
-  /** 统计 */
+  /** 统计（错题本/统计页 onShow 首屏）。
+   *  走全局 loading（2026-10-26 去重：页面级「加载中」已删，同义提示只留全局一处） */
   stats() {
-    return call(config.FN.STATS, {}, { loading: false })
+    return call(config.FN.STATS, {})
   },
 
   /**
